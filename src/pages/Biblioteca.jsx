@@ -140,14 +140,12 @@ export default function Biblioteca({ showToast }) {
               <CatItem label={c.name} count={countFor(c.name,'')}
                 active={activeCat===c.name && !activeSub}
                 hasArrow={c.subs.length>0} arrowOpen={openCatId===c.id}
-                onClick={() => {
-                  if (c.subs.length>0) setOpenCatId(openCatId===c.id?null:c.id)
-                  setActiveCat(c.name); setActiveSub(''); setView('list')
-                }} />
+                onArrowClick={() => setOpenCatId(openCatId===c.id?null:c.id)}
+                onClick={() => { setActiveCat(c.name); setActiveSub('') }} />
               {c.subs.length>0 && openCatId===c.id && c.subs.map(s => (
                 <CatItem key={s} label={s} count={countFor(c.name,s)}
                   active={activeCat===c.name && activeSub===s} indent
-                  onClick={() => { setActiveCat(c.name); setActiveSub(s); setView('list') }} />
+                  onClick={() => { setActiveCat(c.name); setActiveSub(s) }} />
               ))}
             </div>
           ))}
@@ -306,9 +304,9 @@ function ArtCard({ art, onEdit, onDel, showToast }) {
 }
 
 // ── CatItem ────────────────────────────────────────────────────────────────
-function CatItem({ label, count, active, hasArrow, arrowOpen, onClick, indent }) {
+function CatItem({ label, count, active, hasArrow, arrowOpen, onClick, onArrowClick, indent }) {
   return (
-    <div onClick={onClick} style={{
+    <div style={{
       display:'flex', alignItems:'center', justifyContent:'space-between',
       padding: indent ? '11px 20px 11px 36px' : '14px 20px',
       cursor:'pointer', borderBottom:'1px solid var(--line)',
@@ -316,8 +314,11 @@ function CatItem({ label, count, active, hasArrow, arrowOpen, onClick, indent })
       borderLeft: active ? '2px solid var(--gold)' : '2px solid transparent',
       transition:'all .12s'
     }}>
-      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-        {hasArrow && <span style={{ fontSize:8, color:'var(--text3)', display:'inline-block', transform: arrowOpen?'rotate(90deg)':'none', transition:'transform .15s' }}>▶</span>}
+      <div onClick={onClick} style={{ display:'flex', alignItems:'center', gap:8, flex:1 }}>
+        {hasArrow && (
+          <span onClick={e => { e.stopPropagation(); onArrowClick && onArrowClick(e) }}
+            style={{ fontSize:8, color:'var(--text3)', display:'inline-block', transform: arrowOpen?'rotate(90deg)':'none', transition:'transform .15s', padding:'6px', marginLeft:'-6px' }}>▶</span>
+        )}
         <span style={{ fontFamily:"'Barlow Condensed'", fontSize: indent?11:13, fontWeight: active?500:400, letterSpacing:'0.08em', textTransform:'uppercase', color: active?'var(--gold)':'var(--text2)' }}>{label}</span>
       </div>
       <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color: active?'var(--gold2)':'var(--text3)' }}>{count}</span>

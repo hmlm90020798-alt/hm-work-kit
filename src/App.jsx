@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Biblioteca from './pages/Biblioteca'
+import Modelos from './pages/Modelos'
+import Orcamentos from './pages/Orcamentos'
 import Login from './pages/Login'
 import Toast from './components/Toast'
 import { useToast } from './hooks/useToast'
@@ -86,7 +88,7 @@ function Shell() {
           {/* nav items */}
           <nav style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', padding:'0 32px' }}>
             {pages.map((p, i) => (
-              <button key={p.id} onClick={() => { setPage(p.id); setMenuOpen(false); if(p.id!=='biblioteca') showToast('Em desenvolvimento') }}
+              <button key={p.id} onClick={() => { setPage(p.id); setMenuOpen(false);  }}
                 style={{
                   background:'transparent', border:'none', borderBottom:'1px solid var(--line)',
                   padding:'24px 0', cursor:'pointer', textAlign:'left',
@@ -117,6 +119,8 @@ function Shell() {
       {/* PAGE */}
       <main style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
         {page === 'biblioteca' && <Biblioteca showToast={showToast} />}
+        {page === 'modelos'    && <Modelos    showToast={showToast} />}
+        {page === 'orcamentos' && <Orcamentos  showToast={showToast} />}
       </main>
 
       <Toast msg={msg} visible={visible} />
