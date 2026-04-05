@@ -141,11 +141,15 @@ export default function Biblioteca({ showToast }) {
                 active={activeCat===c.name && !activeSub}
                 hasArrow={c.subs.length>0} arrowOpen={openCatId===c.id}
                 onArrowClick={() => setOpenCatId(openCatId===c.id?null:c.id)}
-                onClick={() => { setActiveCat(c.name); setActiveSub('') }} />
+                onClick={() => {
+                  setActiveCat(c.name); setActiveSub('')
+                  if (c.subs.length===0) setView('list')
+                  else setOpenCatId(c.id)
+                }} />
               {c.subs.length>0 && openCatId===c.id && c.subs.map(s => (
                 <CatItem key={s} label={s} count={countFor(c.name,s)}
                   active={activeCat===c.name && activeSub===s} indent
-                  onClick={() => { setActiveCat(c.name); setActiveSub(s) }} />
+                  onClick={() => { setActiveCat(c.name); setActiveSub(s); setView('list') }} />
               ))}
             </div>
           ))}

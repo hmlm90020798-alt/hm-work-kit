@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import Biblioteca from './pages/Biblioteca'
 import Modelos from './pages/Modelos'
 import Orcamentos from './pages/Orcamentos'
+import Tampos from './pages/Tampos'
 import Login from './pages/Login'
 import Toast from './components/Toast'
 import { useToast } from './hooks/useToast'
@@ -25,6 +26,7 @@ function Shell() {
     { id:'biblioteca', label:'Biblioteca' },
     { id:'modelos',    label:'Modelos' },
     { id:'orcamentos', label:'Orçamentos' },
+    { id:'tampos',     label:'Tampos' },
     { id:'ia',         label:'IA' },
   ]
 
@@ -121,6 +123,7 @@ function Shell() {
         {page === 'biblioteca' && <Biblioteca showToast={showToast} />}
         {page === 'modelos'    && <Modelos    showToast={showToast} />}
         {page === 'orcamentos' && <Orcamentos  showToast={showToast} />}
+        {page === 'tampos'     && <Tampos      showToast={showToast} />}
       </main>
 
       <Toast msg={msg} visible={visible} />
