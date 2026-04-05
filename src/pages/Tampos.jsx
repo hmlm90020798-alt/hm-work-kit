@@ -374,7 +374,6 @@ function calcPeca(p) {
   return { m2, pvpTampo, c1Tampo, pvpAcab, c1Acab, pvp:pvpTampo+pvpAcab, c1raw:c1Tampo+c1Acab, esp }
 }
 
-const TIPOS_PEDRA = ['GRANITOS','SILESTONES','COMPAC','DEKTON']
 
 // ── Calculadora ────────────────────────────────────────────────────────────
 function Calculadora({ current, setCurrent, orcamentos, onBack, showToast }) {
