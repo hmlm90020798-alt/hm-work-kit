@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/hm-work-kit/sw.js', { scope: '/hm-work-kit/' })})}
