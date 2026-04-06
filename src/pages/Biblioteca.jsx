@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { db } from '../firebase'
 import { collection, doc, onSnapshot, setDoc, deleteDoc, addDoc, updateDoc } from 'firebase/firestore'
 import '../styles/biblioteca.css'
+import ImportModal from '../components/ImportModal'
 
 export default function Biblioteca({ showToast }) {
   const [cats, setCats]           = useState([])
@@ -128,6 +129,12 @@ export default function Biblioteca({ showToast }) {
           }
         </div>
 
+        {/* Importar */}
+        <button onClick={() => setImportModal(true)} style={{ flexShrink:0, background:'transparent', border:'1px solid var(--neo-gold2)', borderRadius:'var(--neo-radius-pill)', padding:'8px 12px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:600, letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--neo-gold2)', transition:'all .15s', whiteSpace:'nowrap' }}
+          onMouseEnter={e=>e.currentTarget.style.color='var(--neo-gold)'} onMouseLeave={e=>e.currentTarget.style.color='var(--neo-gold2)'}>
+          ↑ Import
+        </button>
+
         {/* + Artigo */}
         <button className="bib-add-btn" onClick={openAdd}>+ Artigo</button>
       </div>
@@ -199,17 +206,7 @@ export default function Biblioteca({ showToast }) {
     <CatModal open={catModal} cats={cats} arts={arts} onClose={()=>setCatModal(false)} onSave={saveCat} showToast={showToast}/>
 
     {/* MODAL IMPORTAR */}
-    <div className={`neo-overlay ${importModal?'open':''}`}>
-      <div className="neo-modal">
-        <div className="neo-modal-head">Importar artigos<button className="neo-modal-close" onClick={()=>setImportModal(false)}>✕</button></div>
-        <div style={{color:'var(--neo-text2)',fontSize:13,fontWeight:300,lineHeight:1.9,marginBottom:20}}>Importa a partir de CSV ou Excel. Colunas esperadas:</div>
-        <div style={{background:'var(--neo-bg)',padding:'14px 16px',fontFamily:"'Barlow Condensed'",fontSize:11,letterSpacing:'0.1em',color:'var(--neo-gold)',lineHeight:2.4,borderLeft:'2px solid var(--neo-gold2)'}}>
-          REFERÊNCIA · DESCRIÇÃO · CATEGORIA · SUBCATEGORIA<br/>PREÇO · FORNECEDOR · LINK · NOTAS
-        </div>
-        <div style={{marginTop:20,padding:28,background:'var(--neo-bg)',borderRadius:'var(--neo-radius)',boxShadow:'var(--neo-shadow-in)',textAlign:'center',fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--neo-text3)'}}>Próximo módulo</div>
-        <div className="modal-actions"><button className="neo-btn neo-btn-ghost" onClick={()=>setImportModal(false)}>Fechar</button></div>
-      </div>
-    </div>
+    <ImportModal open={importModal} onClose={() => setImportModal(false)} mode="biblioteca" showToast={showToast} />
     </>
   )
 }

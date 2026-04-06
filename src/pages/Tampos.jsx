@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { db } from '../firebase'
 import { collection, doc, onSnapshot, setDoc, deleteDoc, addDoc } from 'firebase/firestore'
 import '../styles/tampos.css'
+import ImportModal from '../components/ImportModal'
 
 const ANIGRACO = {
   GRANITOS:{materiais:[
@@ -248,6 +249,7 @@ export default function Tampos({showToast}){
   const [calculos,setCalculos]=useState([])
   const [orcamentos,setOrcamentos]=useState([])
   const [current,setCurrent]=useState(null)
+  const [importModal,setImportModal]=useState(false)
 
   useEffect(()=>{
     const u1=onSnapshot(collection(db,'tampos'),snap=>setCalculos(snap.docs.map(d=>({id:d.id,...d.data()}))))
@@ -270,12 +272,16 @@ export default function Tampos({showToast}){
     <div className="neo-screen">
       <div className="neo-topbar">
         <span style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:700,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--neo-text)'}}>Tampos</span>
-        {calculos.length>0&&(
-          <button className="neo-btn neo-btn-danger" style={{height:26,fontSize:8}}
-            onClick={()=>{if(confirm('Limpar todos os cálculos?'))calculos.forEach(c=>deleteDoc(doc(db,'tampos',c.id)))}}>
-            Limpar tudo
-          </button>
-        )}
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <button className="neo-btn neo-btn-ghost" style={{height:26,fontSize:9,border:'1px solid var(--neo-gold2)',color:'var(--neo-gold2)',borderRadius:'var(--neo-radius-pill)',padding:'0 12px'}}
+            onClick={()=>setImportModal(true)}>↑ Import</button>
+          {calculos.length>0&&(
+            <button className="neo-btn neo-btn-danger" style={{height:26,fontSize:8}}
+              onClick={()=>{if(confirm('Limpar todos os cálculos?'))calculos.forEach(c=>deleteDoc(doc(db,'tampos',c.id)))}}>
+              Limpar tudo
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="neo-scroll" style={{flex:1,overflowY:'auto',padding:'12px 16px 32px'}}>
@@ -314,6 +320,7 @@ export default function Tampos({showToast}){
         })}
       </div>
     </div>
+    <ImportModal open={importModal} onClose={()=>setImportModal(false)} mode="tampos" showToast={showToast}/>
   )
 }
 
