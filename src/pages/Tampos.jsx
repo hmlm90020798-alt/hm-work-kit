@@ -211,8 +211,7 @@ const TRANSPORTE=[
 ]
 
 const TIPOS_PEDRA=['GRANITOS','SILESTONES','COMPAC','DEKTON']
-const TIPOS_OUTROS=['AGLOMERADO','MADEIRA','FENÓLICO']
-const TIPOS_ALL=[...TIPOS_PEDRA,...TIPOS_OUTROS]
+const TIPOS_ALL=[...TIPOS_PEDRA]
 
 function uuid(){return Math.random().toString(36).slice(2,9)}
 function f2(n){return parseFloat(n||0).toFixed(2)}
@@ -620,18 +619,7 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
             style={{background:'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--neo-gold)',display:'flex',alignItems:'center',gap:6,padding:'8px 0',opacity:0.7}}>
             <span style={{fontSize:10}}>{formulaOpen?'▼':'▶'}</span> Fórmula PVP
           </button>
-          {formulaOpen&&<div className="neo-well" style={{padding:'14px',marginBottom:8}}>
-            <div style={{fontFamily:"'Barlow Condensed'",fontSize:11,color:'var(--neo-text2)',letterSpacing:'0.08em',marginBottom:12}}>
-              PVP = (C1 ÷ (1 − margem)) × 1.23
-            </div>
-            <div style={{display:'flex',alignItems:'center',gap:12}}>
-              <label className="neo-label" style={{marginBottom:0,whiteSpace:'nowrap'}}>Margem %</label>
-              <input type="number" className="neo-input-num" value={margem} onChange={e=>setMargem(parseFloat(e.target.value)||0)} style={{width:70}}/>
-              {TA.c1>0&&<div style={{marginLeft:'auto',fontFamily:"'Barlow Condensed'",fontSize:13,color:'var(--neo-gold)'}}>
-                = {f2((TA.c1/100/(1-margem/100))*1.23)} €
-              </div>}
-            </div>
-          </div>}
+          {formulaOpen&&<FormulaPanel margem={margem} setMargem={setMargem} c1Auto={TA.c1} showToast={showToast}/>}
         </div>
 
         {/* Modo simples — peças */}
@@ -706,11 +694,11 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
           if(!p.desc&&isPedra)return null
           return<div key={p.id}>
             <div style={{padding:'10px 16px 4px',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text)'}}>{p.label}{p.desc?' — '+p.desc:''}{p.espessura?' '+p.espessura:''}</div>
-            {esp&&<RefRow label="Tampo / m²" c1={esp.c1} pvp={esp.pvp} showToast={showToast}/>}
+            {esp&&<RefRow label="Tampo / m²" c1={esp.c1} pvp={esp.pvp} refAnigraco={esp.refAnigraco||null} showToast={showToast}/>}
             {(p.acabamentos||[]).map(a=>{
               const base=acabDisp.find(x=>x.nome===a.nome)
               if(!base)return null
-              return<RefRow key={a.nome} label={a.nome} c1={base.c1} pvp={base.pvp} unidade={base.unidade} showToast={showToast}/>
+              return<RefRow key={a.nome} label={a.nome} c1={base.c1} pvp={base.pvp} unidade={base.unidade} refAnigraco={base.refAnigraco||null} showToast={showToast}/>
             })}
           </div>
         })}
@@ -724,11 +712,11 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
           if(!p.desc)return null
           return<div key={p.id}>
             <div style={{padding:'10px 16px 4px',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-blue,#4a8fa8)'}}>B: {p.label}{p.desc?' — '+p.desc:''}{p.espessura?' '+p.espessura:''}</div>
-            {esp&&<RefRow label="Tampo / m²" c1={esp.c1} pvp={esp.pvp} showToast={showToast}/>}
+            {esp&&<RefRow label="Tampo / m²" c1={esp.c1} pvp={esp.pvp} refAnigraco={esp.refAnigraco||null} showToast={showToast}/>}
             {(p.acabamentos||[]).map(a=>{
               const base=acabDisp.find(x=>x.nome===a.nome)
               if(!base)return null
-              return<RefRow key={a.nome} label={a.nome} c1={base.c1} pvp={base.pvp} unidade={base.unidade} showToast={showToast}/>
+              return<RefRow key={a.nome} label={a.nome} c1={base.c1} pvp={base.pvp} unidade={base.unidade} refAnigraco={base.refAnigraco||null} showToast={showToast}/>
             })}
           </div>
         })}
@@ -776,13 +764,86 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
   )
 }
 
-// ── RefRow — linha de referência com C1 e PVP copiáveis ───────────────────
-function RefRow({label,c1,pvp,unidade,showToast}){
-  return<div style={{display:'flex',alignItems:'center',padding:'9px 16px',gap:10,borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
-    <div style={{flex:1,fontSize:12,color:'var(--neo-text2)',fontWeight:300}}>
-      {label}{unidade&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-text3)',marginLeft:6}}>/{unidade}</span>}
+// ── FormulaPanel — cálculo PVP com C1 automático ou manual ───────────────────
+function FormulaPanel({margem,setMargem,c1Auto,showToast}){
+  const [modo,setModo]=useState('auto')   // 'auto' | 'manual'
+  const [c1Manual,setC1Manual]=useState('')
+
+  const c1Val = modo==='auto' ? c1Auto/100 : (parseFloat(c1Manual)||0)
+  const pvpCalc = c1Val>0 && margem<100 ? (c1Val/(1-margem/100))*1.23 : 0
+
+  const copyPvp=()=>{
+    if(!pvpCalc){showToast('Sem valor para copiar');return}
+    navigator.clipboard.writeText(f2(pvpCalc)).catch(()=>{})
+    showToast('PVP copiado — '+f2(pvpCalc)+' €')
+  }
+
+  return(
+    <div className="neo-well" style={{padding:'14px',marginBottom:8}}>
+      <div style={{fontFamily:"'Barlow Condensed'",fontSize:11,color:'var(--neo-text2)',letterSpacing:'0.08em',marginBottom:12}}>
+        PVP = (C1 ÷ (1 − margem)) × 1.23
+      </div>
+
+      {/* Toggle modo */}
+      <div style={{display:'flex',gap:6,marginBottom:12}}>
+        {['auto','manual'].map(m=>(
+          <button key={m} className={`neo-chip-sm ${modo===m?'active':''}`} onClick={()=>setModo(m)}>
+            {m==='auto'?'C1 do cálculo':'C1 manual'}
+          </button>
+        ))}
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'auto 1fr auto',alignItems:'center',gap:10}}>
+        {/* C1 */}
+        <div>
+          <label className="neo-label" style={{marginBottom:4}}>C1 (€)</label>
+          {modo==='manual'
+            ? <input type="number" className="neo-input-num" value={c1Manual}
+                onChange={e=>setC1Manual(e.target.value)}
+                placeholder="0.00" style={{width:90}}/>
+            : <div style={{fontFamily:"'Barlow Condensed'",fontSize:16,fontWeight:600,color:'var(--neo-text)',textAlign:'right',minWidth:80}}>
+                {c1Val>0?f2(c1Val):'—'}
+              </div>
+          }
+        </div>
+
+        {/* Margem */}
+        <div>
+          <label className="neo-label" style={{marginBottom:4}}>Margem %</label>
+          <input type="number" className="neo-input-num" value={margem}
+            onChange={e=>setMargem(parseFloat(e.target.value)||0)}
+            min={0} max={99} style={{width:'100%'}}/>
+        </div>
+
+        {/* Resultado */}
+        <div style={{textAlign:'right'}}>
+          <label className="neo-label" style={{marginBottom:4}}>PVP</label>
+          <button onClick={copyPvp} className={`neo-copy ${pvpCalc?'':''}` }
+            style={{fontSize:18,fontWeight:700,color:pvpCalc?'var(--neo-gold)':'var(--neo-text3)',background:'transparent',border:'none',cursor:pvpCalc?'pointer':'default',padding:'4px 0',fontFamily:"'Barlow Condensed'",letterSpacing:'0.06em'}}>
+            {pvpCalc?f2(pvpCalc)+' €':'—'}
+            {pvpCalc?<span style={{fontSize:10,marginLeft:6,opacity:.6}}>⎘</span>:null}
+          </button>
+        </div>
+      </div>
     </div>
-    <div style={{display:'flex',gap:8,alignItems:'center'}}>
+  )
+}
+
+// ── RefRow — linha de referência com C1, PVP e ref Anigraco copiáveis ─────────
+function RefRow({label,c1,pvp,unidade,refAnigraco,showToast}){
+  return<div style={{display:'flex',alignItems:'center',padding:'9px 16px',gap:10,borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+    <div style={{flex:1,minWidth:0}}>
+      <div style={{fontSize:12,color:'var(--neo-text2)',fontWeight:300}}>
+        {label}{unidade&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-text3)',marginLeft:6}}>/{unidade}</span>}
+      </div>
+      {refAnigraco&&(
+        <div style={{display:'flex',alignItems:'center',gap:6,marginTop:3}}>
+          <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--neo-text3)'}}>Anigraco</span>
+          <CopyVal val={refAnigraco} label="Ref Anigraco" showToast={showToast} style={{fontSize:10}}/>
+        </div>
+      )}
+    </div>
+    <div style={{display:'flex',gap:8,alignItems:'center',flexShrink:0}}>
       <div style={{textAlign:'right'}}>
         <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'var(--neo-text3)',letterSpacing:'0.1em',marginBottom:2}}>C1</div>
         <CopyVal val={c1fmt(c1)} label="C1" showToast={showToast}/>
