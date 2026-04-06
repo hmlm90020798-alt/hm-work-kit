@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { db } from '../firebase'
-import { collection, doc, onSnapshot, setDoc, deleteDoc, getDocs } from 'firebase/firestore'
+import { doc, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore'
 
 const ORC_ID  = 'ativo'
 const ORC_REF = () => doc(db, 'orcamento_ativo', ORC_ID)
@@ -57,14 +57,15 @@ export default function Orcamentos({ showToast, onOpenTampo }) {
   // Abrir calculadora de Tampos ao clicar num item Tampos
   const handleItemClick = async (item) => {
     if (item.origem !== 'Tampos' || !item.tampoId) return
-    // Ir buscar o cálculo ao Firestore
     try {
-      const snap = await getDocs(collection(db, 'tampos'))
-      const calculo = snap.docs.find(d => d.id === item.tampoId)
-      if (calculo && onOpenTampo) {
-        onOpenTampo({ id: calculo.id, ...calculo.data() })
+      const { getDoc, doc: fsDoc } = await import('firebase/firestore')
+      const snap = await getDoc(fsDoc(db, 'tampos', item.tampoId))
+      if (snap.exists() && onOpenTampo) {
+        onOpenTampo({ id: snap.id, ...snap.data() })
+      } else {
+        showToast('Cálculo não encontrado — pode ter sido eliminado')
       }
-    } catch(e) { showToast('Não foi possível abrir o cálculo') }
+    } catch(e) { showToast('Erro ao abrir calculadora') }
   }
 
   const grupos = items.reduce((acc, i) => {

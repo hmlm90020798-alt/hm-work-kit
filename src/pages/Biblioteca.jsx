@@ -36,6 +36,7 @@ export default function Biblioteca({ showToast }) {
   const [search, setSearch]       = useState('')
   const [sort, setSort]           = useState('ref')
   const [sortOpen, setSortOpen]   = useState(false)
+  const [supplierFilter, setSupplierFilter] = useState('')
   const [catOpen, setCatOpen]     = useState(false)
   const [artModal, setArtModal]   = useState(false)
   const [catModal, setCatModal]   = useState(false)
@@ -75,7 +76,15 @@ export default function Biblioteca({ showToast }) {
   const subs = activeCatObj?.subs?.length > 0 ? activeCatObj.subs : []
   const countFor = (name) => name === 'Todos' ? arts.length : arts.filter(a => a.cat === name).length
 
-  const selectCat = (name) => { setActiveCat(name); setActiveSub(''); setCatOpen(false) }
+  const selectCat = (name) => { setActiveCat(name); setActiveSub(''); setSupplierFilter(''); setCatOpen(false) }
+
+  // Fornecedores disponíveis na categoria/sub actual
+  const suppliersAvailable = [...new Set(
+    arts.filter(a => {
+      if(activeCat==='Todos') return true
+      return activeSub ? (a.cat===activeCat&&a.sub===activeSub) : a.cat===activeCat
+    }).map(a=>a.supplier).filter(Boolean)
+  )].sort()
 
   const baseFiltered = arts.filter(a => {
     const mc = activeCat === 'Todos' ? true
@@ -83,7 +92,8 @@ export default function Biblioteca({ showToast }) {
       : a.cat === activeCat
     const q = search.toLowerCase()
     const mq = !q || [a.ref,a.desc,a.cat,a.sub,a.supplier,a.notes].some(v => v && v.toLowerCase().includes(q))
-    return mc && mq
+    const ms = !supplierFilter || a.supplier === supplierFilter
+    return mc && mq && ms
   })
   const filtered = sortArts(baseFiltered, sort)
 
@@ -211,6 +221,17 @@ export default function Biblioteca({ showToast }) {
         </div>
       )}
 
+      {/* FORNECEDORES — só aparece quando há mais de 1 e estamos numa categoria */}
+      {!catOpen && suppliersAvailable.length > 1 && (
+        <div className="bib-subs" style={{borderBottom:'1px solid rgba(255,255,255,0.04)',paddingTop:6,paddingBottom:6}}>
+          <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--neo-text2)',flexShrink:0,alignSelf:'center',marginRight:4}}>Marca</span>
+          <button className={`bib-sub-chip ${supplierFilter===''?'active':''}`} onClick={()=>setSupplierFilter('')}>Todas</button>
+          {suppliersAvailable.map(s=>(
+            <button key={s} className={`bib-sub-chip ${supplierFilter===s?'active':''}`} onClick={()=>setSupplierFilter(s)}>{s}</button>
+          ))}
+        </div>
+      )}
+
       {/* LISTA */}
       <div className="neo-scroll" style={{flex:1,overflowY:'auto'}}>
         {filtered.length===0 && <div className="bib-empty">Nenhum artigo</div>}
@@ -306,7 +327,7 @@ function ArtCard({ art, onEdit, onDel, onStar, showToast, onAddOrc }) {
           {/* Badges linha compacta (fechado) */}
           {!open&&<div style={{display:'flex',alignItems:'center',gap:6,marginTop:2,flexWrap:'nowrap',overflow:'hidden'}}>
             {label&&<span className="bib-badge" style={{color:'var(--neo-text2)',borderColor:'rgba(255,255,255,0.12)'}}>{label}</span>}
-            {art.price>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:11,color:'var(--neo-text2)',letterSpacing:'0.04em',whiteSpace:'nowrap'}}>{art.price.toFixed(2)} €</span>}
+            {art.price>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:700,color:'var(--neo-gold)',letterSpacing:'0.04em',whiteSpace:'nowrap'}}>{art.price.toFixed(2)} €</span>}
             {art.supplier&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.08em',color:'var(--neo-text2)',textTransform:'uppercase',whiteSpace:'nowrap'}}>{art.supplier}</span>}
           </div>}
         </div>

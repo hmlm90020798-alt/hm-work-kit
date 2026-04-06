@@ -252,7 +252,7 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone}){
   const [importModal,setImportModal]=useState(false)
   const [filtroTipo,setFiltroTipo]=useState('TODOS')
   const [matSearch,setMatSearch]=useState('')
-  const [matSort,setMatSort]=useState('grupo')
+  const [matSort,setMatSort]=useState('pvp_asc')
 
   // Abrir calculo vindo de Orçamentos
   useEffect(()=>{
@@ -287,15 +287,9 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone}){
       return tipoOk && searchOk
     })
     .sort((a,b)=>{
-      if(matSort==='pvp_asc'||matSort==='pvp_desc'){
-        const pvpA=Math.min(...Object.values(a.espessuras).map(e=>e.pvp))
-        const pvpB=Math.min(...Object.values(b.espessuras).map(e=>e.pvp))
-        return matSort==='pvp_asc'?pvpA-pvpB:pvpB-pvpA
-      }
-      // grupo: ordenar por grupo depois por desc
-      const ga=a.grupo||'ZZZ', gb=b.grupo||'ZZZ'
-      if(ga!==gb) return ga.localeCompare(gb)
-      return a.desc.localeCompare(b.desc)
+      const pvpA=Math.min(...Object.values(a.espessuras).map(e=>e.pvp))
+      const pvpB=Math.min(...Object.values(b.espessuras).map(e=>e.pvp))
+      return matSort==='pvp_desc'?pvpB-pvpA:pvpA-pvpB
     })
 
   if(current) return <Calculadora current={current} setCurrent={setCurrent}
@@ -366,7 +360,7 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone}){
               </button>
             ))}
             <div style={{marginLeft:'auto',display:'flex',gap:4}}>
-              {[{v:'grupo',l:'Grupo'},{v:'pvp_asc',l:'Preço ↑'},{v:'pvp_desc',l:'Preço ↓'}].map(o=>(
+              {[{v:'pvp_asc',l:'Preço ↑'},{v:'pvp_desc',l:'Preço ↓'}].map(o=>(
                 <button key={o.v} className={`neo-chip-sm ${matSort===o.v?'active':''}`}
                   onClick={()=>setMatSort(o.v)}>{o.l}</button>
               ))}
@@ -615,17 +609,17 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
             const ra=acabDisp.find(a=>a.nome==='RODATAMPO')
             const rActive=(p.acabamentos||[]).find(a=>a.nome==='RODATAMPO')
             if(!ra)return null
-            return<div style={{marginBottom:10,padding:'10px 0',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+            return<div style={{padding:'8px 0',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
               <div style={{display:'flex',alignItems:'center',gap:10}}>
                 <div className={`neo-toggle ${rActive?'on':''}`} onClick={()=>toggleAcab(p.id,ra)}><div className="neo-toggle-knob"/></div>
-                <label className="neo-label" style={{marginBottom:0,flex:1,color:'var(--neo-text)'}}>Rodatampo</label>
+                <span style={{flex:1,fontFamily:"'Barlow Condensed'",fontSize:11,letterSpacing:'0.04em',color:rActive?'var(--neo-text)':'var(--neo-text2)'}}>RODATAMPO</span>
                 {rActive?(
                   <>
                   <input type="number" className="neo-input-num" value={rActive.qty} onChange={e=>updAcabQty(p.id,'RODATAMPO',e.target.value)} placeholder="ml" step="0.01" min="0" style={{width:64}}/>
                   <span style={{fontFamily:"'Barlow Condensed'",fontSize:10,color:'var(--neo-text2)'}}>ml</span>
                   {parseFloat(rActive.qty)>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:13,color:'var(--neo-gold)',minWidth:55,textAlign:'right'}}>{f2(ra.pvp*parseFloat(rActive.qty))} €</span>}
                   </>
-                ):<span style={{fontFamily:"'Barlow Condensed'",fontSize:10,color:'var(--neo-text3)'}}>{f2(ra.pvp)} €/ml</span>}
+                ):<span style={{fontFamily:"'Barlow Condensed'",fontSize:10,color:'var(--neo-text2)'}}>{f2(ra.pvp)} €/ml</span>}
               </div>
             </div>
           })()}
@@ -812,24 +806,31 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
 
       {/* ── TAB REFERÊNCIAS ── */}
       {tab==='resumo'&&<div style={{padding:'8px 0 32px'}}>
-        <div style={{padding:'8px 16px 12px',fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--neo-text3)'}}>
-          Valores de referência por unidade — copiáveis para o programa de orçamentação
+        <div style={{padding:'8px 16px 12px',fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--neo-text2)'}}>
+          Referências por unidade — copiáveis para o programa de orçamentação
         </div>
 
         {(current.pecas||[]).map(p=>{
           const isPedra=TIPOS_PEDRA.includes(p.tipo)
           const mat=ANIGRACO[p.tipo]
-          const ref=mat?.materiais.find(m=>m.desc===p.desc&&m.grupo===p.grupo)||mat?.materiais.find(m=>m.desc===p.desc)
-          const esp=ref?.espessuras[p.espessura]
+          const matRef=mat?.materiais.find(m=>m.desc===p.desc&&m.grupo===p.grupo)||mat?.materiais.find(m=>m.desc===p.desc)
+          const esp=matRef?.espessuras[p.espessura]
           const acabDisp=mat?.acabamentos||[]
+          const res=calcPeca(p)
           if(!p.desc&&isPedra)return null
-          return<div key={p.id}>
-            <div style={{padding:'10px 16px 4px',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text)'}}>{p.label}{p.desc?' — '+p.desc:''}{p.espessura?' '+p.espessura:''}</div>
-            {esp&&<RefRow label="Tampo / m²" c1={esp.c1} pvp={esp.pvp} refAnigraco={esp.refAnigraco||null} showToast={showToast}/>}
+          return<div key={p.id} style={{marginBottom:8}}>
+            <div style={{padding:'10px 16px 4px',display:'flex',alignItems:'baseline',gap:10}}>
+              <span style={{fontFamily:"'Barlow Condensed'",fontSize:11,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text)'}}>{p.label}{p.desc?' — '+p.desc:''}{p.espessura?' '+p.espessura:''}</span>
+              {res.m2>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:10,color:'var(--neo-gold)',letterSpacing:'0.06em'}}>{res.m2.toFixed(3)} m²</span>}
+              {res.pvp>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:10,color:'var(--neo-text2)',marginLeft:'auto'}}>{f2(res.pvp)} €</span>}
+            </div>
+            {esp&&<RefRow label="Tampo / m²" c1={esp.c1} pvp={esp.pvp} refAnigraco={esp.refAnigraco||null} calc={res.m2>0?`${res.m2.toFixed(3)} m² × ${f2(esp.pvp)} = ${f2(res.pvpTampo)} €`:null} showToast={showToast}/>}
             {(p.acabamentos||[]).map(a=>{
               const base=acabDisp.find(x=>x.nome===a.nome)
               if(!base)return null
-              return<RefRow key={a.nome} label={a.nome} c1={base.c1} pvp={base.pvp} unidade={base.unidade} refAnigraco={base.refAnigraco||null} showToast={showToast}/>
+              const qty=base.unidade==='ml'?parseFloat(a.qty)||0:parseInt(a.qty)||0
+              const tot=qty>0?base.pvp*qty:null
+              return<RefRow key={a.nome} label={a.nome} c1={base.c1} pvp={base.pvp} unidade={base.unidade} refAnigraco={base.refAnigraco||null} calc={qty>0?`${qty} ${base.unidade} = ${f2(tot)} €`:null} showToast={showToast}/>
             })}
           </div>
         })}
@@ -837,17 +838,24 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
         {/* Opção B */}
         {current.opcaoB&&(current.opcaoB?.pecas||[]).map(p=>{
           const mat=ANIGRACO[p.tipo]
-          const ref=mat?.materiais.find(m=>m.desc===p.desc&&m.grupo===p.grupo)||mat?.materiais.find(m=>m.desc===p.desc)
-          const esp=ref?.espessuras[p.espessura]
+          const matRef=mat?.materiais.find(m=>m.desc===p.desc&&m.grupo===p.grupo)||mat?.materiais.find(m=>m.desc===p.desc)
+          const esp=matRef?.espessuras[p.espessura]
           const acabDisp=mat?.acabamentos||[]
+          const res=calcPeca(p)
           if(!p.desc)return null
-          return<div key={p.id}>
-            <div style={{padding:'10px 16px 4px',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-blue,#4a8fa8)'}}>B: {p.label}{p.desc?' — '+p.desc:''}{p.espessura?' '+p.espessura:''}</div>
-            {esp&&<RefRow label="Tampo / m²" c1={esp.c1} pvp={esp.pvp} refAnigraco={esp.refAnigraco||null} showToast={showToast}/>}
+          return<div key={p.id} style={{marginBottom:8}}>
+            <div style={{padding:'10px 16px 4px',display:'flex',alignItems:'baseline',gap:10}}>
+              <span style={{fontFamily:"'Barlow Condensed'",fontSize:11,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',color:'#4a8fa8'}}>B: {p.label}{p.desc?' — '+p.desc:''}{p.espessura?' '+p.espessura:''}</span>
+              {res.m2>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:10,color:'#4a8fa8',letterSpacing:'0.06em'}}>{res.m2.toFixed(3)} m²</span>}
+              {res.pvp>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:10,color:'var(--neo-text2)',marginLeft:'auto'}}>{f2(res.pvp)} €</span>}
+            </div>
+            {esp&&<RefRow label="Tampo / m²" c1={esp.c1} pvp={esp.pvp} refAnigraco={esp.refAnigraco||null} calc={res.m2>0?`${res.m2.toFixed(3)} m² × ${f2(esp.pvp)} = ${f2(res.pvpTampo)} €`:null} showToast={showToast}/>}
             {(p.acabamentos||[]).map(a=>{
               const base=acabDisp.find(x=>x.nome===a.nome)
               if(!base)return null
-              return<RefRow key={a.nome} label={a.nome} c1={base.c1} pvp={base.pvp} unidade={base.unidade} refAnigraco={base.refAnigraco||null} showToast={showToast}/>
+              const qty=base.unidade==='ml'?parseFloat(a.qty)||0:parseInt(a.qty)||0
+              const tot=qty>0?base.pvp*qty:null
+              return<RefRow key={a.nome} label={a.nome} c1={base.c1} pvp={base.pvp} unidade={base.unidade} refAnigraco={base.refAnigraco||null} calc={qty>0?`${qty} ${base.unidade} = ${f2(tot)} €`:null} showToast={showToast}/>
             })}
           </div>
         })}
@@ -884,7 +892,8 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
       {matModal&&<MaterialModal tipoProjeto={current.tipo}
         onSelect={(tipo,desc,grupo,espessura)=>{
           if(matModal==='B'){
-            upd('opcaoB',{...current.opcaoB,pecas:(current.opcaoB?.pecas||[]).map((p,i)=>i===0?{...p,tipo,desc,grupo,espessura,acabamentos:[]}:p)})
+            // Manter acabamentos da peça B ao trocar de material
+            upd('opcaoB',{...current.opcaoB,pecas:(current.opcaoB?.pecas||[]).map((p,i)=>i===0?{...p,tipo,desc,grupo,espessura}:p)})
           }else{
             upd('pecas',current.pecas.map(p=>p.id===matModal?{...p,tipo,desc,grupo,espessura,acabamentos:[]}:p))
           }
@@ -960,28 +969,31 @@ function FormulaPanel({margem,setMargem,c1Auto,showToast}){
   )
 }
 
-// ── RefRow — linha de referência com C1, PVP e ref Anigraco copiáveis ─────────
-function RefRow({label,c1,pvp,unidade,refAnigraco,showToast}){
-  return<div style={{display:'flex',alignItems:'center',padding:'9px 16px',gap:10,borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
-    <div style={{flex:1,minWidth:0}}>
-      <div style={{fontSize:12,color:'var(--neo-text2)',fontWeight:300}}>
-        {label}{unidade&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-text3)',marginLeft:6}}>/{unidade}</span>}
-      </div>
-      {refAnigraco&&(
-        <div style={{display:'flex',alignItems:'center',gap:6,marginTop:3}}>
-          <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--neo-text3)'}}>Anigraco</span>
-          <CopyVal val={refAnigraco} label="Ref Anigraco" showToast={showToast} style={{fontSize:10}}/>
+// ── RefRow — linha de referência com C1, PVP, ref Anigraco e cálculo ─────────
+function RefRow({label,c1,pvp,unidade,refAnigraco,calc,showToast}){
+  return<div style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+    <div style={{display:'flex',alignItems:'center',padding:'9px 16px',gap:10}}>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:12,color:'var(--neo-text)',fontWeight:400}}>
+          {label}{unidade&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-text2)',marginLeft:6}}>/{unidade}</span>}
         </div>
-      )}
-    </div>
-    <div style={{display:'flex',gap:8,alignItems:'center',flexShrink:0}}>
-      <div style={{textAlign:'right'}}>
-        <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'var(--neo-text3)',letterSpacing:'0.1em',marginBottom:2}}>C1</div>
-        <CopyVal val={c1fmt(c1)} label="C1" showToast={showToast}/>
+        {refAnigraco&&(
+          <div style={{display:'flex',alignItems:'center',gap:6,marginTop:3}}>
+            <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--neo-text2)'}}>Anigraco</span>
+            <CopyVal val={refAnigraco} label="Ref Anigraco" showToast={showToast}/>
+          </div>
+        )}
+        {calc&&<div style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-gold)',letterSpacing:'0.06em',marginTop:3}}>{calc}</div>}
       </div>
-      <div style={{textAlign:'right'}}>
-        <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'var(--neo-text3)',letterSpacing:'0.1em',marginBottom:2}}>PVP</div>
-        <CopyVal val={f2(pvp)} label="PVP" showToast={showToast} gold/>
+      <div style={{display:'flex',gap:8,alignItems:'center',flexShrink:0}}>
+        <div style={{textAlign:'right'}}>
+          <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'var(--neo-text2)',letterSpacing:'0.1em',marginBottom:2}}>C1</div>
+          <CopyVal val={c1fmt(c1)} label="C1" showToast={showToast}/>
+        </div>
+        <div style={{textAlign:'right'}}>
+          <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'var(--neo-text2)',letterSpacing:'0.1em',marginBottom:2}}>PVP</div>
+          <CopyVal val={f2(pvp)} label="PVP" showToast={showToast} gold/>
+        </div>
       </div>
     </div>
   </div>
