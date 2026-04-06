@@ -5,12 +5,37 @@ import '../styles/biblioteca.css'
 import ImportModal from '../components/ImportModal'
 import { addToOrcamento } from '../hooks/useOrcamento'
 
+const SORT_OPTS = [
+  { value:'ref',      label:'Referência' },
+  { value:'desc',     label:'Nome A-Z'   },
+  { value:'price_asc',label:'Preço ↑'   },
+  { value:'price_desc',label:'Preço ↓'  },
+  { value:'supplier', label:'Fornecedor' },
+  { value:'star',     label:'Estrelas'   },
+]
+
+function sortArts(arts, sort) {
+  return [...arts].sort((a,b) => {
+    if (sort==='star') {
+      if (b.star && !a.star) return 1
+      if (a.star && !b.star) return -1
+    }
+    if (sort==='price_asc')  return (a.price||0)-(b.price||0)
+    if (sort==='price_desc') return (b.price||0)-(a.price||0)
+    if (sort==='supplier')   return (a.supplier||'').localeCompare(b.supplier||'')
+    if (sort==='desc')       return (a.desc||'').localeCompare(b.desc||'')
+    return (a.ref||'').localeCompare(b.ref||'')
+  })
+}
+
 export default function Biblioteca({ showToast }) {
   const [cats, setCats]           = useState([])
   const [arts, setArts]           = useState([])
   const [activeCat, setActiveCat] = useState('Todos')
   const [activeSub, setActiveSub] = useState('')
   const [search, setSearch]       = useState('')
+  const [sort, setSort]           = useState('ref')
+  const [sortOpen, setSortOpen]   = useState(false)
   const [catOpen, setCatOpen]     = useState(false)
   const [artModal, setArtModal]   = useState(false)
   const [catModal, setCatModal]   = useState(false)
@@ -50,13 +75,9 @@ export default function Biblioteca({ showToast }) {
   const subs = activeCatObj?.subs?.length > 0 ? activeCatObj.subs : []
   const countFor = (name) => name === 'Todos' ? arts.length : arts.filter(a => a.cat === name).length
 
-  const selectCat = (name) => {
-    setActiveCat(name)
-    setActiveSub('')
-    setCatOpen(false)
-  }
+  const selectCat = (name) => { setActiveCat(name); setActiveSub(''); setCatOpen(false) }
 
-  const filtered = arts.filter(a => {
+  const baseFiltered = arts.filter(a => {
     const mc = activeCat === 'Todos' ? true
       : activeSub ? (a.cat === activeCat && a.sub === activeSub)
       : a.cat === activeCat
@@ -64,6 +85,7 @@ export default function Biblioteca({ showToast }) {
     const mq = !q || [a.ref,a.desc,a.cat,a.sub,a.supplier,a.notes].some(v => v && v.toLowerCase().includes(q))
     return mc && mq
   })
+  const filtered = sortArts(baseFiltered, sort)
 
   const catOptions = cats.flatMap(c => [
     <option key={c.id} value={c.name+'|'}>{c.name}</option>,
@@ -85,10 +107,16 @@ export default function Biblioteca({ showToast }) {
   const saveArt = async () => {
     if (!form.ref.trim()||!form.desc.trim()) { showToast('Referência e descrição obrigatórias'); return }
     const parts = (form.cat+(form.sub?'|'+form.sub:'|')).split('|')
-    const data = {ref:form.ref.trim(),desc:form.desc.trim(),cat:parts[0],sub:parts[1]||'',price:parseFloat(form.price)||0,supplier:form.supplier.trim(),link:form.link.trim(),notes:form.notes.trim()}
+    const data = {ref:form.ref.trim(),desc:form.desc.trim(),cat:parts[0],sub:parts[1]||'',price:parseFloat(form.price)||0,supplier:form.supplier.trim(),link:form.link.trim(),notes:form.notes.trim(),star:false}
     try {
-      if (editId) { await updateDoc(doc(db,'artigos',editId),data); showToast('Artigo atualizado') }
-      else        { await addDoc(collection(db,'artigos'),data);     showToast('Artigo adicionado') }
+      if (editId) {
+        const prev = arts.find(a=>a.id===editId)
+        await updateDoc(doc(db,'artigos',editId),{...data,star:prev?.star||false})
+        showToast('Artigo atualizado')
+      } else {
+        await addDoc(collection(db,'artigos'),data)
+        showToast('Artigo adicionado')
+      }
       setArtModal(false)
     } catch(e) { showToast('Erro ao guardar') }
   }
@@ -99,12 +127,17 @@ export default function Biblioteca({ showToast }) {
     showToast('Eliminado')
   }
 
+  const toggleStar = async (a) => {
+    await updateDoc(doc(db,'artigos',a.id), {star:!a.star})
+  }
+
   const saveCat = async (cat) => {
     await setDoc(doc(db,'categorias',cat.id), {name:cat.name,subs:cat.subs})
   }
 
   const L = { fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:600, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--neo-text2)', display:'block', marginBottom:8 }
   const I = { width:'100%', background:'var(--neo-bg)', border:'none', borderRadius:'var(--neo-radius-sm)', boxShadow:'var(--neo-shadow-in-sm)', padding:'10px 14px', fontFamily:"'Barlow'", fontSize:13, fontWeight:300, color:'var(--neo-text)', outline:'none', transition:'box-shadow .2s' }
+  const sortLabel = SORT_OPTS.find(o=>o.value===sort)?.label || 'Ordenar'
 
   return (
     <>
@@ -112,37 +145,46 @@ export default function Biblioteca({ showToast }) {
 
       {/* TOPBAR */}
       <div className="bib-topbar">
-
-        {/* Botão categoria */}
-        <button className={`bib-cat-btn ${catOpen?'open':''}`} onClick={() => setCatOpen(o=>!o)}>
-          <span className="bib-cat-btn-label">
-            {activeCat}{activeSub ? ' · '+activeSub : ''}
-          </span>
+        <button className={`bib-cat-btn ${catOpen?'open':''}`} onClick={() => { setCatOpen(o=>!o); setSortOpen(false) }}>
+          <span className="bib-cat-btn-label">{activeCat}{activeSub ? ' · '+activeSub : ''}</span>
           <span className="bib-cat-btn-arrow">▼</span>
         </button>
 
-        {/* Pesquisa */}
         <div style={{flex:1,position:'relative'}}>
           <input className="bib-search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Pesquisar artigo, referência…"/>
           {search
-            ? <button onClick={()=>setSearch('')} style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text3)',fontSize:13,lineHeight:1}}>✕</button>
-            : <span style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',color:'var(--neo-text3)',fontSize:14,pointerEvents:'none'}}>⌕</span>
+            ? <button onClick={()=>setSearch('')} style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text2)',fontSize:13,lineHeight:1}}>✕</button>
+            : <span style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',color:'var(--neo-text2)',fontSize:14,pointerEvents:'none'}}>⌕</span>
           }
         </div>
 
-        {/* Importar */}
-        <button onClick={() => setImportModal(true)} style={{ flexShrink:0, background:'transparent', border:'1px solid var(--neo-gold2)', borderRadius:'var(--neo-radius-pill)', padding:'8px 12px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:600, letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--neo-gold2)', transition:'all .15s', whiteSpace:'nowrap' }}
-          onMouseEnter={e=>e.currentTarget.style.color='var(--neo-gold)'} onMouseLeave={e=>e.currentTarget.style.color='var(--neo-gold2)'}>
+        {/* Ordenar */}
+        <div style={{position:'relative',flexShrink:0}}>
+          <button onClick={()=>{setSortOpen(o=>!o);setCatOpen(false)}} style={{background:'var(--neo-bg2)',border:'none',borderRadius:'var(--neo-radius-pill)',padding:'7px 12px',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-text2)',boxShadow:'var(--neo-shadow-out-sm)',display:'flex',alignItems:'center',gap:5,whiteSpace:'nowrap'}}>
+            <span style={{fontSize:11}}>⇅</span> {sortLabel}
+          </button>
+          {sortOpen&&(
+            <div style={{position:'absolute',top:'calc(100% + 6px)',right:0,background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out)',zIndex:50,minWidth:140,overflow:'hidden'}}>
+              {SORT_OPTS.map(o=>(
+                <button key={o.value} onClick={()=>{setSort(o.value);setSortOpen(false)}}
+                  style={{display:'block',width:'100%',padding:'10px 14px',background:sort===o.value?'var(--neo-bg)':'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.1em',textTransform:'uppercase',color:sort===o.value?'var(--neo-gold)':'var(--neo-text2)',textAlign:'left',transition:'background .12s'}}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <button onClick={() => setImportModal(true)} style={{flexShrink:0,background:'transparent',border:'1px solid var(--neo-gold2)',borderRadius:'var(--neo-radius-pill)',padding:'7px 12px',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:600,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--neo-gold)',transition:'all .15s',whiteSpace:'nowrap'}}>
           ↑ Import
         </button>
 
-        {/* + Artigo */}
         <button className="bib-add-btn" onClick={openAdd}>+ Artigo</button>
       </div>
 
-      {/* PAINEL CATEGORIAS — integrado no layout, empurra o conteúdo */}
+      {/* PAINEL CATEGORIAS */}
       <div className={`bib-cat-panel ${catOpen?'open':''}`}>
-        <div style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--neo-text3)',marginBottom:10}}>
+        <div style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--neo-text2)',marginBottom:10}}>
           {filtered.length} artigo{filtered.length!==1?'s':''}
         </div>
         <div className="bib-cat-grid">
@@ -173,7 +215,11 @@ export default function Biblioteca({ showToast }) {
       <div className="neo-scroll" style={{flex:1,overflowY:'auto'}}>
         {filtered.length===0 && <div className="bib-empty">Nenhum artigo</div>}
         {filtered.map(a => (
-          <ArtCard key={a.id} art={a} onEdit={openEdit} onDel={delArt} showToast={showToast}
+          <ArtCard key={a.id} art={a}
+            onEdit={openEdit}
+            onDel={delArt}
+            onStar={toggleStar}
+            showToast={showToast}
             onAddOrc={() => addToOrcamento({ ref:a.ref, desc:a.desc, cat:a.cat, price:a.price||0, origem:'Biblioteca' }, showToast)}/>
         ))}
       </div>
@@ -204,63 +250,102 @@ export default function Biblioteca({ showToast }) {
       </div>
     </div>
 
-    {/* MODAL CATEGORIAS */}
     <CatModal open={catModal} cats={cats} arts={arts} onClose={()=>setCatModal(false)} onSave={saveCat} showToast={showToast}/>
-
-    {/* MODAL IMPORTAR */}
     <ImportModal open={importModal} onClose={() => setImportModal(false)} mode="biblioteca" showToast={showToast} />
     </>
   )
 }
 
-// ── ArtCard ──────────────────────────────────────────────────────────────────
-function ArtCard({ art, onEdit, onDel, showToast, onAddOrc }) {
+// ── ArtCard — card expansível com estrela, link alinhado, contraste melhorado ──
+function ArtCard({ art, onEdit, onDel, onStar, showToast, onAddOrc }) {
+  const [open,   setOpen]   = useState(false)
   const [copied, setCopied] = useState(false)
   const [added,  setAdded]  = useState(false)
   const label = art.sub ? art.cat+' · '+art.sub : art.cat
 
-  const copy = () => {
+  const copy = (e) => {
+    e.stopPropagation()
     navigator.clipboard.writeText(art.ref).catch(()=>{})
     setCopied(true); setTimeout(()=>setCopied(false),1600)
     showToast('Referência copiada — '+art.ref)
   }
 
-  const handleAddOrc = () => {
+  const handleAddOrc = (e) => {
+    e.stopPropagation()
     onAddOrc()
     setAdded(true); setTimeout(()=>setAdded(false),1600)
   }
 
+  const handleStar = (e) => {
+    e.stopPropagation()
+    onStar(art)
+  }
+
   return (
-    <div className="bib-art-card">
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
-        <div style={{display:'flex',alignItems:'center',gap:10,minWidth:0}}>
-          <span className="bib-art-ref">{art.ref}</span>
-          <button className={`bib-copy-btn ${copied?'copied':''}`} onClick={copy}>{copied?'✓':'⎘'}</button>
+    <div className={`bib-art-card ${open?'expanded':''} ${art.star?'starred':''}`} onClick={()=>setOpen(o=>!o)}>
+
+      {/* ── LINHA PRINCIPAL (sempre visível) ── */}
+      <div style={{display:'flex',alignItems:'center',gap:8}}>
+
+        {/* Estrela */}
+        <button onClick={handleStar} style={{background:'transparent',border:'none',cursor:'pointer',fontSize:14,lineHeight:1,padding:'2px',flexShrink:0,color:art.star?'#f0c040':'var(--neo-text3)',transition:'color .15s'}}>
+          {art.star?'★':'☆'}
+        </button>
+
+        {/* Ref + copy */}
+        <div style={{display:'flex',alignItems:'center',gap:8,minWidth:0,flex:'0 0 auto'}}>
+          <span className="bib-art-ref" style={{color:'var(--neo-gold)',fontSize:16}}>{art.ref}</span>
+          <button onClick={copy} className={`bib-copy-btn ${copied?'copied':''}`} style={{color:copied?'var(--neo-gold)':'var(--neo-text2)'}}>{copied?'✓':'⎘'}</button>
         </div>
-        <div style={{display:'flex',gap:6,flexShrink:0}}>
-          {/* + Orçamento */}
-          <button onClick={handleAddOrc} style={{ padding:'4px 10px', borderRadius:'var(--neo-radius-pill)', border:'none', background: added ? 'linear-gradient(145deg,#d4b87a,#b8924a)' : 'var(--neo-bg2)', boxShadow: added ? 'var(--neo-shadow-in-sm),var(--neo-glow-gold)' : 'var(--neo-shadow-out-sm)', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color: added ? '#1a1610' : 'var(--neo-text3)', transition:'all .2s', whiteSpace:'nowrap' }}>
-            {added ? '✓ Orç' : '+ Orç'}
+
+        {/* Descrição (truncada quando fechado) */}
+        <div style={{flex:1,minWidth:0,overflow:'hidden'}}>
+          <div style={{fontSize:13,color:'var(--neo-text)',fontWeight:300,whiteSpace:open?'normal':'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.4}}>
+            {art.desc}
+          </div>
+          {/* Badges linha compacta (fechado) */}
+          {!open&&<div style={{display:'flex',alignItems:'center',gap:6,marginTop:2,flexWrap:'nowrap',overflow:'hidden'}}>
+            {label&&<span className="bib-badge" style={{color:'var(--neo-text2)',borderColor:'rgba(255,255,255,0.12)'}}>{label}</span>}
+            {art.price>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:11,color:'var(--neo-text2)',letterSpacing:'0.04em',whiteSpace:'nowrap'}}>{art.price.toFixed(2)} €</span>}
+            {art.supplier&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.08em',color:'var(--neo-text2)',textTransform:'uppercase',whiteSpace:'nowrap'}}>{art.supplier}</span>}
+          </div>}
+        </div>
+
+        {/* Ícones direita */}
+        <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}} onClick={e=>e.stopPropagation()}>
+          <button onClick={handleAddOrc} style={{padding:'4px 10px',borderRadius:'var(--neo-radius-pill)',border:'none',background:added?'linear-gradient(145deg,#d4b87a,#b8924a)':'var(--neo-bg2)',boxShadow:added?'var(--neo-shadow-in-sm),var(--neo-glow-gold)':'var(--neo-shadow-out-sm)',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:added?'#1a1610':'var(--neo-text2)',transition:'all .2s',whiteSpace:'nowrap'}}>
+            {added?'✓ Orç':'+ Orç'}
           </button>
-          {art.link && <a href={art.link} target="_blank" rel="noreferrer" style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-text3)',textDecoration:'none',padding:'6px 2px'}}>↗</a>}
-          <button className="bib-act-btn" onClick={()=>onEdit(art)}>✎</button>
-          <button className="bib-act-btn del" onClick={()=>onDel(art.id,art.desc)}>✕</button>
+          {art.link&&(
+            <a href={art.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
+              style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:28,height:28,borderRadius:'var(--neo-radius-pill)',background:'var(--neo-bg2)',boxShadow:'var(--neo-shadow-out-sm)',color:'var(--neo-text2)',fontSize:12,textDecoration:'none',transition:'all .15s',flexShrink:0}}
+              title={art.link}>↗</a>
+          )}
+          <button className="bib-act-btn" onClick={e=>{e.stopPropagation();onEdit(art)}} style={{color:'var(--neo-text2)'}}>✎</button>
+          <button className="bib-act-btn del" onClick={e=>{e.stopPropagation();onDel(art.id,art.desc)}}>✕</button>
         </div>
       </div>
-      <div className="bib-art-name">{art.desc}</div>
-      <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-        <span className="bib-badge">{label}</span>
-        {art.price>0 && <span style={{fontFamily:"'Barlow Condensed'",fontSize:12,color:'var(--neo-text2)',letterSpacing:'0.04em'}}>{art.price.toFixed(2)} €</span>}
-        {art.supplier && <span style={{fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.08em',color:'var(--neo-text3)',textTransform:'uppercase'}}>{art.supplier}</span>}
-        {art.notes && <span className="bib-art-note">{art.notes}</span>}
-      </div>
+
+      {/* ── DETALHE EXPANDIDO ── */}
+      {open&&(
+        <div style={{marginTop:12,paddingTop:12,borderTop:'1px solid rgba(255,255,255,0.06)'}}>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:art.notes?8:0}}>
+            <span className="bib-badge" style={{color:'var(--neo-text2)',borderColor:'rgba(255,255,255,0.12)'}}>{label}</span>
+            {art.price>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:12,color:'var(--neo-text2)',letterSpacing:'0.04em'}}>{art.price.toFixed(2)} €</span>}
+            {art.supplier&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.1em',color:'var(--neo-text2)',textTransform:'uppercase',padding:'3px 8px',background:'var(--neo-bg)',borderRadius:'var(--neo-radius-pill)',boxShadow:'var(--neo-shadow-in-sm)'}}>{art.supplier}</span>}
+          </div>
+          {art.notes&&<div style={{fontSize:12,fontWeight:300,color:'var(--neo-text2)',lineHeight:1.6,marginTop:6}}>{art.notes}</div>}
+          {art.link&&<div style={{marginTop:6}}><a href={art.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.1em',color:'var(--neo-gold2)',textDecoration:'none'}}>{art.link}</a></div>}
+        </div>
+      )}
     </div>
   )
 }
 
-// ── CatModal ─────────────────────────────────────────────────────────────────
+// ── CatModal ──────────────────────────────────────────────────────────────────
 function CatModal({ open, cats, arts, onClose, onSave, showToast }) {
   const [newCat, setNewCat] = useState('')
+  const I = {flex:1,background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-in-sm)',padding:'8px 12px',fontFamily:"'Barlow'",fontSize:13,fontWeight:300,color:'var(--neo-text)',outline:'none'}
 
   const addCat = async () => {
     const v=newCat.trim(); if(!v)return
@@ -278,12 +363,7 @@ function CatModal({ open, cats, arts, onClose, onSave, showToast }) {
     if((cat.subs||[]).includes(val.trim())){showToast('Já existe');return}
     await onSave({...cat,subs:[...(cat.subs||[]),val.trim()]}); showToast('Subcategoria adicionada')
   }
-  const removeSub = async (cat,sub) => {
-    await onSave({...cat,subs:(cat.subs||[]).filter(s=>s!==sub)})
-  }
-
-  const L = {fontFamily:"'Barlow Condensed'",fontSize:9,fontWeight:600,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--neo-text2)',display:'block',marginBottom:8}
-  const I = {flex:1,background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-in-sm)',padding:'8px 12px',fontFamily:"'Barlow'",fontSize:13,fontWeight:300,color:'var(--neo-text)',outline:'none'}
+  const removeSub = async (cat,sub) => { await onSave({...cat,subs:(cat.subs||[]).filter(s=>s!==sub)}) }
 
   return (
     <div className={`neo-overlay ${open?'open':''}`}>
@@ -302,7 +382,7 @@ function CatModal({ open, cats, arts, onClose, onSave, showToast }) {
                   <button onClick={()=>removeSub(cat,s)} style={{background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text3)',fontSize:11}}>✕</button>
                 </div>
               ))}
-              <SubAdd onAdd={(v)=>addSub(cat,v)} catName={cat.name}/>
+              <SubAdd onAdd={(v)=>addSub(cat,v)}/>
             </div>
           ))}
         </div>
@@ -318,12 +398,12 @@ function CatModal({ open, cats, arts, onClose, onSave, showToast }) {
   )
 }
 
-function SubAdd({ onAdd, catName }) {
+function SubAdd({ onAdd }) {
   const [v,setV]=useState('')
-  const I = {flex:1,background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-in-sm)',padding:'6px 10px',fontFamily:"'Barlow'",fontSize:12,fontWeight:300,color:'var(--neo-text)',outline:'none'}
+  const I={flex:1,background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-in-sm)',padding:'6px 10px',fontFamily:"'Barlow'",fontSize:12,fontWeight:300,color:'var(--neo-text)',outline:'none'}
   return(
     <div style={{display:'flex',gap:8,marginTop:8,paddingLeft:12}}>
-      <input value={v} onChange={e=>setV(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){onAdd(v);setV('')}}} placeholder={'+ subcategoria…'} style={I}/>
+      <input value={v} onChange={e=>setV(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){onAdd(v);setV('')}}} placeholder='+ subcategoria…' style={I}/>
       <button onClick={()=>{onAdd(v);setV('')}} className="neo-btn neo-btn-ghost" style={{height:30,fontSize:9,flexShrink:0}}>Add</button>
     </div>
   )

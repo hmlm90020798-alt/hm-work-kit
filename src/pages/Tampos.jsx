@@ -215,7 +215,7 @@ const TIPOS_ALL=[...TIPOS_PEDRA]
 
 function uuid(){return Math.random().toString(36).slice(2,9)}
 function f2(n){return parseFloat(n||0).toFixed(2)}
-function c1fmt(c1){return (c1/100).toFixed(2)}
+function c1fmt(c1){return Math.round(c1).toString()}  // cêntimos inteiros, ex: 21519
 
 function calcPeca(p){
   const m2=(p.segmentos||[]).reduce((s,sg)=>s+(parseFloat(sg.comp)||0)*(parseFloat(sg.larg)||0),0)
@@ -250,6 +250,8 @@ export default function Tampos({showToast}){
   const [orcamentos,setOrcamentos]=useState([])
   const [current,setCurrent]=useState(null)
   const [importModal,setImportModal]=useState(false)
+  const [filtroTipo,setFiltroTipo]=useState('TODOS')
+  const [matSearch,setMatSearch]=useState('')
 
   useEffect(()=>{
     const u1=onSnapshot(collection(db,'tampos'),snap=>setCalculos(snap.docs.map(d=>({id:d.id,...d.data()}))))
@@ -265,15 +267,33 @@ export default function Tampos({showToast}){
     return{pvp:pvp-desc,c1}
   }
 
+  // Materiais filtrados para a listagem
+  const todosOsMateriais = TIPOS_ALL.flatMap(tipo=>
+    (ANIGRACO[tipo]?.materiais||[]).map(m=>({...m,tipo}))
+  )
+  const matsFiltrados = todosOsMateriais.filter(m=>{
+    const tipoOk = filtroTipo==='TODOS' || m.tipo===filtroTipo
+    const searchOk = !matSearch || m.desc.toLowerCase().includes(matSearch.toLowerCase()) || m.tipo.toLowerCase().includes(matSearch.toLowerCase())
+    return tipoOk && searchOk
+  })
+
   if(current) return <Calculadora current={current} setCurrent={setCurrent}
-    orcamentos={orcamentos} showToast={showToast} onBack={()=>setCurrent(null)}/>
+    orcamentos={orcamentos} showToast={showToast} onBack={async()=>{
+      // Auto-guardar se tiver nome ou peças preenchidas
+      if(current.nome?.trim()||(current.pecas||[]).some(p=>p.desc)){
+        const data={...current};delete data.id
+        if(current.id){await setDoc(doc(db,'tampos',current.id),data)}
+        else{const r=await addDoc(collection(db,'tampos'),data);setCurrent(c=>({...c,id:r.id}))}
+      }
+      setCurrent(null)
+    }}/>
 
   return(<>
     <div className="neo-screen">
       <div className="neo-topbar">
         <span style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:700,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--neo-text)'}}>Tampos</span>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
-          <button className="neo-btn neo-btn-ghost" style={{height:26,fontSize:9,border:'1px solid var(--neo-gold2)',color:'var(--neo-gold2)',borderRadius:'var(--neo-radius-pill)',padding:'0 12px'}}
+          <button className="neo-btn neo-btn-ghost" style={{height:26,fontSize:9,border:'1px solid var(--neo-gold2)',color:'var(--neo-gold)',borderRadius:'var(--neo-radius-pill)',padding:'0 12px'}}
             onClick={()=>setImportModal(true)}>↑ Import</button>
           {calculos.length>0&&(
             <button className="neo-btn neo-btn-danger" style={{height:26,fontSize:8}}
@@ -284,40 +304,103 @@ export default function Tampos({showToast}){
         </div>
       </div>
 
-      <div className="neo-scroll" style={{flex:1,overflowY:'auto',padding:'12px 16px 32px'}}>
-        {TIPOS_ALL.map(tipo=>{
-          const calcs=calculos.filter(c=>c.tipo===tipo)
-          const mat=ANIGRACO[tipo]
-          return(
-            <div key={tipo} style={{marginBottom:16}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8,paddingLeft:2}}>
-                <div>
-                  <span style={{fontFamily:"'Barlow Condensed'",fontSize:14,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text)'}}>{tipo}</span>
-                  {mat&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-text3)',letterSpacing:'0.1em',marginLeft:10}}>{mat.materiais.length} refs</span>}
-                </div>
-                <button className="neo-btn neo-btn-ghost" style={{height:26,fontSize:9}} onClick={()=>setCurrent(novoProjeto(tipo))}>+ Cálculo</button>
-              </div>
+      <div className="neo-scroll" style={{flex:1,overflowY:'auto'}}>
 
-              {calcs.length>0&&calcs.map(c=>{
-                const res=totProj(c)
-                return(
-                  <div key={c.id} className="neo-surface" style={{padding:'12px 14px',marginBottom:6,display:'flex',alignItems:'center',gap:10,cursor:'pointer'}}
-                    onClick={()=>setCurrent({...c})}>
-                    <div style={{flex:1}}>
-                      <div style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--neo-text)',marginBottom:2}}>{c.nome||'Sem nome'}</div>
-                      {c.contacto&&<div style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.1em',color:'var(--neo-text3)'}}>{c.contacto}</div>}
-                    </div>
-                    <div style={{textAlign:'right',flexShrink:0}}>
-                      <div style={{fontFamily:"'Barlow Condensed'",fontSize:16,fontWeight:700,color:'var(--neo-gold)'}}>{f2(res.pvp)} €</div>
-                    </div>
-                    <button onClick={e=>{e.stopPropagation();if(confirm('Eliminar?'))deleteDoc(doc(db,'tampos',c.id))}}
-                      style={{background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text3)',fontSize:13,padding:'4px',lineHeight:1}}>✕</button>
-                  </div>
-                )
-              })}
+        {/* ── Cálculos guardados ── */}
+        {calculos.length>0&&(
+          <div style={{padding:'10px 14px 4px'}}>
+            <div style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--neo-text2)',marginBottom:8}}>
+              Cálculos guardados
             </div>
-          )
-        })}
+            {calculos.map(c=>{
+              const res=totProj(c)
+              return(
+                <div key={c.id} className="neo-surface" style={{padding:'11px 14px',marginBottom:6,display:'flex',alignItems:'center',gap:10,cursor:'pointer'}}
+                  onClick={()=>setCurrent({...c})}>
+                  <div style={{flex:1}}>
+                    <div style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--neo-text)',marginBottom:1}}>{c.nome||'Sem nome'}</div>
+                    <div style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-text2)',letterSpacing:'0.08em'}}>{c.tipo}{c.contacto?' · '+c.contacto:''}</div>
+                  </div>
+                  <div style={{fontFamily:"'Barlow Condensed'",fontSize:16,fontWeight:700,color:'var(--neo-gold)',flexShrink:0}}>{f2(res.pvp)} €</div>
+                  <button onClick={e=>{e.stopPropagation();if(confirm('Eliminar?'))deleteDoc(doc(db,'tampos',c.id))}}
+                    style={{background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text2)',fontSize:13,padding:'4px',lineHeight:1,flexShrink:0}}>✕</button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* ── Catálogo de materiais ── */}
+        <div style={{padding:'10px 14px 4px'}}>
+          <div style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--neo-text2)',marginBottom:10}}>
+            Catálogo Anigraco
+          </div>
+
+          {/* Filtro por tipo */}
+          <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}}>
+            {['TODOS',...TIPOS_ALL].map(t=>(
+              <button key={t} className={`neo-chip-sm ${filtroTipo===t?'active':''}`}
+                onClick={()=>setFiltroTipo(t)}>
+                {t==='TODOS'?'Todos':t.charAt(0)+t.slice(1).toLowerCase()}
+              </button>
+            ))}
+          </div>
+
+          {/* Pesquisa */}
+          <div style={{position:'relative',marginBottom:10}}>
+            <input className="neo-input" value={matSearch} onChange={e=>setMatSearch(e.target.value)}
+              placeholder="Pesquisar material…" style={{paddingRight:36}}/>
+            {matSearch&&<button onClick={()=>setMatSearch('')}
+              style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text2)',fontSize:13}}>✕</button>}
+          </div>
+
+          {/* Lista de materiais */}
+          <div style={{marginBottom:20}}>
+            {matsFiltrados.map((m,i)=>{
+              const esps=Object.entries(m.espessuras)
+              const pvpMin=Math.min(...esps.map(([,v])=>v.pvp))
+              const pvpMax=Math.max(...esps.map(([,v])=>v.pvp))
+              return(
+                <div key={i} style={{
+                  background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',
+                  boxShadow:'var(--neo-shadow-out-sm)',marginBottom:5,
+                  padding:'11px 14px',display:'flex',alignItems:'center',gap:12
+                }}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,letterSpacing:'0.06em',textTransform:'uppercase',color:'var(--neo-text)',marginBottom:2}}>
+                      {m.desc}
+                    </div>
+                    <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                      <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-gold2)',background:'var(--neo-bg)',padding:'2px 7px',borderRadius:'var(--neo-radius-pill)'}}>
+                        {m.tipo.charAt(0)+m.tipo.slice(1).toLowerCase()}
+                      </span>
+                      {m.grupo&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'var(--neo-text2)',letterSpacing:'0.1em'}}>
+                        Grupo {m.grupo}
+                      </span>}
+                    </div>
+                  </div>
+                  <div style={{textAlign:'right',flexShrink:0}}>
+                    <div style={{fontFamily:"'Barlow Condensed'",fontSize:12,fontWeight:600,color:'var(--neo-gold)'}}>
+                      {pvpMin===pvpMax?f2(pvpMin):`${f2(pvpMin)}–${f2(pvpMax)}`} €/m²
+                    </div>
+                    <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'var(--neo-text2)',marginTop:2}}>
+                      {esps.map(([e])=>e).join(' · ')}
+                    </div>
+                  </div>
+                  <button className="neo-btn neo-btn-ghost" style={{height:26,fontSize:9,flexShrink:0,borderRadius:'var(--neo-radius-pill)',border:'1px solid rgba(255,255,255,0.1)',padding:'0 10px'}}
+                    onClick={()=>{const p=novoProjeto(m.tipo);p.pecas[0].desc=m.desc;p.pecas[0].grupo=m.grupo;setCurrent(p)}}>
+                    Calcular
+                  </button>
+                </div>
+              )
+            })}
+            {matsFiltrados.length===0&&(
+              <div style={{padding:'30px 0',textAlign:'center',fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--neo-text2)'}}>
+                Sem resultados
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
     <ImportModal open={importModal} onClose={()=>setImportModal(false)} mode="tampos" showToast={showToast}/>
