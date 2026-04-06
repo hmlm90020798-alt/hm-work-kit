@@ -268,7 +268,7 @@ export default function Tampos({showToast}){
   if(current) return <Calculadora current={current} setCurrent={setCurrent}
     orcamentos={orcamentos} showToast={showToast} onBack={()=>setCurrent(null)}/>
 
-  return(
+  return(<>
     <div className="neo-screen">
       <div className="neo-topbar">
         <span style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:700,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--neo-text)'}}>Tampos</span>
@@ -321,7 +321,7 @@ export default function Tampos({showToast}){
       </div>
     </div>
     <ImportModal open={importModal} onClose={()=>setImportModal(false)} mode="tampos" showToast={showToast}/>
-  )
+  </>)
 }
 
 // ── Calculadora ────────────────────────────────────────────────────────────
