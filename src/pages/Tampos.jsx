@@ -3,6 +3,7 @@ import { db } from '../firebase'
 import { collection, doc, onSnapshot, setDoc, deleteDoc, addDoc } from 'firebase/firestore'
 import '../styles/tampos.css'
 import ImportModal from '../components/ImportModal'
+import { addToOrcamento } from '../hooks/useOrcamento'
 
 const ANIGRACO = {
   GRANITOS:{materiais:[
@@ -553,6 +554,19 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
         <div style={{display:'flex',gap:6}}>
           <button className="neo-btn neo-btn-ghost" style={{height:28,padding:'0 10px',fontSize:9}} onClick={limparDados}>Limpar</button>
           <button className="neo-btn neo-btn-ghost" style={{height:28,padding:'0 10px',fontSize:9}} onClick={gerarPDF}>PDF</button>
+          <button className="neo-btn neo-btn-ghost" style={{height:28,padding:'0 10px',fontSize:9,border:'1px solid var(--neo-gold2)',color:'var(--neo-gold2)',borderRadius:'var(--neo-radius-pill)'}}
+            onClick={()=>{
+              const nome=current.nome||current.tipo||'Tampo'
+              addToOrcamento({
+                ref: nome,
+                desc: current.pecas.map(p=>p.desc||p.label).filter(Boolean).join(' + '),
+                cat:'Tampos',
+                price: TA.pvp,
+                origem:'Tampos'
+              }, showToast)
+            }}>
+            + Orç
+          </button>
           <button className="neo-btn neo-btn-gold" style={{height:28,padding:'0 12px',fontSize:9}} onClick={save}>Guardar</button>
         </div>
       </div>

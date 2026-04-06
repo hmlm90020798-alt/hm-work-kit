@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { db } from '../firebase'
 import { collection, doc, onSnapshot, setDoc, deleteDoc, addDoc } from 'firebase/firestore'
+import { addToOrcamento } from '../hooks/useOrcamento'
 
 export default function Modelos({ showToast }) {
   const [modelos, setModelos] = useState([])
@@ -92,6 +93,7 @@ export default function Modelos({ showToast }) {
             ← Modelos
           </button>
           <div style={{ display:'flex', gap:8 }}>
+            <AddOrcBtn items={m.items} name={m.name} showToast={showToast}/>
             <button onClick={() => openEdit(m)} style={{ background:'transparent', border:'1px solid var(--line2)', width:32, height:32, cursor:'pointer', color:'var(--text3)', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center' }}>✎</button>
             <button onClick={() => setAddArtModal(true)} className="btn btn-gold" style={{ height:32, padding:'0 14px', fontSize:9 }}>+ Artigo</button>
           </div>
@@ -203,6 +205,7 @@ export default function Modelos({ showToast }) {
               </div>
             </div>
             <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+              <AddOrcBtn items={m.items} name={m.name} showToast={showToast}/>
               <button onClick={() => openEdit(m)} style={{ background:'transparent', border:'1px solid var(--line2)', width:28, height:28, cursor:'pointer', color:'var(--text3)', fontSize:12, display:'flex', alignItems:'center', justifyContent:'center' }}>✎</button>
               <button onClick={() => delModelo(m.id,m.name)} style={{ background:'transparent', border:'1px solid var(--line2)', width:28, height:28, cursor:'pointer', color:'var(--text3)', fontSize:12, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
             </div>
@@ -213,6 +216,42 @@ export default function Modelos({ showToast }) {
 
     <ModeloFormModal open={modal} editId={editId} form={form} setForm={setForm} onSave={saveModelo} onClose={() => setModal(false)} />
     </>
+  )
+}
+
+// ── AddOrcBtn — adiciona todos os artigos do modelo ao orçamento ativo ───────
+function AddOrcBtn({ items, name, showToast }) {
+  const [added, setAdded] = React.useState(false)
+
+  const handle = async () => {
+    if (!items || items.length === 0) { showToast('Modelo sem artigos'); return }
+    for (const item of items) {
+      await addToOrcamento({
+        ref:    item.ref,
+        desc:   item.desc,
+        cat:    item.cat || '',
+        price:  item.price || 0,
+        origem: 'Modelos',
+      }, () => {})
+    }
+    showToast(`${items.length} artigo${items.length !== 1 ? 's' : ''} adicionado${items.length !== 1 ? 's' : ''} ao orçamento`)
+    setAdded(true)
+    setTimeout(() => setAdded(false), 1800)
+  }
+
+  return (
+    <button onClick={handle} style={{
+      padding:'0 12px', height:32,
+      background: added ? 'linear-gradient(145deg,#d4b87a,#b8924a)' : 'transparent',
+      border:'1px solid var(--line2)',
+      cursor:'pointer',
+      fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:700,
+      letterSpacing:'0.12em', textTransform:'uppercase',
+      color: added ? '#1a1610' : 'var(--text3)',
+      transition:'all .2s', whiteSpace:'nowrap',
+    }}>
+      {added ? '✓ Orç' : '+ Orç'}
+    </button>
   )
 }
 

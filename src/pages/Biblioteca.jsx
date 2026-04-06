@@ -3,6 +3,7 @@ import { db } from '../firebase'
 import { collection, doc, onSnapshot, setDoc, deleteDoc, addDoc, updateDoc } from 'firebase/firestore'
 import '../styles/biblioteca.css'
 import ImportModal from '../components/ImportModal'
+import { addToOrcamento } from '../hooks/useOrcamento'
 
 export default function Biblioteca({ showToast }) {
   const [cats, setCats]           = useState([])
@@ -172,7 +173,8 @@ export default function Biblioteca({ showToast }) {
       <div className="neo-scroll" style={{flex:1,overflowY:'auto'}}>
         {filtered.length===0 && <div className="bib-empty">Nenhum artigo</div>}
         {filtered.map(a => (
-          <ArtCard key={a.id} art={a} onEdit={openEdit} onDel={delArt} showToast={showToast}/>
+          <ArtCard key={a.id} art={a} onEdit={openEdit} onDel={delArt} showToast={showToast}
+            onAddOrc={() => addToOrcamento({ ref:a.ref, desc:a.desc, cat:a.cat, price:a.price||0, origem:'Biblioteca' }, showToast)}/>
         ))}
       </div>
     </div>
@@ -212,14 +214,20 @@ export default function Biblioteca({ showToast }) {
 }
 
 // ── ArtCard ──────────────────────────────────────────────────────────────────
-function ArtCard({ art, onEdit, onDel, showToast }) {
+function ArtCard({ art, onEdit, onDel, showToast, onAddOrc }) {
   const [copied, setCopied] = useState(false)
+  const [added,  setAdded]  = useState(false)
   const label = art.sub ? art.cat+' · '+art.sub : art.cat
 
   const copy = () => {
     navigator.clipboard.writeText(art.ref).catch(()=>{})
     setCopied(true); setTimeout(()=>setCopied(false),1600)
     showToast('Referência copiada — '+art.ref)
+  }
+
+  const handleAddOrc = () => {
+    onAddOrc()
+    setAdded(true); setTimeout(()=>setAdded(false),1600)
   }
 
   return (
@@ -230,6 +238,10 @@ function ArtCard({ art, onEdit, onDel, showToast }) {
           <button className={`bib-copy-btn ${copied?'copied':''}`} onClick={copy}>{copied?'✓':'⎘'}</button>
         </div>
         <div style={{display:'flex',gap:6,flexShrink:0}}>
+          {/* + Orçamento */}
+          <button onClick={handleAddOrc} style={{ padding:'4px 10px', borderRadius:'var(--neo-radius-pill)', border:'none', background: added ? 'linear-gradient(145deg,#d4b87a,#b8924a)' : 'var(--neo-bg2)', boxShadow: added ? 'var(--neo-shadow-in-sm),var(--neo-glow-gold)' : 'var(--neo-shadow-out-sm)', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color: added ? '#1a1610' : 'var(--neo-text3)', transition:'all .2s', whiteSpace:'nowrap' }}>
+            {added ? '✓ Orç' : '+ Orç'}
+          </button>
           {art.link && <a href={art.link} target="_blank" rel="noreferrer" style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-text3)',textDecoration:'none',padding:'6px 2px'}}>↗</a>}
           <button className="bib-act-btn" onClick={()=>onEdit(art)}>✎</button>
           <button className="bib-act-btn del" onClick={()=>onDel(art.id,art.desc)}>✕</button>
