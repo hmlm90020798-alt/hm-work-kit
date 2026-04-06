@@ -1,0 +1,269 @@
+/* ── Neomorfismo Biblioteca (consistente com Tampos) ─────────────────── */
+.bib-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--neo-bg);
+  color: var(--neo-text);
+  font-family: 'Barlow', sans-serif;
+}
+
+/* Barra principal */
+.bib-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  height: 52px;
+  background: var(--neo-bg);
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  position: relative;
+  z-index: 3;
+}
+
+/* Botão categoria activa */
+.bib-cat-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--neo-bg2);
+  border: none;
+  border-radius: var(--neo-radius-pill);
+  padding: 8px 14px;
+  cursor: pointer;
+  box-shadow: var(--neo-shadow-out-sm);
+  transition: all .15s;
+  flex-shrink: 0;
+  max-width: 180px;
+}
+.bib-cat-btn:active { box-shadow: var(--neo-shadow-in-sm); }
+.bib-cat-btn.open   { box-shadow: var(--neo-shadow-in-sm), var(--neo-glow-gold); }
+.bib-cat-btn-label  {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--neo-gold);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bib-cat-btn-arrow {
+  font-size: 7px; color: var(--neo-text3);
+  transition: transform .2s; flex-shrink: 0;
+}
+.bib-cat-btn.open .bib-cat-btn-arrow { transform: rotate(180deg); }
+
+/* Input pesquisa */
+.bib-search {
+  flex: 1;
+  background: var(--neo-bg);
+  border: none;
+  border-radius: var(--neo-radius-pill);
+  box-shadow: var(--neo-shadow-in-sm);
+  padding: 8px 36px 8px 16px;
+  font-family: 'Barlow', sans-serif;
+  font-size: 13px; font-weight: 300;
+  color: var(--neo-text);
+  outline: none;
+  transition: box-shadow .2s;
+}
+.bib-search:focus { box-shadow: var(--neo-shadow-in-sm), 0 0 0 1px rgba(200,169,110,0.35); }
+.bib-search::placeholder { color: var(--neo-text3); }
+
+/* Botão + artigo */
+.bib-add-btn {
+  flex-shrink: 0;
+  background: linear-gradient(145deg, #d4b87a, #b8924a);
+  border: none;
+  border-radius: var(--neo-radius-pill);
+  padding: 8px 16px;
+  cursor: pointer;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: #1a1610;
+  box-shadow: var(--neo-shadow-out-sm);
+  transition: all .15s;
+  white-space: nowrap;
+}
+.bib-add-btn:hover { box-shadow: var(--neo-glow-gold); transform: translateY(-1px); }
+.bib-add-btn:active { box-shadow: var(--neo-shadow-in-sm); transform: none; }
+
+/* Painel de categorias — desliza para baixo, não sobrepõe */
+.bib-cat-panel {
+  flex-shrink: 0;
+  background: var(--neo-bg2);
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height .25s ease, padding .25s ease;
+  padding: 0 16px;
+  box-shadow: inset 0 -4px 8px rgba(0,0,0,0.3);
+}
+.bib-cat-panel.open {
+  max-height: 400px;
+  padding: 14px 16px 16px;
+}
+
+/* Grelha de categorias */
+.bib-cat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+/* Card de categoria */
+.bib-cat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 10px 12px;
+  background: var(--neo-bg);
+  border: none;
+  border-radius: var(--neo-radius-sm);
+  box-shadow: var(--neo-shadow-out-sm);
+  cursor: pointer;
+  transition: all .12s;
+  text-align: left;
+}
+.bib-cat-card:active { box-shadow: var(--neo-shadow-in-sm); }
+.bib-cat-card.active {
+  background: var(--neo-bg);
+  box-shadow: var(--neo-shadow-in-sm), var(--neo-glow-gold);
+}
+.bib-cat-card-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--neo-text2);
+  line-height: 1.3;
+}
+.bib-cat-card.active .bib-cat-card-name { color: var(--neo-gold); }
+.bib-cat-card-count {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9px; color: var(--neo-text3);
+  margin-top: 3px;
+}
+.bib-cat-card.active .bib-cat-card-count { color: var(--neo-gold2); }
+
+/* Sub-chips */
+.bib-subs {
+  display: flex;
+  gap: 6px;
+  padding: 8px 16px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  background: var(--neo-bg2);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.bib-subs::-webkit-scrollbar { display: none; }
+.bib-sub-chip {
+  flex-shrink: 0;
+  padding: 5px 14px;
+  border-radius: var(--neo-radius-pill);
+  border: none;
+  background: var(--neo-bg);
+  box-shadow: var(--neo-shadow-out-sm);
+  cursor: pointer;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--neo-text2);
+  transition: all .12s;
+}
+.bib-sub-chip:active { box-shadow: var(--neo-shadow-in-sm); }
+.bib-sub-chip.active {
+  box-shadow: var(--neo-shadow-in-sm), var(--neo-glow-gold);
+  color: var(--neo-gold);
+}
+
+/* Footer do painel */
+.bib-cat-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+.bib-cat-footer-btn {
+  background: transparent; border: none; cursor: pointer;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--neo-text3); transition: color .12s;
+}
+.bib-cat-footer-btn:hover { color: var(--neo-gold); }
+
+/* Card artigo */
+.bib-art-card {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.bib-art-card:hover { background: var(--neo-bg2); }
+.bib-art-ref {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 18px; font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--neo-gold);
+}
+.bib-art-name {
+  font-size: 13px; font-weight: 400;
+  color: var(--neo-text); line-height: 1.4;
+}
+.bib-art-note {
+  font-size: 11px; font-weight: 300;
+  color: var(--neo-text3);
+}
+
+/* Botão copiar ref */
+.bib-copy-btn {
+  padding: 3px 9px;
+  border-radius: var(--neo-radius-pill);
+  border: none;
+  background: var(--neo-bg2);
+  box-shadow: var(--neo-shadow-out-sm);
+  cursor: pointer;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--neo-text3); transition: all .12s;
+}
+.bib-copy-btn:active { box-shadow: var(--neo-shadow-in-sm); }
+.bib-copy-btn.copied { box-shadow: var(--neo-shadow-in-sm), var(--neo-glow-gold); color: var(--neo-gold); }
+
+/* Acção artigo (edit/del) */
+.bib-act-btn {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--neo-bg2);
+  box-shadow: var(--neo-shadow-out-sm);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: var(--neo-text3);
+  transition: all .12s;
+}
+.bib-act-btn:active { box-shadow: var(--neo-shadow-in-sm); }
+.bib-act-btn.del:hover { color: var(--neo-danger); }
+
+/* Badge */
+.bib-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: var(--neo-radius-pill);
+  background: var(--neo-bg);
+  box-shadow: var(--neo-shadow-in-sm);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--neo-text2);
+}
+
+/* Empty */
+.bib-empty {
+  padding: 60px 20px; text-align: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--neo-text3);
+}
