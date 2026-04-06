@@ -20,6 +20,7 @@ function Shell() {
   const { user, loading, logout } = useAuth()
   const [page, setPage]       = useState('biblioteca')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [tampoParaAbrir, setTampoParaAbrir] = useState(null)
   const { msg, visible, showToast } = useToast()
 
   if (loading) return (
@@ -138,8 +139,8 @@ function Shell() {
       <main style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
         {page === 'biblioteca' && <Biblioteca showToast={showToast} />}
         {page === 'modelos'    && <Modelos    showToast={showToast} />}
-        {page === 'orcamentos' && <Orcamentos showToast={showToast} />}
-        {page === 'tampos'     && <Tampos     showToast={showToast} />}
+        {page === 'orcamentos' && <Orcamentos showToast={showToast} onOpenTampo={(c)=>{ setTampoParaAbrir(c); setPage('tampos') }} />}
+        {page === 'tampos'     && <Tampos     showToast={showToast} abrirCalculo={tampoParaAbrir} onAbrirCalculoDone={()=>setTampoParaAbrir(null)} />}
       </main>
 
       <Toast msg={msg} visible={visible} />

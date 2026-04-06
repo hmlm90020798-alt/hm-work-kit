@@ -245,13 +245,22 @@ function novoProjeto(tipo){
 }
 
 // ── Lista principal ────────────────────────────────────────────────────────
-export default function Tampos({showToast}){
+export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone}){
   const [calculos,setCalculos]=useState([])
   const [orcamentos,setOrcamentos]=useState([])
   const [current,setCurrent]=useState(null)
   const [importModal,setImportModal]=useState(false)
   const [filtroTipo,setFiltroTipo]=useState('TODOS')
   const [matSearch,setMatSearch]=useState('')
+  const [matSort,setMatSort]=useState('grupo')
+
+  // Abrir calculo vindo de Orçamentos
+  useEffect(()=>{
+    if(abrirCalculo){
+      setCurrent(abrirCalculo)
+      onAbrirCalculoDone?.()
+    }
+  },[abrirCalculo])
 
   useEffect(()=>{
     const u1=onSnapshot(collection(db,'tampos'),snap=>setCalculos(snap.docs.map(d=>({id:d.id,...d.data()}))))
@@ -271,11 +280,23 @@ export default function Tampos({showToast}){
   const todosOsMateriais = TIPOS_ALL.flatMap(tipo=>
     (ANIGRACO[tipo]?.materiais||[]).map(m=>({...m,tipo}))
   )
-  const matsFiltrados = todosOsMateriais.filter(m=>{
-    const tipoOk = filtroTipo==='TODOS' || m.tipo===filtroTipo
-    const searchOk = !matSearch || m.desc.toLowerCase().includes(matSearch.toLowerCase()) || m.tipo.toLowerCase().includes(matSearch.toLowerCase())
-    return tipoOk && searchOk
-  })
+  const matsFiltrados = todosOsMateriais
+    .filter(m=>{
+      const tipoOk = filtroTipo==='TODOS' || m.tipo===filtroTipo
+      const searchOk = !matSearch || m.desc.toLowerCase().includes(matSearch.toLowerCase()) || m.tipo.toLowerCase().includes(matSearch.toLowerCase()) || (m.grupo||'').toLowerCase().includes(matSearch.toLowerCase())
+      return tipoOk && searchOk
+    })
+    .sort((a,b)=>{
+      if(matSort==='pvp_asc'||matSort==='pvp_desc'){
+        const pvpA=Math.min(...Object.values(a.espessuras).map(e=>e.pvp))
+        const pvpB=Math.min(...Object.values(b.espessuras).map(e=>e.pvp))
+        return matSort==='pvp_asc'?pvpA-pvpB:pvpB-pvpA
+      }
+      // grupo: ordenar por grupo depois por desc
+      const ga=a.grupo||'ZZZ', gb=b.grupo||'ZZZ'
+      if(ga!==gb) return ga.localeCompare(gb)
+      return a.desc.localeCompare(b.desc)
+    })
 
   if(current) return <Calculadora current={current} setCurrent={setCurrent}
     orcamentos={orcamentos} showToast={showToast} onBack={async()=>{
@@ -336,14 +357,20 @@ export default function Tampos({showToast}){
             Catálogo Anigraco
           </div>
 
-          {/* Filtro por tipo */}
-          <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}}>
+          {/* Filtro por tipo + ordenação */}
+          <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10,alignItems:'center'}}>
             {['TODOS',...TIPOS_ALL].map(t=>(
               <button key={t} className={`neo-chip-sm ${filtroTipo===t?'active':''}`}
                 onClick={()=>setFiltroTipo(t)}>
                 {t==='TODOS'?'Todos':t.charAt(0)+t.slice(1).toLowerCase()}
               </button>
             ))}
+            <div style={{marginLeft:'auto',display:'flex',gap:4}}>
+              {[{v:'grupo',l:'Grupo'},{v:'pvp_asc',l:'Preço ↑'},{v:'pvp_desc',l:'Preço ↓'}].map(o=>(
+                <button key={o.v} className={`neo-chip-sm ${matSort===o.v?'active':''}`}
+                  onClick={()=>setMatSort(o.v)}>{o.l}</button>
+              ))}
+            </div>
           </div>
 
           {/* Pesquisa */}
@@ -636,15 +663,36 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
         <div style={{display:'flex',gap:6}}>
           <button className="neo-btn neo-btn-ghost" style={{height:28,padding:'0 10px',fontSize:9}} onClick={limparDados}>Limpar</button>
           <button className="neo-btn neo-btn-ghost" style={{height:28,padding:'0 10px',fontSize:9}} onClick={gerarPDF}>PDF</button>
-          <button className="neo-btn neo-btn-ghost" style={{height:28,padding:'0 10px',fontSize:9,border:'1px solid var(--neo-gold2)',color:'var(--neo-gold2)',borderRadius:'var(--neo-radius-pill)'}}
-            onClick={()=>{
+          <button className="neo-btn neo-btn-ghost" style={{height:28,padding:'0 10px',fontSize:9,border:'1px solid var(--neo-gold2)',color:'var(--neo-gold)',borderRadius:'var(--neo-radius-pill)'}}
+            onClick={async()=>{
               const nome=current.nome||current.tipo||'Tampo'
+              // Guardar primeiro para ter ID
+              let tampoId=current.id
+              if(!tampoId){
+                const data={...current};delete data.id
+                const {addDoc,collection:col}=await import('firebase/firestore')
+                const r=await addDoc(col(db,'tampos'),data)
+                tampoId=r.id
+                setCurrent(c=>({...c,id:tampoId}))
+              }
+              // Calcular C1 da primeira peça (representativo)
+              const primeiraPeca=current.pecas?.[0]
+              let c1Ref=null, refAnigraco=null
+              if(primeiraPeca?.desc&&primeiraPeca?.tipo){
+                const mat=ANIGRACO[primeiraPeca.tipo]
+                const ref=mat?.materiais.find(m=>m.desc===primeiraPeca.desc&&m.grupo===primeiraPeca.grupo)||mat?.materiais.find(m=>m.desc===primeiraPeca.desc)
+                const esp=ref?.espessuras[primeiraPeca.espessura]
+                if(esp){c1Ref=c1fmt(esp.c1);refAnigraco=esp.refAnigraco||null}
+              }
               addToOrcamento({
                 ref: nome,
                 desc: current.pecas.map(p=>p.desc||p.label).filter(Boolean).join(' + '),
                 cat:'Tampos',
                 price: TA.pvp,
-                origem:'Tampos'
+                origem:'Tampos',
+                tampoId,
+                c1Ref,
+                refAnigraco
               }, showToast)
             }}>
             + Orç

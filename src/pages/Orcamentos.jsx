@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { db } from '../firebase'
-import { doc, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore'
+import { collection, doc, onSnapshot, setDoc, deleteDoc, getDocs } from 'firebase/firestore'
 
 const ORC_ID  = 'ativo'
 const ORC_REF = () => doc(db, 'orcamento_ativo', ORC_ID)
 
 function f2(n) { return parseFloat(n || 0).toFixed(2) }
 
-export default function Orcamentos({ showToast }) {
+export default function Orcamentos({ showToast, onOpenTampo }) {
   const [orc,    setOrc]    = useState(null)
   const [copied, setCopied] = useState({})
   const [confirmClear, setConfirmClear] = useState(false)
@@ -20,13 +20,9 @@ export default function Orcamentos({ showToast }) {
   }, [])
 
   const items   = orc?.items || []
-  const total   = items.reduce((s, i) => s + (i.price || 0) * (i.qty || 1), 0)
+  // Total = soma dos price de itens Biblioteca/Modelos (Tampos têm price=pvp do cálculo)
+  const total   = items.reduce((s, i) => s + (i.price || 0), 0)
   const isEmpty = items.length === 0
-
-  const setQty = async (ref, qty) => {
-    const newItems = items.map(i => i.ref === ref ? { ...i, qty: Math.max(1, qty) } : i)
-    await setDoc(ORC_REF(), { ...orc, items: newItems })
-  }
 
   const remove = async (ref) => {
     const newItems = items.filter(i => i.ref !== ref)
@@ -40,17 +36,35 @@ export default function Orcamentos({ showToast }) {
     showToast('Orçamento limpo')
   }
 
-  const copyRef = (ref) => {
-    navigator.clipboard.writeText(ref).catch(() => {})
-    setCopied(p => ({ ...p, [ref]: true }))
-    setTimeout(() => setCopied(p => ({ ...p, [ref]: false })), 1600)
-    showToast('Copiado — ' + ref)
+  const copyVal = (val, label) => {
+    navigator.clipboard.writeText(val).catch(() => {})
+    setCopied(p => ({ ...p, [val]: true }))
+    setTimeout(() => setCopied(p => ({ ...p, [val]: false })), 1600)
+    showToast(`${label} copiado — ${val}`)
   }
 
   const copyAll = () => {
-    const txt = items.map(i => `${i.ref}  ×${i.qty || 1}  ${i.desc}`).join('\n')
+    const txt = items.map(i => {
+      const parts = [i.ref, i.desc]
+      if (i.c1Ref) parts.push(`C1: ${i.c1Ref}`)
+      if (i.refAnigraco) parts.push(`Anigraco: ${i.refAnigraco}`)
+      return parts.join('  ')
+    }).join('\n')
     navigator.clipboard.writeText(txt).catch(() => {})
-    showToast('Todas as referências copiadas')
+    showToast('Referências copiadas')
+  }
+
+  // Abrir calculadora de Tampos ao clicar num item Tampos
+  const handleItemClick = async (item) => {
+    if (item.origem !== 'Tampos' || !item.tampoId) return
+    // Ir buscar o cálculo ao Firestore
+    try {
+      const snap = await getDocs(collection(db, 'tampos'))
+      const calculo = snap.docs.find(d => d.id === item.tampoId)
+      if (calculo && onOpenTampo) {
+        onOpenTampo({ id: calculo.id, ...calculo.data() })
+      }
+    } catch(e) { showToast('Não foi possível abrir o cálculo') }
   }
 
   const grupos = items.reduce((acc, i) => {
@@ -76,14 +90,14 @@ export default function Orcamentos({ showToast }) {
             Orçamento
           </span>
           {!isEmpty && (
-            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text3)', letterSpacing:'0.1em', marginLeft:10 }}>
-              {items.length} artigo{items.length !== 1 ? 's' : ''}
+            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', letterSpacing:'0.1em', marginLeft:10 }}>
+              {items.length} item{items.length !== 1 ? 's' : ''}
             </span>
           )}
         </div>
         {!isEmpty && (
           <div style={{ display:'flex', gap:8 }}>
-            <button onClick={copyAll} style={{ background:'transparent', border:'1px solid var(--neo-gold2)', borderRadius:'var(--neo-radius-pill)', padding:'6px 12px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:600, letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--neo-gold2)', transition:'color .15s' }}>
+            <button onClick={copyAll} style={{ background:'transparent', border:'1px solid var(--neo-gold2)', borderRadius:'var(--neo-radius-pill)', padding:'6px 12px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:600, letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--neo-gold)', transition:'color .15s' }}>
               ⎘ Copiar tudo
             </button>
             <button onClick={() => setConfirmClear(true)} className="neo-btn neo-btn-danger" style={{ height:28, padding:'0 12px', fontSize:9, borderRadius:'var(--neo-radius-pill)' }}>
@@ -96,16 +110,16 @@ export default function Orcamentos({ showToast }) {
       {/* VAZIO */}
       {isEmpty && (
         <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16, padding:'40px 20px' }}>
-          <div style={{ width:56, height:56, borderRadius:'50%', background:'var(--neo-bg2)', boxShadow:'var(--neo-shadow-in)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, opacity:.3 }}>
+          <div style={{ width:56, height:56, borderRadius:'50%', background:'var(--neo-bg2)', boxShadow:'var(--neo-shadow-in)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, opacity:.4 }}>
             ◻
           </div>
           <div style={{ textAlign:'center' }}>
-            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', color:'var(--neo-text3)', marginBottom:8 }}>
+            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:8 }}>
               Orçamento vazio
             </div>
-            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text3)', letterSpacing:'0.08em', lineHeight:2 }}>
+            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)', letterSpacing:'0.08em', lineHeight:2 }}>
               Adiciona artigos a partir da Biblioteca,<br/>Tampos ou Modelos usando o botão<br/>
-              <span style={{ color:'var(--neo-gold2)' }}>+ Orç</span>
+              <span style={{ color:'var(--neo-gold)' }}>+ Orç</span>
             </div>
           </div>
         </div>
@@ -114,23 +128,26 @@ export default function Orcamentos({ showToast }) {
       {/* LISTA */}
       {!isEmpty && (
         <>
-          <div className="neo-scroll" style={{ flex:1, overflowY:'auto', padding:'10px 0 8px' }}>
+          <div className="neo-scroll" style={{ flex:1, overflowY:'auto', padding:'8px 0' }}>
             {Object.entries(grupos).map(([origem, gItems]) => (
-              <div key={origem} style={{ marginBottom:8 }}>
-                <div style={{ padding:'2px 16px 6px', display:'flex', alignItems:'center', gap:8 }}>
-                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color: origemColor[origem] || 'var(--neo-text3)' }}>
+              <div key={origem} style={{ marginBottom:10 }}>
+
+                {/* Label de grupo */}
+                <div style={{ padding:'4px 14px 6px', display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color: origemColor[origem] || 'var(--neo-text2)' }}>
                     {origem}
                   </span>
-                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, color:'var(--neo-text3)' }}>{gItems.length}</span>
+                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)' }}>{gItems.length}</span>
                 </div>
+
                 {gItems.map(item => (
-                  <ItemRow
+                  <OrcItem
                     key={item.ref}
                     item={item}
-                    copied={!!copied[item.ref]}
-                    onCopy={() => copyRef(item.ref)}
-                    onQty={(q) => setQty(item.ref, q)}
+                    copied={copied}
+                    onCopy={copyVal}
                     onRemove={() => remove(item.ref)}
+                    onOpen={() => handleItemClick(item)}
                     cor={origemColor[origem]}
                   />
                 ))}
@@ -139,17 +156,17 @@ export default function Orcamentos({ showToast }) {
           </div>
 
           {/* TOTAL */}
-          <div style={{ flexShrink:0, padding:'14px 16px 18px', background:'var(--neo-bg)', boxShadow:'0 -2px 8px rgba(0,0,0,0.35)' }}>
+          <div style={{ flexShrink:0, padding:'14px 16px 18px', background:'var(--neo-bg)', boxShadow:'0 -2px 8px rgba(0,0,0,0.4)' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
-              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.18em', textTransform:'uppercase', color:'var(--neo-text3)' }}>
-                Total material
+              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.18em', textTransform:'uppercase', color:'var(--neo-text2)' }}>
+                Total PVP indicativo
               </span>
               <span style={{ fontFamily:"'Barlow Condensed'", fontSize:26, fontWeight:700, color:'var(--neo-gold)' }}>
                 {f2(total)} €
               </span>
             </div>
-            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, color:'var(--neo-text3)', letterSpacing:'0.1em', textAlign:'right' }}>
-              Valores indicativos — sujeitos a confirmação
+            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, color:'var(--neo-text2)', letterSpacing:'0.1em', textAlign:'right' }}>
+              Valores sujeitos a confirmação
             </div>
           </div>
         </>
@@ -164,8 +181,8 @@ export default function Orcamentos({ showToast }) {
               <button className="neo-modal-close" onClick={() => setConfirmClear(false)}>✕</button>
             </div>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, color:'var(--neo-text2)', letterSpacing:'0.06em', lineHeight:1.9, marginBottom:24 }}>
-              Tens a certeza? Vão ser removidos {items.length} artigo{items.length !== 1 ? 's' : ''}.<br/>
-              <span style={{ color:'var(--neo-text3)', fontSize:10 }}>Esta acção não pode ser desfeita.</span>
+              Tens a certeza? Serão removidos {items.length} item{items.length !== 1 ? 's' : ''}.<br/>
+              <span style={{ color:'var(--neo-text2)', fontSize:10 }}>Esta acção não pode ser desfeita.</span>
             </div>
             <div style={{ display:'flex', justifyContent:'flex-end', gap:10 }}>
               <button className="neo-btn neo-btn-ghost" onClick={() => setConfirmClear(false)}>Cancelar</button>
@@ -178,41 +195,95 @@ export default function Orcamentos({ showToast }) {
   )
 }
 
-function ItemRow({ item, copied, onCopy, onQty, onRemove, cor }) {
-  const subtotal = (item.price || 0) * (item.qty || 1)
+// ── OrcItem — card de item do orçamento ──────────────────────────────────────
+function OrcItem({ item, copied, onCopy, onRemove, onOpen, cor }) {
+  const isTampo = item.origem === 'Tampos'
+
   return (
-    <div style={{ margin:'0 12px 5px', background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)' }}>
-      <div style={{ padding:'11px 14px', display:'flex', alignItems:'center', gap:10 }}>
-        <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:3 }}>
-            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:600, letterSpacing:'0.1em', color: cor || 'var(--neo-gold)' }}>
-              {item.ref}
-            </span>
-            <button onClick={onCopy} style={{ background:'var(--neo-bg)', border:'none', borderRadius:'var(--neo-radius-pill)', padding:'2px 8px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, color: copied ? 'var(--neo-gold)' : 'var(--neo-text3)', boxShadow: copied ? 'var(--neo-shadow-in-sm), var(--neo-glow-gold)' : 'var(--neo-shadow-out-sm)', transition:'all .15s' }}>
-              {copied ? '✓' : '⎘'}
+    <div style={{ margin:'0 12px 6px', background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', overflow:'hidden' }}>
+      <div style={{ padding:'12px 14px' }}>
+
+        {/* Linha 1: ref + ações */}
+        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+          <span style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700, letterSpacing:'0.1em', color: cor || 'var(--neo-gold)', flex:1 }}>
+            {item.ref}
+          </span>
+          {isTampo && (
+            <button onClick={onOpen}
+              style={{ padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', border:'1px solid rgba(74,143,168,0.4)', background:'transparent', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:'#4a8fa8', transition:'all .15s' }}>
+              → Calculadora
             </button>
-          </div>
-          <div style={{ fontSize:12, fontWeight:300, color:'var(--neo-text2)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-            {item.desc}
-          </div>
-          {item.cat && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text3)', letterSpacing:'0.08em', marginTop:2 }}>{item.cat}</div>}
+          )}
+          <button onClick={onRemove}
+            style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--neo-text2)', fontSize:13, padding:'2px 4px', lineHeight:1, flexShrink:0 }}>✕</button>
         </div>
 
-        <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'flex-end', gap:5 }}>
-          <div className="neo-qty">
-            <button className="neo-qty-btn" onClick={() => onQty((item.qty || 1) - 1)} style={{ width:24, height:24, fontSize:14 }}>−</button>
-            <span className="neo-qty-val" style={{ fontSize:14, minWidth:20 }}>{item.qty || 1}</span>
-            <button className="neo-qty-btn" onClick={() => onQty((item.qty || 1) + 1)} style={{ width:24, height:24, fontSize:14 }}>+</button>
-          </div>
+        {/* Linha 2: descrição */}
+        <div style={{ fontSize:13, fontWeight:300, color:'var(--neo-text)', marginBottom:8, lineHeight:1.4 }}>
+          {item.desc}
+        </div>
+
+        {/* Linha 3: refs copiáveis */}
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
+
+          {/* C1 */}
+          {item.c1Ref && (
+            <CopyChip
+              label="C1"
+              val={item.c1Ref}
+              copied={!!copied[item.c1Ref]}
+              onCopy={() => onCopy(item.c1Ref, 'C1')}
+            />
+          )}
+
+          {/* Ref Anigraco */}
+          {item.refAnigraco && (
+            <CopyChip
+              label="Anigraco"
+              val={item.refAnigraco}
+              copied={!!copied[item.refAnigraco]}
+              onCopy={() => onCopy(item.refAnigraco, 'Ref Anigraco')}
+              gold
+            />
+          )}
+
+          {/* Categoria / tipo */}
+          {item.cat && !isTampo && (
+            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', letterSpacing:'0.08em', textTransform:'uppercase' }}>
+              {item.cat}
+            </span>
+          )}
+
+          {/* PVP para Tampos */}
           {item.price > 0 && (
-            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, color:'var(--neo-text2)', letterSpacing:'0.04em' }}>
-              {f2(subtotal)} €
+            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:600, color: isTampo ? '#4a8fa8' : 'var(--neo-text2)', marginLeft:'auto', letterSpacing:'0.04em' }}>
+              {f2(item.price)} €
             </span>
           )}
         </div>
-
-        <button onClick={onRemove} style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--neo-text3)', fontSize:13, padding:'4px', lineHeight:1, flexShrink:0 }}>✕</button>
       </div>
     </div>
+  )
+}
+
+function CopyChip({ label, val, copied, onCopy, gold }) {
+  return (
+    <button onClick={onCopy} style={{
+      display:'inline-flex', alignItems:'center', gap:5,
+      padding:'4px 10px', borderRadius:'var(--neo-radius-pill)',
+      background:'var(--neo-bg)', border:'none',
+      boxShadow: copied ? 'var(--neo-shadow-in-sm), var(--neo-glow-gold)' : 'var(--neo-shadow-out-sm)',
+      cursor:'pointer', transition:'all .15s',
+    }}>
+      <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em', textTransform:'uppercase', color: copied ? 'var(--neo-gold)' : 'var(--neo-text2)' }}>
+        {label}
+      </span>
+      <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, letterSpacing:'0.06em', color: copied ? 'var(--neo-gold)' : (gold ? 'var(--neo-gold)' : 'var(--neo-text)') }}>
+        {val}
+      </span>
+      <span style={{ fontSize:9, color: copied ? 'var(--neo-gold)' : 'var(--neo-text2)' }}>
+        {copied ? '✓' : '⎘'}
+      </span>
+    </button>
   )
 }
