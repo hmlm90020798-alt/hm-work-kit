@@ -20,9 +20,16 @@ export default function Orcamentos({ showToast, onOpenTampo }) {
   }, [])
 
   const items   = orc?.items || []
-  // Total = soma dos price de itens Biblioteca/Modelos (Tampos têm price=pvp do cálculo)
-  const total   = items.reduce((s, i) => s + (i.price || 0), 0)
+  const total   = items.reduce((s, i) => {
+    if (i.origem === 'Tampos') return s + (i.price || 0)
+    return s + (i.price || 0) * (i.qty || 1)
+  }, 0)
   const isEmpty = items.length === 0
+
+  const setQty = async (ref, qty) => {
+    const newItems = items.map(i => i.ref === ref ? { ...i, qty: Math.max(1, qty) } : i)
+    await setDoc(ORC_REF(), { ...orc, items: newItems })
+  }
 
   const remove = async (ref) => {
     const newItems = items.filter(i => i.ref !== ref)
@@ -149,6 +156,7 @@ export default function Orcamentos({ showToast, onOpenTampo }) {
                     onCopy={copyVal}
                     onRemove={() => remove(item.ref)}
                     onOpen={() => handleItemClick(item)}
+                    onQty={(ref, qty) => setQty(ref, qty)}
                     cor={origemColor[origem]}
                   />
                 ))}
@@ -197,8 +205,9 @@ export default function Orcamentos({ showToast, onOpenTampo }) {
 }
 
 // ── OrcItem — card de item do orçamento ──────────────────────────────────────
-function OrcItem({ item, copied, onCopy, onRemove, onOpen, cor }) {
+function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, cor }) {
   const isTampo = item.origem === 'Tampos'
+  const subtotal = isTampo ? (item.price||0) : (item.price||0)*(item.qty||1)
 
   return (
     <div style={{ margin:'0 12px 6px', background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', overflow:'hidden' }}>
@@ -228,41 +237,36 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, cor }) {
           {item.desc}
         </div>
 
-        {/* Linha 3: refs copiáveis */}
+        {/* Linha 3: refs + qty + preço */}
         <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
-
-          {/* C1 */}
           {item.c1Ref && (
-            <CopyChip
-              label="C1"
-              val={item.c1Ref}
-              copied={!!copied[item.c1Ref]}
-              onCopy={() => onCopy(item.c1Ref, 'C1')}
-            />
+            <CopyChip label="C1" val={item.c1Ref} copied={!!copied[item.c1Ref]} onCopy={() => onCopy(item.c1Ref, 'C1')} />
           )}
-
-          {/* Ref Anigraco */}
           {item.refAnigraco && (
-            <CopyChip
-              label="Anigraco"
-              val={item.refAnigraco}
-              copied={!!copied[item.refAnigraco]}
-              onCopy={() => onCopy(item.refAnigraco, 'Ref Anigraco')}
-              gold
-            />
+            <CopyChip label="Anigraco" val={item.refAnigraco} copied={!!copied[item.refAnigraco]} onCopy={() => onCopy(item.refAnigraco, 'Ref Anigraco')} gold />
           )}
-
-          {/* Categoria / tipo */}
           {item.cat && !isTampo && (
             <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', letterSpacing:'0.08em', textTransform:'uppercase' }}>
               {item.cat}
             </span>
           )}
 
-          {/* PVP para Tampos */}
-          {item.price > 0 && (
-            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:600, color: isTampo ? '#4a8fa8' : 'var(--neo-text2)', marginLeft:'auto', letterSpacing:'0.04em' }}>
-              {f2(item.price)} €
+          {/* Qty — só Biblioteca/Modelos */}
+          {!isTampo && (
+            <div style={{ display:'flex', alignItems:'center', gap:4, marginLeft:'auto' }}>
+              <button onClick={()=>onQty(item.ref,(item.qty||1)-1)}
+                style={{ width:22,height:22,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1 }}>−</button>
+              <span style={{ fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,color:'var(--neo-text)',minWidth:18,textAlign:'center' }}>{item.qty||1}</span>
+              <button onClick={()=>onQty(item.ref,(item.qty||1)+1)}
+                style={{ width:22,height:22,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1 }}>+</button>
+              {item.price>0&&<span style={{ fontFamily:"'Barlow Condensed'",fontSize:12,color:'var(--neo-text2)',marginLeft:4 }}>{(item.price*(item.qty||1)).toFixed(2)} €</span>}
+            </div>
+          )}
+
+          {/* Preço Tampo — fixo */}
+          {isTampo && item.price>0 && (
+            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:600, color:'#4a8fa8', marginLeft:'auto' }}>
+              {(item.price).toFixed(2)} €
             </span>
           )}
         </div>
