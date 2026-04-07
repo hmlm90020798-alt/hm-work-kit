@@ -204,11 +204,15 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, cor }) {
     <div style={{ margin:'0 12px 6px', background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', overflow:'hidden' }}>
       <div style={{ padding:'12px 14px' }}>
 
-        {/* Linha 1: ref + ações */}
+        {/* Linha 1: ref copiável + ações */}
         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-          <span style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700, letterSpacing:'0.1em', color: cor || 'var(--neo-gold)', flex:1 }}>
-            {item.ref}
-          </span>
+          <CopyChip
+            label=""
+            val={item.ref}
+            copied={!!copied[item.ref]}
+            onCopy={() => onCopy(item.ref, 'Referência')}
+            mainRef
+          />
           {isTampo && (
             <button onClick={onOpen}
               style={{ padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', border:'1px solid rgba(74,143,168,0.4)', background:'transparent', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:'#4a8fa8', transition:'all .15s' }}>
@@ -216,7 +220,7 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, cor }) {
             </button>
           )}
           <button onClick={onRemove}
-            style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--neo-text2)', fontSize:13, padding:'2px 4px', lineHeight:1, flexShrink:0 }}>✕</button>
+            style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--neo-text2)', fontSize:13, padding:'2px 4px', lineHeight:1, flexShrink:0, marginLeft:'auto' }}>✕</button>
         </div>
 
         {/* Linha 2: descrição */}
@@ -267,7 +271,27 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, cor }) {
   )
 }
 
-function CopyChip({ label, val, copied, onCopy, gold }) {
+function CopyChip({ label, val, copied, onCopy, gold, mainRef }) {
+  if (mainRef) {
+    return (
+      <button onClick={onCopy} style={{
+        display:'inline-flex', alignItems:'center', gap:6,
+        background:'transparent', border:'none', cursor:'pointer', padding:0,
+      }}>
+        <span style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700, letterSpacing:'0.1em', color: copied ? 'var(--neo-gold)' : 'var(--neo-gold)' }}>
+          {val}
+        </span>
+        <span style={{
+          background:'var(--neo-bg)', borderRadius:'var(--neo-radius-pill)', padding:'2px 7px',
+          boxShadow: copied ? 'var(--neo-shadow-in-sm), var(--neo-glow-gold)' : 'var(--neo-shadow-out-sm)',
+          fontFamily:"'Barlow Condensed'", fontSize:9, color: copied ? 'var(--neo-gold)' : 'var(--neo-text2)',
+          transition:'all .15s',
+        }}>
+          {copied ? '✓' : '⎘'}
+        </span>
+      </button>
+    )
+  }
   return (
     <button onClick={onCopy} style={{
       display:'inline-flex', alignItems:'center', gap:5,
@@ -276,9 +300,9 @@ function CopyChip({ label, val, copied, onCopy, gold }) {
       boxShadow: copied ? 'var(--neo-shadow-in-sm), var(--neo-glow-gold)' : 'var(--neo-shadow-out-sm)',
       cursor:'pointer', transition:'all .15s',
     }}>
-      <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em', textTransform:'uppercase', color: copied ? 'var(--neo-gold)' : 'var(--neo-text2)' }}>
+      {label && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em', textTransform:'uppercase', color: copied ? 'var(--neo-gold)' : 'var(--neo-text2)' }}>
         {label}
-      </span>
+      </span>}
       <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, letterSpacing:'0.06em', color: copied ? 'var(--neo-gold)' : (gold ? 'var(--neo-gold)' : 'var(--neo-text)') }}>
         {val}
       </span>

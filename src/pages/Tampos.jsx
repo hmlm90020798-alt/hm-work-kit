@@ -308,6 +308,7 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone}){
       <div className="neo-topbar">
         <span style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:700,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--neo-text)'}}>Tampos</span>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <AnigracoRef showToast={showToast}/>
           <button className="neo-btn neo-btn-ghost" style={{height:26,fontSize:9,border:'1px solid var(--neo-gold2)',color:'var(--neo-gold)',borderRadius:'var(--neo-radius-pill)',padding:'0 12px'}}
             onClick={()=>setImportModal(true)}>↑ Import</button>
           {calculos.length>0&&(
@@ -695,26 +696,29 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
         </div>
       </div>
 
-      {/* Total + comparação */}
+      {/* Total + comparação + ref Anigraco */}
       <div className="neo-total-bar">
-        <div style={{display:'flex',gap:20}}>
+        <div style={{display:'flex',gap:20,alignItems:'center'}}>
           <div>
-            <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--neo-text3)',marginBottom:3}}>{current.opcaoB?'Opção A':'PVP total'}</div>
+            <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--neo-text2)',marginBottom:3}}>{current.opcaoB?'Opção A':'PVP total'}</div>
             <div style={{fontFamily:"'Barlow Condensed'",fontSize:20,fontWeight:700,color:'var(--neo-gold)'}}>{f2(TA.pvp)} €</div>
           </div>
           {TB&&<div>
-            <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--neo-text3)',marginBottom:3}}>Opção B</div>
+            <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--neo-text2)',marginBottom:3}}>Opção B</div>
             <div style={{fontFamily:"'Barlow Condensed'",fontSize:20,fontWeight:700,color:'var(--neo-blue,#4a8fa8)'}}>{f2(TB.pvp)} €</div>
           </div>}
           {TB&&<div style={{display:'flex',alignItems:'center'}}>
-            <div style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-text3)',textAlign:'center'}}>
+            <div style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-text2)',textAlign:'center'}}>
               <div>Δ</div>
               <div style={{color:TA.pvp<TB.pvp?'var(--neo-gold)':'var(--neo-text2)',fontSize:12,fontWeight:600}}>{f2(Math.abs(TA.pvp-TB.pvp))} €</div>
             </div>
           </div>}
+
+          {/* Ref Anigraco — sempre visível na calculadora */}
+          <AnigracoRef showToast={showToast}/>
         </div>
         <button onClick={()=>{ if(!current.opcaoB) activarCompB(); else upd('opcaoB',null) }}
-          style={{background:'transparent',border:'1px solid',borderColor:current.opcaoB?'var(--neo-gold)':'rgba(255,255,255,0.1)',borderRadius:20,padding:'5px 12px',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.12em',textTransform:'uppercase',color:current.opcaoB?'var(--neo-gold)':'var(--neo-text3)',transition:'all .2s'}}>
+          style={{background:'transparent',border:'1px solid',borderColor:current.opcaoB?'var(--neo-gold)':'rgba(255,255,255,0.1)',borderRadius:20,padding:'5px 12px',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.12em',textTransform:'uppercase',color:current.opcaoB?'var(--neo-gold)':'var(--neo-text2)',transition:'all .2s'}}>
           {current.opcaoB?'Modo simples':'Comparar'}
         </button>
       </div>
@@ -901,6 +905,34 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
         }}
         onClose={()=>setMatModal(null)}/>}
     </div>
+  )
+}
+
+// ── AnigracoRef — ref fixa do fornecedor Anigraco, sempre copiável ────────────
+const REF_ANIGRACO = '207849'
+function AnigracoRef({showToast}){
+  const [copied,setCopied]=useState(false)
+  const copy=()=>{
+    navigator.clipboard.writeText(REF_ANIGRACO).catch(()=>{})
+    setCopied(true);setTimeout(()=>setCopied(false),1600)
+    showToast('Ref Anigraco copiada — '+REF_ANIGRACO)
+  }
+  return(
+    <button onClick={copy} style={{
+      display:'flex',flexDirection:'column',alignItems:'flex-start',
+      background:'var(--neo-bg)',border:'none',
+      borderRadius:'var(--neo-radius-sm)',
+      boxShadow:copied?'var(--neo-shadow-in-sm),var(--neo-glow-gold)':'var(--neo-shadow-out-sm)',
+      padding:'5px 12px',cursor:'pointer',transition:'all .15s',
+      borderLeft:`2px solid ${copied?'var(--neo-gold)':'var(--neo-gold2)'}`,
+    }}>
+      <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.18em',textTransform:'uppercase',color:copied?'var(--neo-gold)':'var(--neo-text2)',marginBottom:2}}>
+        Ref Anigraco {copied?'✓':'⎘'}
+      </span>
+      <span style={{fontFamily:"'Barlow Condensed'",fontSize:16,fontWeight:700,letterSpacing:'0.08em',color:copied?'var(--neo-gold)':'var(--neo-text)'}}>
+        {REF_ANIGRACO}
+      </span>
+    </button>
   )
 }
 
