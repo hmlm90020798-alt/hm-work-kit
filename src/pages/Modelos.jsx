@@ -59,7 +59,18 @@ export default function Modelos({ showToast }) {
   const addItem = async (art) => {
     if (!modelo) return
     if ((modelo.items||[]).find(i=>i.artId===art.id)) { showToast('Artigo já existe'); return }
-    const items = [...(modelo.items||[]), {artId:art.id, ref:art.ref, desc:art.desc, cat:art.cat||'', price:art.price||0, qty:1}]
+    const items = [...(modelo.items||[]), {
+      artId:    art.id,
+      ref:      art.ref,
+      desc:     art.desc,
+      cat:      art.cat||'',
+      sub:      art.sub||'',
+      price:    art.price||0,
+      supplier: art.supplier||'',
+      link:     art.link||'',
+      notes:    art.notes||'',
+      qty:      1
+    }]
     await setDoc(doc(db,'modelos',modelo.id), {...modelo, items})
     showToast('Artigo adicionado')
   }
@@ -88,7 +99,17 @@ export default function Modelos({ showToast }) {
     const items = m.items||[]
     if (!items.length) { showToast('Modelo sem artigos'); return }
     for (const item of items) {
-      await addToOrcamento({ref:item.ref,desc:item.desc,cat:item.cat||'',price:item.price||0,origem:'Modelos'},()=>{})
+      await addToOrcamento({
+        ref:      item.ref,
+        desc:     item.desc,
+        cat:      item.cat||'',
+        sub:      item.sub||'',
+        price:    item.price||0,
+        supplier: item.supplier||'',
+        link:     item.link||'',
+        notes:    item.notes||'',
+        origem:   'Modelos'
+      }, ()=>{})
     }
     showToast(`${items.length} artigo${items.length!==1?'s':''} adicionado${items.length!==1?'s':''} ao orçamento`)
   }
@@ -376,28 +397,46 @@ function ItemRow({item,onQty,onRemove,onStar,showToast}){
     setCopied(true);setTimeout(()=>setCopied(false),1600)
     showToast('Copiado — '+item.ref)
   }
+  const label = item.sub ? item.cat+' · '+item.sub : item.cat
   return(
-    <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(255,255,255,0.05)',display:'flex',alignItems:'center',gap:10}}>
-      <button onClick={onStar} style={{background:'transparent',border:'none',cursor:'pointer',fontSize:13,color:item.star?'#f0c040':'var(--neo-text2)',flexShrink:0,padding:'2px'}}>
+    <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(255,255,255,0.05)',display:'flex',alignItems:'flex-start',gap:10}}>
+      <button onClick={onStar} style={{background:'transparent',border:'none',cursor:'pointer',fontSize:13,color:item.star?'#f0c040':'var(--neo-text2)',flexShrink:0,padding:'2px',marginTop:1}}>
         {item.star?'★':'☆'}
       </button>
       <div style={{flex:1,minWidth:0}}>
-        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
+        {/* Ref + copy */}
+        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:3}}>
           <span style={{fontFamily:"'Barlow Condensed'",fontSize:14,fontWeight:600,letterSpacing:'0.08em',color:'var(--neo-gold)'}}>{item.ref}</span>
           <button onClick={copy} style={{background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-pill)',padding:'2px 7px',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,color:copied?'var(--neo-gold)':'var(--neo-text2)',boxShadow:copied?'var(--neo-shadow-in-sm),var(--neo-glow-gold)':'var(--neo-shadow-out-sm)',transition:'all .15s'}}>
             {copied?'✓':'⎘'}
           </button>
         </div>
-        <div style={{fontSize:12,fontWeight:300,color:'var(--neo-text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.desc}</div>
-        {item.cat&&<div style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-text2)',letterSpacing:'0.08em',marginTop:2}}>{item.cat}</div>}
+        {/* Descrição */}
+        <div style={{fontSize:12,fontWeight:300,color:'var(--neo-text)',marginBottom:4,lineHeight:1.4}}>{item.desc}</div>
+        {/* Meta — cat, supplier, price */}
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
+          {label&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-text2)',background:'var(--neo-bg)',padding:'2px 7px',borderRadius:'var(--neo-radius-pill)'}}>{label}</span>}
+          {item.supplier&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--neo-text2)'}}>{item.supplier}</span>}
+          {item.price>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:11,fontWeight:600,color:'var(--neo-gold)'}}>{item.price.toFixed(2)} €</span>}
+        </div>
+        {/* Notas */}
+        {item.notes&&<div style={{fontSize:11,fontWeight:300,color:'var(--neo-text2)',marginTop:4,lineHeight:1.4}}>{item.notes}</div>}
+        {/* Link */}
+        {item.link&&<a href={item.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
+          style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.08em',color:'var(--neo-gold2)',textDecoration:'none',display:'inline-block',marginTop:4}}>
+          ↗ {item.link.replace(/^https?:\/\//,'').slice(0,40)}{item.link.length>47?'…':''}
+        </a>}
       </div>
-      <div style={{display:'flex',alignItems:'center',gap:4,flexShrink:0}}>
-        <button onClick={()=>onQty((item.qty||1)-1)} style={{width:24,height:24,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>−</button>
-        <span style={{fontFamily:"'Barlow Condensed'",fontSize:14,fontWeight:600,color:'var(--neo-text)',minWidth:22,textAlign:'center'}}>{item.qty||1}</span>
-        <button onClick={()=>onQty((item.qty||1)+1)} style={{width:24,height:24,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>+</button>
+      {/* Qty + remover */}
+      <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6,flexShrink:0}}>
+        <div style={{display:'flex',alignItems:'center',gap:4}}>
+          <button onClick={()=>onQty((item.qty||1)-1)} style={{width:24,height:24,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>−</button>
+          <span style={{fontFamily:"'Barlow Condensed'",fontSize:14,fontWeight:600,color:'var(--neo-text)',minWidth:22,textAlign:'center'}}>{item.qty||1}</span>
+          <button onClick={()=>onQty((item.qty||1)+1)} style={{width:24,height:24,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>+</button>
+        </div>
+        {item.price>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:11,color:'var(--neo-text2)'}}>{((item.price||0)*(item.qty||1)).toFixed(2)} €</span>}
+        <button onClick={onRemove} style={{background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text2)',fontSize:13,padding:'2px'}}>✕</button>
       </div>
-      {item.price>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:12,color:'var(--neo-text2)',minWidth:64,textAlign:'right',flexShrink:0}}>{((item.price||0)*(item.qty||1)).toFixed(2)} €</span>}
-      <button onClick={onRemove} style={{background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text2)',fontSize:13,flexShrink:0,padding:'2px'}}>✕</button>
     </div>
   )
 }

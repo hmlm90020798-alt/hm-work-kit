@@ -146,7 +146,7 @@ export default function Biblioteca({ showToast }) {
   }
 
   const saveCat = async (cat) => {
-    await setDoc(doc(db,'categorias',cat.id), {name:cat.name,subs:cat.subs})
+    await setDoc(doc(db,'categorias',cat.id), {name:cat.name, subs:cat.subs||[], order:cat.order??999})
   }
 
   const L = { fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:600, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--neo-text2)', display:'block', marginBottom:8 }
