@@ -441,27 +441,46 @@ function CatModal({ open, cats, arts, onClose, onSave, showToast }) {
         </div>
         <div style={{maxHeight:'52vh',overflowY:'auto',marginBottom:16}} className="neo-scroll">
           {sorted.map((cat,idx)=>(
-            <div key={cat.id} style={{display:'flex',alignItems:'center',gap:6,marginBottom:8,padding:'10px 12px',borderRadius:6,background:'var(--neo-bg2)',border:'1px solid rgba(255,255,255,0.05)'}}>
-              {/* Setas ordem */}
-              <div style={{display:'flex',flexDirection:'column',gap:0,flexShrink:0}}>
-                <button onClick={()=>move(idx,-1)} disabled={idx===0||saving}
-                  style={{background:'transparent',border:'none',cursor:idx===0?'default':'pointer',color:idx===0?'rgba(255,255,255,0.1)':'var(--neo-text2)',fontSize:12,lineHeight:1,padding:'1px 4px',display:'block'}}>▲</button>
-                <button onClick={()=>move(idx,1)} disabled={idx===sorted.length-1||saving}
-                  style={{background:'transparent',border:'none',cursor:idx===sorted.length-1?'default':'pointer',color:idx===sorted.length-1?'rgba(255,255,255,0.1)':'var(--neo-text2)',fontSize:12,lineHeight:1,padding:'1px 4px',display:'block'}}>▼</button>
+            <div key={cat.id} style={{display:'flex',gap:4,marginBottom:8,alignItems:'stretch'}}>
+
+              {/* Coluna de setas — separada do card */}
+              <div style={{display:'flex',flexDirection:'column',gap:4,flexShrink:0,justifyContent:'center'}}>
+                <button
+                  onClick={()=>{ if(!saving&&idx>0) move(idx,-1) }}
+                  style={{
+                    width:28,height:28,border:'1px solid rgba(255,255,255,0.08)',borderRadius:4,
+                    background:idx===0||saving?'transparent':'var(--neo-bg2)',
+                    cursor:idx===0||saving?'default':'pointer',
+                    color:idx===0||saving?'rgba(255,255,255,0.12)':'var(--neo-text)',
+                    fontSize:13,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1,
+                  }}>▲</button>
+                <button
+                  onClick={()=>{ if(!saving&&idx<sorted.length-1) move(idx,1) }}
+                  style={{
+                    width:28,height:28,border:'1px solid rgba(255,255,255,0.08)',borderRadius:4,
+                    background:idx===sorted.length-1||saving?'transparent':'var(--neo-bg2)',
+                    cursor:idx===sorted.length-1||saving?'default':'pointer',
+                    color:idx===sorted.length-1||saving?'rgba(255,255,255,0.12)':'var(--neo-text)',
+                    fontSize:13,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1,
+                  }}>▼</button>
               </div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-text)',marginBottom:2}}>{cat.name}</div>
-                {(cat.subs||[]).length>0&&<div style={{paddingLeft:8}}>
+
+              {/* Card da categoria */}
+              <div style={{flex:1,padding:'10px 12px',borderRadius:6,background:'var(--neo-bg2)',border:'1px solid rgba(255,255,255,0.05)'}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:(cat.subs||[]).length>0?6:0}}>
+                  <span style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-text)'}}>{cat.name}</span>
+                  <button className="bib-act-btn del" onClick={()=>removeCat(cat)}>✕</button>
+                </div>
+                {(cat.subs||[]).length>0&&<div style={{paddingLeft:4,marginBottom:4}}>
                   {(cat.subs||[]).map(s=>(
                     <div key={s} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'3px 0',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
                       <span style={{fontSize:11,fontWeight:300,color:'var(--neo-text2)'}}>↳ {s}</span>
-                      <button onClick={()=>removeSub(cat,s)} style={{background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text2)',fontSize:10,padding:'1px'}}>✕</button>
+                      <button onClick={()=>removeSub(cat,s)} style={{background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text2)',fontSize:10,padding:'2px'}}>✕</button>
                     </div>
                   ))}
                 </div>}
                 <SubAdd onAdd={(v)=>addSub(cat,v)}/>
               </div>
-              <button className="bib-act-btn del" onClick={()=>removeCat(cat)} style={{flexShrink:0,alignSelf:'flex-start'}}>✕</button>
             </div>
           ))}
         </div>
