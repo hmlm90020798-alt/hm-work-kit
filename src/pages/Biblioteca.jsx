@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { db } from '../firebase'
 import { collection, doc, onSnapshot, setDoc, deleteDoc, addDoc, updateDoc } from 'firebase/firestore'
 import '../styles/biblioteca.css'
@@ -386,36 +386,37 @@ function ArtCard({ art, onEdit, onDel, onStar, showToast, onAddOrc }) {
 function CatModal({ open, cats, arts, onClose, onSave, showToast }) {
   const [newCat, setNewCat] = useState('')
   const [saving, setSaving] = useState(false)
-  const dragId  = React.useRef(null)
-  const dragIdx = React.useRef(null)
+  const catsRef = useRef(cats)
+  useEffect(() => { catsRef.current = cats }, [cats])
+
   const I = {flex:1,background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-in-sm)',padding:'8px 12px',fontFamily:"'Barlow'",fontSize:13,fontWeight:300,color:'var(--neo-text)',outline:'none'}
 
-  const sorted = [...cats].sort((a,b)=>(a.order??999)-(b.order??999))
+  const getSorted = () => [...catsRef.current].sort((a,b)=>(a.order??999)-(b.order??999))
 
   const saveOrder = async (newOrder) => {
     setSaving(true)
-    await Promise.all(newOrder.map((cat,i) => onSave({...cat, order:i})))
-    setSaving(false)
+    try {
+      for (let i=0; i<newOrder.length; i++) {
+        await onSave({...newOrder[i], order:i})
+      }
+    } finally { setSaving(false) }
   }
 
-  const moveUp = (idx) => {
-    if(idx===0) return
-    const arr=[...sorted]
-    ;[arr[idx-1],arr[idx]]=[arr[idx],arr[idx-1]]
-    saveOrder(arr)
-  }
-  const moveDown = (idx) => {
-    if(idx===sorted.length-1) return
-    const arr=[...sorted]
-    ;[arr[idx],arr[idx+1]]=[arr[idx+1],arr[idx]]
+  const move = (idx, dir) => {
+    const arr = getSorted()
+    const newIdx = idx + dir
+    if (newIdx < 0 || newIdx >= arr.length) return
+    const tmp = arr[idx]; arr[idx] = arr[newIdx]; arr[newIdx] = tmp
     saveOrder(arr)
   }
 
   const addCat = async () => {
     const v=newCat.trim(); if(!v)return
-    if(cats.some(c=>c.name===v)){showToast('Já existe');return}
+    if(catsRef.current.some(c=>c.name===v)){showToast('Já existe');return}
     const id=v.toLowerCase().replace(/[^a-z0-9]/g,'')+(Date.now()%10000)
-    await onSave({id,name:v,subs:[],order:cats.length}); setNewCat(''); showToast('Categoria criada')
+    const order=catsRef.current.length
+    await onSave({id,name:v,subs:[],order})
+    setNewCat(''); showToast('Categoria criada')
   }
   const removeCat = async (cat) => {
     const n=arts.filter(a=>a.cat===cat.name).length
@@ -423,65 +424,44 @@ function CatModal({ open, cats, arts, onClose, onSave, showToast }) {
     await deleteDoc(doc(db,'categorias',cat.id)); showToast('Removida')
   }
   const addSub = async (cat,val) => {
-    if(!val||!val.trim())return
+    if(!val?.trim())return
     if((cat.subs||[]).includes(val.trim())){showToast('Já existe');return}
     await onSave({...cat,subs:[...(cat.subs||[]),val.trim()]}); showToast('Subcategoria adicionada')
   }
   const removeSub = async (cat,sub) => { await onSave({...cat,subs:(cat.subs||[]).filter(s=>s!==sub)}) }
 
-  const handleDragStart = (e, id, idx) => {
-    dragId.current  = id
-    dragIdx.current = idx
-    e.dataTransfer.effectAllowed = 'move'
-  }
-  const handleDrop = (e, targetIdx) => {
-    e.preventDefault()
-    const fromIdx = dragIdx.current
-    if(fromIdx === null || fromIdx === targetIdx) return
-    const arr = [...sorted]
-    const [moved] = arr.splice(fromIdx, 1)
-    arr.splice(targetIdx, 0, moved)
-    saveOrder(arr)
-    dragId.current  = null
-    dragIdx.current = null
-  }
+  const sorted = getSorted()
 
   return (
     <div className={`neo-overlay ${open?'open':''}`}>
       <div className="neo-modal" style={{maxWidth:500}}>
         <div className="neo-modal-head">
-          Categorias {saving&&<span style={{fontSize:10,color:'var(--neo-text2)',fontWeight:300}}>A guardar…</span>}
+          Categorias {saving&&<span style={{fontSize:10,color:'var(--neo-gold)',fontWeight:400,letterSpacing:'0.1em'}}>↻</span>}
           <button className="neo-modal-close" onClick={onClose}>✕</button>
         </div>
-        <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text2)',marginBottom:10}}>
-          ↕ Arrasta ou usa as setas para reordenar
-        </div>
-        <div style={{maxHeight:'50vh',overflowY:'auto',marginBottom:16}} className="neo-scroll">
+        <div style={{maxHeight:'52vh',overflowY:'auto',marginBottom:16}} className="neo-scroll">
           {sorted.map((cat,idx)=>(
-            <div key={cat.id}
-              draggable
-              onDragStart={e=>handleDragStart(e,cat.id,idx)}
-              onDragOver={e=>e.preventDefault()}
-              onDrop={e=>handleDrop(e,idx)}
-              style={{marginBottom:10,padding:'10px 12px',borderRadius:6,border:'1px solid rgba(255,255,255,0.05)',background:'var(--neo-bg2)',cursor:'grab',userSelect:'none'}}>
-              <div style={{display:'flex',alignItems:'center',gap:8}}>
-                <span style={{fontSize:14,color:'var(--neo-text2)',flexShrink:0}}>⠿</span>
-                <span style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-text)',flex:1}}>{cat.name}</span>
-                {/* Setas */}
-                <button onClick={()=>moveUp(idx)} disabled={idx===0} style={{background:'transparent',border:'none',cursor:idx===0?'default':'pointer',color:idx===0?'var(--neo-text3)':'var(--neo-text2)',fontSize:14,padding:'2px 4px',lineHeight:1}}>↑</button>
-                <button onClick={()=>moveDown(idx)} disabled={idx===sorted.length-1} style={{background:'transparent',border:'none',cursor:idx===sorted.length-1?'default':'pointer',color:idx===sorted.length-1?'var(--neo-text3)':'var(--neo-text2)',fontSize:14,padding:'2px 4px',lineHeight:1}}>↓</button>
-                <button className="bib-act-btn del" onClick={()=>removeCat(cat)} style={{flexShrink:0}}>✕</button>
+            <div key={cat.id} style={{display:'flex',alignItems:'center',gap:6,marginBottom:8,padding:'10px 12px',borderRadius:6,background:'var(--neo-bg2)',border:'1px solid rgba(255,255,255,0.05)'}}>
+              {/* Setas ordem */}
+              <div style={{display:'flex',flexDirection:'column',gap:0,flexShrink:0}}>
+                <button onClick={()=>move(idx,-1)} disabled={idx===0||saving}
+                  style={{background:'transparent',border:'none',cursor:idx===0?'default':'pointer',color:idx===0?'rgba(255,255,255,0.1)':'var(--neo-text2)',fontSize:12,lineHeight:1,padding:'1px 4px',display:'block'}}>▲</button>
+                <button onClick={()=>move(idx,1)} disabled={idx===sorted.length-1||saving}
+                  style={{background:'transparent',border:'none',cursor:idx===sorted.length-1?'default':'pointer',color:idx===sorted.length-1?'rgba(255,255,255,0.1)':'var(--neo-text2)',fontSize:12,lineHeight:1,padding:'1px 4px',display:'block'}}>▼</button>
               </div>
-              {/* Subcategorias */}
-              {(cat.subs||[]).length>0&&<div style={{marginTop:8,paddingLeft:22}}>
-                {(cat.subs||[]).map(s=>(
-                  <div key={s} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'4px 0',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
-                    <span style={{fontSize:12,fontWeight:300,color:'var(--neo-text2)'}}>↳ {s}</span>
-                    <button onClick={()=>removeSub(cat,s)} style={{background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text2)',fontSize:11}}>✕</button>
-                  </div>
-                ))}
-              </div>}
-              <SubAdd onAdd={(v)=>addSub(cat,v)}/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-text)',marginBottom:2}}>{cat.name}</div>
+                {(cat.subs||[]).length>0&&<div style={{paddingLeft:8}}>
+                  {(cat.subs||[]).map(s=>(
+                    <div key={s} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'3px 0',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
+                      <span style={{fontSize:11,fontWeight:300,color:'var(--neo-text2)'}}>↳ {s}</span>
+                      <button onClick={()=>removeSub(cat,s)} style={{background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text2)',fontSize:10,padding:'1px'}}>✕</button>
+                    </div>
+                  ))}
+                </div>}
+                <SubAdd onAdd={(v)=>addSub(cat,v)}/>
+              </div>
+              <button className="bib-act-btn del" onClick={()=>removeCat(cat)} style={{flexShrink:0,alignSelf:'flex-start'}}>✕</button>
             </div>
           ))}
         </div>
@@ -499,11 +479,11 @@ function CatModal({ open, cats, arts, onClose, onSave, showToast }) {
 
 function SubAdd({ onAdd }) {
   const [v,setV]=useState('')
-  const I={flex:1,background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-in-sm)',padding:'6px 10px',fontFamily:"'Barlow'",fontSize:12,fontWeight:300,color:'var(--neo-text)',outline:'none'}
+  const I={flex:1,background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-in-sm)',padding:'5px 10px',fontFamily:"'Barlow'",fontSize:12,fontWeight:300,color:'var(--neo-text)',outline:'none'}
   return(
-    <div style={{display:'flex',gap:8,marginTop:8,paddingLeft:24}}>
+    <div style={{display:'flex',gap:6,marginTop:6,paddingLeft:8}}>
       <input value={v} onChange={e=>setV(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){onAdd(v);setV('')}}} placeholder='+ subcategoria…' style={I}/>
-      <button onClick={()=>{onAdd(v);setV('')}} className="neo-btn neo-btn-ghost" style={{height:30,fontSize:9,flexShrink:0}}>Add</button>
+      <button onClick={()=>{onAdd(v);setV('')}} className="neo-btn neo-btn-ghost" style={{height:28,fontSize:9,flexShrink:0,padding:'0 10px'}}>Add</button>
     </div>
   )
 }
