@@ -5,6 +5,7 @@ import Modelos from './pages/Modelos'
 import Orcamentos from './pages/Orcamentos'
 import Tampos from './pages/Tampos'
 import MaoDeObra from './pages/MaoDeObra'
+import IA from './pages/IA'
 import Login from './pages/Login'
 import Toast from './components/Toast'
 import { useToast } from './hooks/useToast'
@@ -15,7 +16,7 @@ const PAGES = [
   { id:'orcamentos', label:'Orçamentos', sub:'Cálculo de material' },
   { id:'tampos',     label:'Tampos',     sub:'Calculadora ANIGRACO' },
   { id:'maodeobra',  label:'Mão de Obra',sub:'Serviços e instalações' },
-  { id:'ia',         label:'IA',         sub:'Em desenvolvimento' },
+  { id:'ia',         label:'IA',         sub:'Assistente de orçamentação' },
 ]
 
 function Shell() {
@@ -80,16 +81,14 @@ function Shell() {
           <nav style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', padding:'0 28px' }}>
             {PAGES.map((p, i) => {
               const isActive = page === p.id
-              const isIA = p.id === 'ia'
               return (
-                <button key={p.id} onClick={() => !isIA && goTo(p.id)}
+                <button key={p.id} onClick={() => goTo(p.id)}
                   style={{
                     background:'transparent', border:'none',
                     borderBottom:'1px solid rgba(255,255,255,0.05)',
-                    padding:'20px 0', cursor: isIA ? 'default' : 'pointer',
+                    padding:'20px 0', cursor:'pointer',
                     textAlign:'left', display:'flex', alignItems:'center', justifyContent:'space-between',
-                    gap:16, opacity: isIA ? 0.35 : 1,
-                    transition:'all .15s'
+                    gap:16, transition:'all .15s'
                   }}>
                   <div>
                     <div style={{
@@ -144,6 +143,7 @@ function Shell() {
         {page === 'orcamentos' && <Orcamentos showToast={showToast} onOpenTampo={(c)=>{ setTampoParaAbrir(c); setPage('tampos') }} />}
         {page === 'tampos'     && <Tampos     showToast={showToast} abrirCalculo={tampoParaAbrir} onAbrirCalculoDone={()=>setTampoParaAbrir(null)} />}
         {page === 'maodeobra'  && <MaoDeObra  showToast={showToast} />}
+        {page === 'ia'         && <IA         showToast={showToast} />}
       </main>
 
       <Toast msg={msg} visible={visible} />

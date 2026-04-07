@@ -441,53 +441,69 @@ function ModelCard({m,total,onOpen,onDel,onAdd,onEdit}){
 
 // ── ItemRow ───────────────────────────────────────────────────────────────────
 function ItemRow({item,onQty,onRemove,onStar,showToast}){
-  const [copied,setCopied]=useState(false)
+  const [open,   setOpen]   = useState(false)
+  const [copied, setCopied] = useState(false)
+  const isMO = item.origem === 'maodeobra'
+  const label = item.sub ? item.cat+' · '+item.sub : item.cat
+
   const copy=(e)=>{
     e.stopPropagation()
     navigator.clipboard.writeText(item.ref).catch(()=>{})
     setCopied(true);setTimeout(()=>setCopied(false),1600)
     showToast('Copiado — '+item.ref)
   }
-  const label = item.sub ? item.cat+' · '+item.sub : item.cat
+
   return(
-    <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(255,255,255,0.05)',display:'flex',alignItems:'flex-start',gap:10}}>
-      <button onClick={onStar} style={{background:'transparent',border:'none',cursor:'pointer',fontSize:13,color:item.star?'#f0c040':'var(--neo-text2)',flexShrink:0,padding:'2px',marginTop:1}}>
-        {item.star?'★':'☆'}
-      </button>
-      <div style={{flex:1,minWidth:0}}>
+    <div onClick={()=>setOpen(o=>!o)}
+      style={{padding:'10px 16px',borderBottom:'1px solid rgba(255,255,255,0.05)',cursor:'pointer',
+        borderLeft: isMO ? '2px solid #b07acc' : '2px solid transparent'}}>
+      <div style={{display:'flex',alignItems:'center',gap:8}}>
+        {/* Estrela */}
+        <button onClick={e=>{e.stopPropagation();onStar()}} style={{background:'transparent',border:'none',cursor:'pointer',fontSize:13,color:item.star?'#f0c040':'var(--neo-text2)',flexShrink:0,padding:'2px'}}>
+          {item.star?'★':'☆'}
+        </button>
+
         {/* Ref + copy */}
-        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:3}}>
-          <span style={{fontFamily:"'Barlow Condensed'",fontSize:14,fontWeight:600,letterSpacing:'0.08em',color:'var(--neo-gold)'}}>{item.ref}</span>
+        <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
+          <span style={{fontFamily:"'Barlow Condensed'",fontSize:14,fontWeight:700,letterSpacing:'0.08em',color:isMO?'#b07acc':'var(--neo-gold)'}}>{item.ref}</span>
           <button onClick={copy} style={{background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-pill)',padding:'2px 7px',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,color:copied?'var(--neo-gold)':'var(--neo-text2)',boxShadow:copied?'var(--neo-shadow-in-sm),var(--neo-glow-gold)':'var(--neo-shadow-out-sm)',transition:'all .15s'}}>
             {copied?'✓':'⎘'}
           </button>
         </div>
-        {/* Descrição */}
-        <div style={{fontSize:12,fontWeight:300,color:'var(--neo-text)',marginBottom:4,lineHeight:1.4}}>{item.desc}</div>
-        {/* Meta — cat, supplier, price */}
-        <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
+
+        {/* Desc + badges */}
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:12,fontWeight:300,color:'var(--neo-text)',whiteSpace:open?'normal':'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.4}}>
+            {item.desc}
+          </div>
+          {!open&&<div style={{display:'flex',gap:6,alignItems:'center',marginTop:2,flexWrap:'nowrap',overflow:'hidden'}}>
+            {label&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-text2)',background:'var(--neo-bg)',padding:'2px 7px',borderRadius:'var(--neo-radius-pill)',flexShrink:0}}>{label}</span>}
+            {item.price>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:12,fontWeight:700,color:'var(--neo-gold)',whiteSpace:'nowrap'}}>{item.price.toFixed(2)} €</span>}
+            {item.supplier&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--neo-text2)',whiteSpace:'nowrap'}}>{item.supplier}</span>}
+          </div>}
+        </div>
+
+        {/* Qty + remover */}
+        <div style={{display:'flex',alignItems:'center',gap:4,flexShrink:0}} onClick={e=>e.stopPropagation()}>
+          <button onClick={()=>onQty((item.qty||1)-1)} style={{width:22,height:22,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>−</button>
+          <span style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,color:'var(--neo-text)',minWidth:18,textAlign:'center'}}>{item.qty||1}</span>
+          <button onClick={()=>onQty((item.qty||1)+1)} style={{width:22,height:22,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>+</button>
+          <button onClick={onRemove} style={{background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text2)',fontSize:13,padding:'2px',marginLeft:2}}>✕</button>
+        </div>
+      </div>
+
+      {/* Detalhe expandido */}
+      {open&&<div style={{marginTop:10,paddingTop:10,borderTop:'1px solid rgba(255,255,255,0.06)'}}>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:item.notes?6:0}}>
           {label&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-text2)',background:'var(--neo-bg)',padding:'2px 7px',borderRadius:'var(--neo-radius-pill)'}}>{label}</span>}
-          {item.supplier&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--neo-text2)'}}>{item.supplier}</span>}
-          {item.price>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:11,fontWeight:600,color:'var(--neo-gold)'}}>{item.price.toFixed(2)} €</span>}
+          {item.price>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:12,fontWeight:700,color:'var(--neo-gold)'}}>{((item.price||0)*(item.qty||1)).toFixed(2)} € {item.qty>1?`(${item.qty} × ${item.price.toFixed(2)})`:''}</span>}
+          {item.supplier&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-text2)',padding:'2px 8px',background:'var(--neo-bg)',borderRadius:'var(--neo-radius-pill)'}}>{item.supplier}</span>}
         </div>
-        {/* Notas */}
-        {item.notes&&<div style={{fontSize:11,fontWeight:300,color:'var(--neo-text2)',marginTop:4,lineHeight:1.4}}>{item.notes}</div>}
-        {/* Link */}
-        {item.link&&<a href={item.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
-          style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.08em',color:'var(--neo-gold2)',textDecoration:'none',display:'inline-block',marginTop:4}}>
-          ↗ {item.link.replace(/^https?:\/\//,'').slice(0,40)}{item.link.length>47?'…':''}
+        {item.notes&&<div style={{fontSize:11,fontWeight:300,color:'var(--neo-text2)',lineHeight:1.5,marginTop:4}}>{item.notes}</div>}
+        {item.link&&<a href={item.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-gold2)',textDecoration:'none',display:'inline-block',marginTop:4}}>
+          ↗ {item.link.replace(/^https?:\/\//,'').slice(0,50)}
         </a>}
-      </div>
-      {/* Qty + remover */}
-      <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6,flexShrink:0}}>
-        <div style={{display:'flex',alignItems:'center',gap:4}}>
-          <button onClick={()=>onQty((item.qty||1)-1)} style={{width:24,height:24,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>−</button>
-          <span style={{fontFamily:"'Barlow Condensed'",fontSize:14,fontWeight:600,color:'var(--neo-text)',minWidth:22,textAlign:'center'}}>{item.qty||1}</span>
-          <button onClick={()=>onQty((item.qty||1)+1)} style={{width:24,height:24,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>+</button>
-        </div>
-        {item.price>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:11,color:'var(--neo-text2)'}}>{((item.price||0)*(item.qty||1)).toFixed(2)} €</span>}
-        <button onClick={onRemove} style={{background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text2)',fontSize:13,padding:'2px'}}>✕</button>
-      </div>
+      </div>}
     </div>
   )
 }
