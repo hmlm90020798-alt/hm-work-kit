@@ -127,7 +127,7 @@ export default function Biblioteca({ showToast }) {
     try {
       if (editId) {
         const prev = arts.find(a=>a.id===editId)
-        await updateDoc(doc(db,'artigos',editId),{...data,star:prev?.star||false,kc:prev?.kc||false})
+        await updateDoc(doc(db,'artigos',editId),{...data,star:prev?.star||false,kc:form.kc||false})
         showToast('Artigo atualizado')
       } else {
         await addDoc(collection(db,'artigos'),data)
