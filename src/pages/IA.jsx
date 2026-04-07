@@ -6,10 +6,10 @@ import { addToOrcamento } from '../hooks/useOrcamento'
 
 // ── Gemini API ────────────────────────────────────────────────────────────────
 const GEMINI_MODELS = [
-  'gemini-1.5-flash',
-  'gemini-1.5-pro',
-  'gemini-pro',
-  'gemini-2.0-flash-lite',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-001',
+  'gemini-2.0-flash-lite-001',
+  'gemini-2.5-flash',
 ]
 const GEMINI_API = (model, key) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`
