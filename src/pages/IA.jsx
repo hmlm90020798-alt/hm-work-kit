@@ -4,10 +4,17 @@ import { collection, getDocs } from 'firebase/firestore'
 import { MAO_DE_OBRA } from '../data/maoDeObra'
 import { addToOrcamento } from '../hooks/useOrcamento'
 
-// ── Gemini 1.5 Flash — gratuito, sem CORS ────────────────────────────────────
-const GEMINI_MODEL = 'gemini-1.5-flash-latest'
-const GEMINI_URL   = (key) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`
+// ── Gemini API ────────────────────────────────────────────────────────────────
+const GEMINI_MODELS = [
+  'gemini-1.5-flash',
+  'gemini-1.5-pro',
+  'gemini-pro',
+  'gemini-2.0-flash-lite',
+]
+const GEMINI_API = (model, key) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`
+const LIST_MODELS = (key) =>
+  `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`
 
 // Contexto MO compacto — só standard com PVP ≥ 5€
 const MO_CONTEXT = MAO_DE_OBRA
@@ -80,41 +87,67 @@ export default function IA({ showToast }) {
     if (trimmed) { localStorage.setItem(KEY_STORAGE, trimmed); setShowKey(false) }
   }
 
+  const [modelUsado, setModelUsado] = useState('')
+
   const analisar = async () => {
     if (!descricao.trim()) { showToast('Descreve o projecto primeiro'); return }
     if (!apiKey) { setShowKey(true); showToast('Configura a API key primeiro'); return }
-    setLoading(true); setResultado(null); setErro(''); setAceites({})
-    try {
-      const prompt = buildPrompt(descricao, artigos)
-      const res = await fetch(GEMINI_URL(apiKey), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 2048 }
+    setLoading(true); setResultado(null); setErro(''); setAceites({}); setModelUsado('')
+
+    const prompt = buildPrompt(descricao, artigos)
+    let lastErr = ''
+
+    // Tentar cada modelo em sequência até um funcionar
+    for (const model of GEMINI_MODELS) {
+      try {
+        const res = await fetch(GEMINI_API(model, apiKey), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 2048 }
+          })
         })
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(()=>({}))
-        throw new Error(err?.error?.message || `HTTP ${res.status}`)
+        if (res.status === 404) { lastErr = `${model} não disponível`; continue }
+        if (res.status === 429) { lastErr = 'Limite de pedidos atingido — aguarda um momento'; break }
+        if (!res.ok) {
+          const e = await res.json().catch(()=>({}))
+          lastErr = e?.error?.message || `HTTP ${res.status}`
+          if (res.status === 400 && lastErr.includes('API_KEY')) break
+          continue
+        }
+        const data = await res.json()
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+        const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim()
+        const parsed = JSON.parse(clean)
+        setResultado(parsed)
+        setModelUsado(model)
+        const init = {}
+        ;(parsed.categorias||[]).forEach(c => { init[c.nome] = true })
+        setAceites(init)
+        setLoading(false)
+        return
+      } catch(e) {
+        lastErr = e.message || 'Erro desconhecido'
       }
-      const data = await res.json()
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-      const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim()
-      const parsed = JSON.parse(clean)
-      setResultado(parsed)
-      const init = {}
-      ;(parsed.categorias||[]).forEach(c => { init[c.nome] = true })
-      setAceites(init)
-    } catch(e) {
-      console.error(e)
-      if (e.message?.includes('API_KEY') || e.message?.includes('400')) {
-        setErro('API key inválida. Verifica a chave em aistudio.google.com.')
-        setShowKey(true)
-      } else {
-        setErro('Não foi possível analisar o projecto. ' + (e.message||'Tenta novamente.'))
+    }
+
+    // Nenhum modelo funcionou — tentar listar modelos disponíveis para diagnóstico
+    try {
+      const r = await fetch(LIST_MODELS(apiKey))
+      if (r.ok) {
+        const d = await r.json()
+        const nomes = (d.models||[])
+          .filter(m => m.supportedGenerationMethods?.includes('generateContent'))
+          .map(m => m.name.replace('models/',''))
+        if (nomes.length > 0) {
+          lastErr = `Modelos disponíveis na tua key: ${nomes.slice(0,5).join(', ')}. Contacta o suporte.`
+        }
       }
-    } finally { setLoading(false) }
+    } catch(_) {}
+
+    setErro(lastErr || 'Não foi possível conectar ao Gemini. Verifica a API key.')
+    setLoading(false)
   }
 
   const enviarParaOrc = async () => {
