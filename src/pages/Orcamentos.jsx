@@ -83,9 +83,10 @@ export default function Orcamentos({ showToast, onOpenTampo }) {
   }, {})
 
   const origemColor = {
-    'Biblioteca': 'var(--neo-gold)',
-    'Tampos':     '#4a8fa8',
-    'Modelos':    '#8a9e6e',
+    'Biblioteca':   'var(--neo-gold)',
+    'Tampos':       '#4a8fa8',
+    'Modelos':      '#8a9e6e',
+    'Mão de Obra':  '#b07acc',
   }
 
   return (
@@ -207,7 +208,8 @@ export default function Orcamentos({ showToast, onOpenTampo }) {
 // ── OrcItem — card de item do orçamento ──────────────────────────────────────
 function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, cor }) {
   const isTampo = item.origem === 'Tampos'
-  const subtotal = isTampo ? (item.price||0) : (item.price||0)*(item.qty||1)
+  const isMO    = item.origem === 'Mão de Obra'
+  const subtotal = (isTampo||isMO) ? (item.price||0) : (item.price||0)*(item.qty||1)
 
   return (
     <div style={{ margin:'0 12px 6px', background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', overflow:'hidden' }}>
@@ -252,7 +254,7 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, cor }) {
           )}
 
           {/* Qty — só Biblioteca/Modelos */}
-          {!isTampo && (
+          {!isTampo && !isMO && (
             <div style={{ display:'flex', alignItems:'center', gap:4, marginLeft:'auto' }}>
               <button onClick={()=>onQty(item.ref,(item.qty||1)-1)}
                 style={{ width:22,height:22,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1 }}>−</button>
@@ -263,9 +265,9 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, cor }) {
             </div>
           )}
 
-          {/* Preço Tampo — fixo */}
-          {isTampo && item.price>0 && (
-            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:600, color:'#4a8fa8', marginLeft:'auto' }}>
+          {/* Preço fixo — Tampos e Mão de Obra */}
+          {(isTampo||isMO) && item.price>0 && (
+            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:600, color:isMO?'#b07acc':'#4a8fa8', marginLeft:'auto' }}>
               {(item.price).toFixed(2)} €
             </span>
           )}

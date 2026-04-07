@@ -4,6 +4,7 @@ import Biblioteca from './pages/Biblioteca'
 import Modelos from './pages/Modelos'
 import Orcamentos from './pages/Orcamentos'
 import Tampos from './pages/Tampos'
+import MaoDeObra from './pages/MaoDeObra'
 import Login from './pages/Login'
 import Toast from './components/Toast'
 import { useToast } from './hooks/useToast'
@@ -13,6 +14,7 @@ const PAGES = [
   { id:'modelos',    label:'Modelos',    sub:'Templates de projecto' },
   { id:'orcamentos', label:'Orçamentos', sub:'Cálculo de material' },
   { id:'tampos',     label:'Tampos',     sub:'Calculadora ANIGRACO' },
+  { id:'maodeobra',  label:'Mão de Obra',sub:'Serviços e instalações' },
   { id:'ia',         label:'IA',         sub:'Em desenvolvimento' },
 ]
 
@@ -141,6 +143,7 @@ function Shell() {
         {page === 'modelos'    && <Modelos    showToast={showToast} />}
         {page === 'orcamentos' && <Orcamentos showToast={showToast} onOpenTampo={(c)=>{ setTampoParaAbrir(c); setPage('tampos') }} />}
         {page === 'tampos'     && <Tampos     showToast={showToast} abrirCalculo={tampoParaAbrir} onAbrirCalculoDone={()=>setTampoParaAbrir(null)} />}
+        {page === 'maodeobra'  && <MaoDeObra  showToast={showToast} />}
       </main>
 
       <Toast msg={msg} visible={visible} />
