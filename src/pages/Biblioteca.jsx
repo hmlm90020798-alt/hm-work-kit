@@ -39,6 +39,7 @@ export default function Biblioteca({ showToast }) {
   const [supplierFilter, setSupplierFilter] = useState('')
   const [supplierOpen, setSupplierOpen] = useState(false)
   const [onlyStars, setOnlyStars] = useState(false)
+  const [onlyKC,    setOnlyKC]    = useState(false)
   const [catOpen, setCatOpen]     = useState(false)
   const [artModal, setArtModal]   = useState(false)
   const [catModal, setCatModal]   = useState(false)
@@ -97,7 +98,8 @@ export default function Biblioteca({ showToast }) {
     const mq = !q || [a.ref,a.desc,a.cat,a.sub,a.supplier,a.notes].some(v => v && v.toLowerCase().includes(q))
     const ms = !supplierFilter || a.supplier === supplierFilter
     const mstar = !onlyStars || a.star
-    return mc && mq && ms && mstar
+    const mkc   = !onlyKC   || a.kc
+    return mc && mq && ms && mstar && mkc
   })
   const filtered = sortArts(baseFiltered, sort)
 
@@ -114,18 +116,18 @@ export default function Biblioteca({ showToast }) {
 
   const openEdit = (a) => {
     setEditId(a.id)
-    setForm({ref:a.ref,desc:a.desc,cat:a.cat,sub:a.sub||'',price:a.price||'',supplier:a.supplier||'',link:a.link||'',notes:a.notes||''})
+    setForm({ref:a.ref,desc:a.desc,cat:a.cat,sub:a.sub||'',price:a.price||'',supplier:a.supplier||'',link:a.link||'',notes:a.notes||'',kc:a.kc||false})
     setArtModal(true)
   }
 
   const saveArt = async () => {
     if (!form.ref.trim()||!form.desc.trim()) { showToast('Referência e descrição obrigatórias'); return }
     const parts = (form.cat+(form.sub?'|'+form.sub:'|')).split('|')
-    const data = {ref:form.ref.trim(),desc:form.desc.trim(),cat:parts[0],sub:parts[1]||'',price:parseFloat(form.price)||0,supplier:form.supplier.trim(),link:form.link.trim(),notes:form.notes.trim(),star:false}
+    const data = {ref:form.ref.trim(),desc:form.desc.trim(),cat:parts[0],sub:parts[1]||'',price:parseFloat(form.price)||0,supplier:form.supplier.trim(),link:form.link.trim(),notes:form.notes.trim(),star:false,kc:form.kc||false}
     try {
       if (editId) {
         const prev = arts.find(a=>a.id===editId)
-        await updateDoc(doc(db,'artigos',editId),{...data,star:prev?.star||false})
+        await updateDoc(doc(db,'artigos',editId),{...data,star:prev?.star||false,kc:prev?.kc||false})
         showToast('Artigo atualizado')
       } else {
         await addDoc(collection(db,'artigos'),data)
@@ -143,6 +145,10 @@ export default function Biblioteca({ showToast }) {
 
   const toggleStar = async (a) => {
     await updateDoc(doc(db,'artigos',a.id), {star:!a.star})
+  }
+
+  const toggleKC = async (a) => {
+    await updateDoc(doc(db,'artigos',a.id), {kc:!a.kc})
   }
 
   const saveCat = async (cat) => {
@@ -180,6 +186,17 @@ export default function Biblioteca({ showToast }) {
           boxShadow:onlyStars?'var(--neo-shadow-in-sm),var(--neo-glow-gold)':'var(--neo-shadow-out-sm)',
           color:onlyStars?'#1a1610':'var(--neo-text2)',transition:'all .2s',
         }}>★</button>
+
+        {/* KC — filtro toggle */}
+        <button onClick={()=>setOnlyKC(o=>!o)} title="Só artigos KC" style={{
+          flexShrink:0,
+          background:onlyKC?'linear-gradient(145deg,#6ec6e8,#3a7a9e)':'var(--neo-bg2)',
+          border:'none',borderRadius:'var(--neo-radius-pill)',padding:'0 10px',height:34,
+          cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:700,
+          letterSpacing:'0.14em',
+          boxShadow:onlyKC?'var(--neo-shadow-in-sm),0 0 8px rgba(110,198,232,0.4)':'var(--neo-shadow-out-sm)',
+          color:onlyKC?'#0f1e26':'var(--neo-text2)',transition:'all .2s',whiteSpace:'nowrap',
+        }}>KC</button>
 
         {/* Marca */}
         <div style={{position:'relative',flexShrink:0}}>
@@ -259,6 +276,7 @@ export default function Biblioteca({ showToast }) {
             onEdit={openEdit}
             onDel={delArt}
             onStar={toggleStar}
+            onToggleKC={toggleKC}
             showToast={showToast}
             onAddOrc={() => addToOrcamento({ ref:a.ref, desc:a.desc, cat:a.cat, price:a.price||0, origem:'Biblioteca' }, showToast)}/>
         ))}
@@ -283,6 +301,21 @@ export default function Biblioteca({ showToast }) {
         </div>
         <div className="frow"><label style={L}>Link</label><input type="url" value={form.link} onChange={e=>setForm(f=>({...f,link:e.target.value}))} placeholder="https://…" style={I}/></div>
         <div className="frow"><label style={L}>Notas</label><textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Observações…" style={{...I,resize:'vertical',minHeight:52}}/></div>
+        <div className="frow" style={{flexDirection:'row',alignItems:'center',gap:12,cursor:'pointer'}} onClick={()=>setForm(f=>({...f,kc:!f.kc}))}>
+          <div style={{
+            width:36,height:20,borderRadius:10,transition:'background .2s',flexShrink:0,position:'relative',
+            background:form.kc?'linear-gradient(145deg,#6ec6e8,#3a7a9e)':'var(--neo-bg)',
+            boxShadow:form.kc?'0 0 6px rgba(110,198,232,0.4)':'var(--neo-shadow-in-sm)',
+          }}>
+            <div style={{
+              position:'absolute',top:3,left:form.kc?18:3,width:14,height:14,borderRadius:'50%',
+              background:form.kc?'#0f1e26':'var(--neo-text2)',transition:'left .2s',
+            }}/>
+          </div>
+          <span style={{fontFamily:"'Barlow Condensed'",fontSize:11,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',color:form.kc?'#6ec6e8':'var(--neo-text2)'}}>
+            Artigo KC — Cozinhas Centralizadas
+          </span>
+        </div>
         <div className="modal-actions">
           <button className="neo-btn neo-btn-ghost" onClick={()=>setArtModal(false)}>Cancelar</button>
           <button className="neo-btn neo-btn-gold" onClick={saveArt}>Guardar</button>
@@ -297,7 +330,7 @@ export default function Biblioteca({ showToast }) {
 }
 
 // ── ArtCard — card expansível com estrela, link alinhado, contraste melhorado ──
-function ArtCard({ art, onEdit, onDel, onStar, showToast, onAddOrc }) {
+function ArtCard({ art, onEdit, onDel, onStar, onToggleKC, showToast, onAddOrc }) {
   const [open,   setOpen]   = useState(false)
   const [copied, setCopied] = useState(false)
   const [added,  setAdded]  = useState(false)
@@ -321,8 +354,16 @@ function ArtCard({ art, onEdit, onDel, onStar, showToast, onAddOrc }) {
     onStar(art)
   }
 
+  const handleKC = (e) => {
+    e.stopPropagation()
+    onToggleKC(art)
+  }
+
   return (
-    <div className={`bib-art-card ${open?'expanded':''} ${art.star?'starred':''}`} onClick={()=>setOpen(o=>!o)}>
+    <div className={`bib-art-card ${open?'expanded':''} ${art.star?'starred':''}`}
+      onClick={()=>setOpen(o=>!o)}
+      style={art.kc ? {borderLeft:'3px solid #4a9ec0', boxShadow:'var(--neo-shadow-out), -2px 0 10px rgba(74,158,192,0.18)'} : {}}
+    >
 
       {/* ── LINHA PRINCIPAL (sempre visível) ── */}
       <div style={{display:'flex',alignItems:'center',gap:8}}>
@@ -331,6 +372,16 @@ function ArtCard({ art, onEdit, onDel, onStar, showToast, onAddOrc }) {
         <button onClick={handleStar} style={{background:'transparent',border:'none',cursor:'pointer',fontSize:14,lineHeight:1,padding:'2px',flexShrink:0,color:art.star?'#f0c040':'var(--neo-text3)',transition:'color .15s'}}>
           {art.star?'★':'☆'}
         </button>
+
+        {/* Badge KC */}
+        {art.kc&&(
+          <button onClick={handleKC} title="Remover KC" style={{
+            background:'linear-gradient(135deg,#3a7a9e,#2a5a76)',
+            border:'none',borderRadius:4,padding:'2px 6px',cursor:'pointer',flexShrink:0,
+            fontFamily:"'Barlow Condensed'",fontSize:9,fontWeight:700,letterSpacing:'0.14em',
+            color:'#c8eaf8',boxShadow:'0 0 6px rgba(74,158,192,0.35)',lineHeight:1.4,
+          }}>KC</button>
+        )}
 
         {/* Ref + copy */}
         <div style={{display:'flex',alignItems:'center',gap:8,minWidth:0,flex:'0 0 auto'}}>
