@@ -21,7 +21,7 @@ const PAGES = [
 function Shell() {
   const { user, loading, logout } = useAuth()
   const [page, setPage]       = useState('biblioteca')
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(true)
   const [tampoParaAbrir, setTampoParaAbrir] = useState(null)
   const { msg, visible, showToast } = useToast()
 

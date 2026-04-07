@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { db } from '../firebase'
 import { collection, doc, onSnapshot, setDoc, deleteDoc, addDoc } from 'firebase/firestore'
 import { addToOrcamento } from '../hooks/useOrcamento'
+import { MAO_DE_OBRA } from '../data/maoDeObra'
+
+const MO_SECCOES = [...new Set(MAO_DE_OBRA.map(s=>s.seccao))].sort()
 
 const CONTEXTOS = ['Cozinha','Casa de Banho','Quarto','Escritório','Parceiro','Outro']
 
@@ -99,6 +102,7 @@ export default function Modelos({ showToast }) {
     const items = m.items||[]
     if (!items.length) { showToast('Modelo sem artigos'); return }
     for (const item of items) {
+      const origem = item.origem==='maodeobra' ? 'Mão de Obra' : 'Modelos'
       await addToOrcamento({
         ref:      item.ref,
         desc:     item.desc,
@@ -108,15 +112,18 @@ export default function Modelos({ showToast }) {
         supplier: item.supplier||'',
         link:     item.link||'',
         notes:    item.notes||'',
-        origem:   'Modelos'
+        origem,
       }, ()=>{})
     }
-    showToast(`${items.length} artigo${items.length!==1?'s':''} adicionado${items.length!==1?'s':''} ao orçamento`)
+    showToast(`${items.length} item${items.length!==1?'s':''} adicionado${items.length!==1?'s':''} ao orçamento`)
   }
 
   const total = (items) => (items||[]).reduce((s,i)=>s+(i.price||0)*(i.qty||1),0)
   const [artCat,    setArtCat]    = useState('Todos')
   const [artSub,    setArtSub]    = useState('')
+  const [artMode,   setArtMode]   = useState('biblioteca') // 'biblioteca' | 'maodeobra'
+  const [moSeccao,  setMoSeccao]  = useState('Todos')
+  const [moSearch,  setMoSearch]  = useState('')
 
   const artFiltered = artigos.filter(a=>{
     const catOk = artCat==='Todos' ? true : artSub ? (a.cat===artCat&&a.sub===artSub) : a.cat===artCat
@@ -129,6 +136,29 @@ export default function Modelos({ showToast }) {
   const artCats = ['Todos',...[...new Set(artigos.map(a=>a.cat).filter(Boolean))].sort()]
   const artSubs = artCat==='Todos' ? [] :
     [...new Set(artigos.filter(a=>a.cat===artCat).map(a=>a.sub).filter(Boolean))].sort()
+
+  // MO filtrada
+  const moFiltered = useMemo(()=>MAO_DE_OBRA.filter(s=>{
+    const secOk = moSeccao==='Todos'||s.seccao===moSeccao
+    const q = moSearch.toLowerCase()
+    const srchOk = !q||s.nome.toLowerCase().includes(q)||s.id.includes(q)
+    return secOk && srchOk
+  }),[moSeccao,moSearch])
+
+  // Adicionar serviço de MO ao modelo
+  const addMO = async (s) => {
+    if(!modelo) return
+    if((modelo.items||[]).find(i=>i.artId===s.id)){showToast('Já existe no modelo');return}
+    const items=[...(modelo.items||[]),{
+      artId:s.id, ref:s.id, desc:s.nome,
+      cat:s.seccao, sub:s.sub, price:s.pvp,
+      un:s.un, tipo:s.tipo,
+      supplier:'', link:'', notes:'', qty:1,
+      origem:'maodeobra'
+    }]
+    await setDoc(doc(db,'modelos',modelo.id),{...modelo,items})
+    showToast('Serviço adicionado')
+  }
 
   // ── DETAIL VIEW ──────────────────────────────────────────────────────────
   if (detailId) {
@@ -197,101 +227,122 @@ export default function Modelos({ showToast }) {
         )}
       </div>
 
-      {/* Modal adicionar artigo — com navegação por categorias */}
+      {/* Modal adicionar — Biblioteca ou Mão de Obra */}
       <div className={`neo-overlay ${artModal?'open':''}`}>
         <div className="neo-modal" style={{maxWidth:520}}>
           <div className="neo-modal-head">
-            Adicionar artigo
-            <button className="neo-modal-close" onClick={()=>{setArtModal(false);setArtSearch('');setArtCat('Todos');setArtSub('')}}>✕</button>
+            Adicionar ao modelo
+            <button className="neo-modal-close" onClick={()=>{setArtModal(false);setArtSearch('');setArtCat('Todos');setArtSub('');setMoSearch('');setMoSeccao('Todos')}}>✕</button>
           </div>
 
-          {/* Pesquisa */}
-          <input autoFocus value={artSearch} onChange={e=>setArtSearch(e.target.value)}
-            placeholder="Pesquisar referência, descrição…" className="neo-input" style={{marginBottom:10}}/>
-
-          {/* Chips de categoria */}
-          <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:artSubs.length>0?6:10}}>
-            {artCats.map(c=>(
-              <button key={c} onClick={()=>{setArtCat(c);setArtSub('')}}
-                style={{padding:'4px 10px',borderRadius:'var(--neo-radius-pill)',border:'none',
-                  background:artCat===c?'linear-gradient(145deg,#d4b87a,#b8924a)':'var(--neo-bg)',
-                  boxShadow:artCat===c?'var(--neo-shadow-in-sm)':'var(--neo-shadow-out-sm)',
-                  cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,fontWeight:600,
-                  letterSpacing:'0.1em',textTransform:'uppercase',
-                  color:artCat===c?'#1a1610':'var(--neo-text2)',transition:'all .15s'}}>
-                {c}
-              </button>
+          {/* Tabs Biblioteca / MO */}
+          <div style={{display:'flex',background:'var(--neo-bg)',borderRadius:'var(--neo-radius-pill)',padding:3,marginBottom:12,boxShadow:'var(--neo-shadow-in-sm)'}}>
+            {[{v:'biblioteca',l:'Biblioteca'},{v:'maodeobra',l:'Mão de Obra'}].map(t=>(
+              <button key={t.v} onClick={()=>setArtMode(t.v)} style={{
+                flex:1,height:28,border:'none',borderRadius:'var(--neo-radius-pill)',cursor:'pointer',
+                fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:600,letterSpacing:'0.12em',textTransform:'uppercase',
+                background:artMode===t.v?'var(--neo-bg2)':'transparent',
+                color:artMode===t.v?'var(--neo-gold)':'var(--neo-text2)',
+                boxShadow:artMode===t.v?'var(--neo-shadow-out-sm)':'none',transition:'all .2s',
+              }}>{t.l}</button>
             ))}
           </div>
 
-          {/* Chips de subcategoria */}
-          {artSubs.length>0&&(
-            <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:10}}>
-              <button onClick={()=>setArtSub('')}
-                style={{padding:'3px 9px',borderRadius:'var(--neo-radius-pill)',border:'none',
-                  background:artSub===''?'var(--neo-bg)':'transparent',
-                  boxShadow:artSub===''?'var(--neo-shadow-in-sm)':'none',
-                  cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:8,fontWeight:600,
-                  letterSpacing:'0.1em',textTransform:'uppercase',
-                  color:artSub===''?'var(--neo-gold)':'var(--neo-text2)'}}>Todas</button>
-              {artSubs.map(s=>(
-                <button key={s} onClick={()=>setArtSub(s)}
-                  style={{padding:'3px 9px',borderRadius:'var(--neo-radius-pill)',border:'none',
-                    background:artSub===s?'var(--neo-bg)':'transparent',
-                    boxShadow:artSub===s?'var(--neo-shadow-in-sm)':'none',
-                    cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:8,fontWeight:600,
+          {/* ── ABA BIBLIOTECA ── */}
+          {artMode==='biblioteca'&&<>
+            <input autoFocus value={artSearch} onChange={e=>setArtSearch(e.target.value)}
+              placeholder="Pesquisar referência, descrição…" className="neo-input" style={{marginBottom:10}}/>
+            <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:artSubs.length>0?6:10}}>
+              {artCats.map(c=>(
+                <button key={c} onClick={()=>{setArtCat(c);setArtSub('')}}
+                  style={{padding:'4px 10px',borderRadius:'var(--neo-radius-pill)',border:'none',
+                    background:artCat===c?'linear-gradient(145deg,#d4b87a,#b8924a)':'var(--neo-bg)',
+                    boxShadow:artCat===c?'var(--neo-shadow-in-sm)':'var(--neo-shadow-out-sm)',
+                    cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,fontWeight:600,
                     letterSpacing:'0.1em',textTransform:'uppercase',
-                    color:artSub===s?'var(--neo-gold)':'var(--neo-text2)'}}>
-                  {s}
+                    color:artCat===c?'#1a1610':'var(--neo-text2)',transition:'all .15s'}}>
+                  {c}
                 </button>
               ))}
             </div>
-          )}
-
-          {/* Contador */}
-          <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text2)',marginBottom:6}}>
-            {artFiltered.length} artigo{artFiltered.length!==1?'s':''}
-          </div>
-
-          {/* Lista */}
-          <div style={{maxHeight:'46vh',overflowY:'auto'}} className="neo-scroll">
-            {artigos.length===0&&(
-              <div style={{padding:'30px 0',textAlign:'center',fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--neo-text2)'}}>
-                Biblioteca vazia — adiciona artigos primeiro
-              </div>
-            )}
-            {artFiltered.length===0&&artigos.length>0&&(
-              <div style={{padding:'20px 0',textAlign:'center',fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text2)'}}>
-                Sem resultados
-              </div>
-            )}
-            {artFiltered.map(a=>{
-              const jaExiste = (modelo?.items||[]).find(i=>i.artId===a.id)
-              return(
-                <div key={a.id} onClick={()=>{ if(!jaExiste){addItem(a);setArtModal(false);setArtSearch('');setArtCat('Todos');setArtSub('')} }}
-                  style={{padding:'10px 4px',borderBottom:'1px solid rgba(255,255,255,0.05)',cursor:jaExiste?'default':'pointer',
-                    display:'flex',alignItems:'center',gap:10,opacity:jaExiste?.5:1}}>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
-                      <span style={{fontFamily:"'Barlow Condensed'",fontSize:13,color:'var(--neo-gold)',letterSpacing:'0.08em',fontWeight:600}}>{a.ref}</span>
-                      {a.cat&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-text2)'}}>{a.sub?a.cat+' · '+a.sub:a.cat}</span>}
+            {artSubs.length>0&&<div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:10}}>
+              <button onClick={()=>setArtSub('')} style={{padding:'3px 9px',borderRadius:'var(--neo-radius-pill)',border:'none',background:artSub===''?'var(--neo-bg)':'transparent',boxShadow:artSub===''?'var(--neo-shadow-in-sm)':'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:8,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:artSub===''?'var(--neo-gold)':'var(--neo-text2)'}}>Todas</button>
+              {artSubs.map(s=>(
+                <button key={s} onClick={()=>setArtSub(s)} style={{padding:'3px 9px',borderRadius:'var(--neo-radius-pill)',border:'none',background:artSub===s?'var(--neo-bg)':'transparent',boxShadow:artSub===s?'var(--neo-shadow-in-sm)':'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:8,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:artSub===s?'var(--neo-gold)':'var(--neo-text2)'}}>
+                  {s}
+                </button>
+              ))}
+            </div>}
+            <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text2)',marginBottom:6}}>
+              {artFiltered.length} artigo{artFiltered.length!==1?'s':''}
+            </div>
+            <div style={{maxHeight:'40vh',overflowY:'auto'}} className="neo-scroll">
+              {artigos.length===0&&<div style={{padding:'30px 0',textAlign:'center',fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--neo-text2)'}}>Biblioteca vazia</div>}
+              {artFiltered.length===0&&artigos.length>0&&<div style={{padding:'20px 0',textAlign:'center',fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text2)'}}>Sem resultados</div>}
+              {artFiltered.map(a=>{
+                const jaExiste=(modelo?.items||[]).find(i=>i.artId===a.id)
+                return(
+                  <div key={a.id} onClick={()=>{if(!jaExiste){addItem(a);setArtModal(false);setArtSearch('');setArtCat('Todos');setArtSub('')}}}
+                    style={{padding:'10px 4px',borderBottom:'1px solid rgba(255,255,255,0.05)',cursor:jaExiste?'default':'pointer',display:'flex',alignItems:'center',gap:10,opacity:jaExiste?.5:1}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
+                        <span style={{fontFamily:"'Barlow Condensed'",fontSize:13,color:'var(--neo-gold)',letterSpacing:'0.08em',fontWeight:600}}>{a.ref}</span>
+                        {a.cat&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-text2)'}}>{a.sub?a.cat+' · '+a.sub:a.cat}</span>}
+                      </div>
+                      <span style={{fontSize:12,color:'var(--neo-text)',fontWeight:300}}>{a.desc}</span>
                     </div>
-                    <span style={{fontSize:12,color:'var(--neo-text)',fontWeight:300}}>{a.desc}</span>
+                    <div style={{textAlign:'right',flexShrink:0}}>
+                      {a.price>0&&<div style={{fontFamily:"'Barlow Condensed'",fontSize:12,fontWeight:600,color:'var(--neo-gold)'}}>{a.price.toFixed(2)} €</div>}
+                      <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'var(--neo-text2)',letterSpacing:'0.1em',marginTop:2}}>{jaExiste?'já adicionado':'+ adicionar'}</div>
+                    </div>
                   </div>
-                  <div style={{textAlign:'right',flexShrink:0}}>
-                    {a.price>0&&<div style={{fontFamily:"'Barlow Condensed'",fontSize:12,fontWeight:600,color:'var(--neo-gold)'}}>{a.price.toFixed(2)} €</div>}
-                    {jaExiste
-                      ? <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'var(--neo-text2)',letterSpacing:'0.1em',marginTop:2}}>já adicionado</div>
-                      : <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'var(--neo-text2)',letterSpacing:'0.1em',marginTop:2}}>+ adicionar</div>
-                    }
+                )
+              })}
+            </div>
+          </>}
+
+          {/* ── ABA MÃO DE OBRA ── */}
+          {artMode==='maodeobra'&&<>
+            <input value={moSearch} onChange={e=>setMoSearch(e.target.value)}
+              placeholder="Pesquisar serviço ou código…" className="neo-input" style={{marginBottom:10}}/>
+            {/* Secções MO */}
+            <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:10}}>
+              <button onClick={()=>setMoSeccao('Todos')} className={`neo-chip-sm ${moSeccao==='Todos'?'active':''}`}>Todas</button>
+              {MO_SECCOES.map(s=>(
+                <button key={s} onClick={()=>setMoSeccao(s)} className={`neo-chip-sm ${moSeccao===s?'active':''}`} style={{whiteSpace:'nowrap'}}>
+                  {s.replace(/^\d+ · /,'')}
+                </button>
+              ))}
+            </div>
+            <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text2)',marginBottom:6}}>
+              {moFiltered.length} serviço{moFiltered.length!==1?'s':''}
+            </div>
+            <div style={{maxHeight:'40vh',overflowY:'auto'}} className="neo-scroll">
+              {moFiltered.length===0&&<div style={{padding:'20px 0',textAlign:'center',fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text2)'}}>Sem resultados</div>}
+              {moFiltered.map(s=>{
+                const jaExiste=(modelo?.items||[]).find(i=>i.artId===s.id)
+                return(
+                  <div key={s.id} onClick={()=>{if(!jaExiste){addMO(s);setArtModal(false);setMoSearch('');setMoSeccao('Todos')}}}
+                    style={{padding:'10px 4px',borderBottom:'1px solid rgba(255,255,255,0.05)',cursor:jaExiste?'default':'pointer',display:'flex',alignItems:'center',gap:10,opacity:jaExiste?.5:1}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
+                        <span style={{fontFamily:"'Barlow Condensed'",fontSize:11,color:'#b07acc',letterSpacing:'0.08em',fontWeight:600}}>{s.id}</span>
+                        <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-text2)'}}>{s.un} · {s.seccao.replace(/^\d+ · /,'')}</span>
+                      </div>
+                      <span style={{fontSize:12,color:'var(--neo-text)',fontWeight:300}}>{s.nome}</span>
+                    </div>
+                    <div style={{textAlign:'right',flexShrink:0}}>
+                      <div style={{fontFamily:"'Barlow Condensed'",fontSize:12,fontWeight:600,color:'var(--neo-gold)'}}>{s.pvp.toFixed(2)} €</div>
+                      <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'var(--neo-text2)',letterSpacing:'0.1em',marginTop:2}}>{jaExiste?'já adicionado':'+ adicionar'}</div>
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          </>}
 
           <div style={{display:'flex',justifyContent:'flex-end',marginTop:14}}>
-            <button className="neo-btn neo-btn-ghost" onClick={()=>{setArtModal(false);setArtSearch('');setArtCat('Todos');setArtSub('')}}>Fechar</button>
+            <button className="neo-btn neo-btn-ghost" onClick={()=>{setArtModal(false);setArtSearch('');setArtCat('Todos');setArtSub('');setMoSearch('');setMoSeccao('Todos')}}>Fechar</button>
           </div>
         </div>
       </div>
