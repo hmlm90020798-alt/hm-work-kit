@@ -232,7 +232,7 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, cor }) {
   const subtotal = semQty ? (item.price||0) : (item.price||0)*(item.qty||1)
 
   return (
-    <div style={{ margin:'0 12px 6px', background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', overflow:'hidden' }}>
+    <div className="neo-hover" style={{ margin:'0 12px 6px', background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', overflow:'hidden' }}>
       <div style={{ padding:'12px 14px' }}>
 
         {/* Linha 1: ref copiável + ações */}

@@ -410,7 +410,7 @@ function ModelCard({m,total,onOpen,onDel,onAdd,onEdit}){
   const [added,setAdded]=useState(false)
   const items=m.items||[]
   return(
-    <div onClick={onOpen} style={{background:'var(--neo-bg2)',borderRadius:'var(--neo-radius)',boxShadow:'var(--neo-shadow-out-sm)',padding:'14px 16px',marginBottom:8,cursor:'pointer'}}>
+    <div onClick={onOpen} className="neo-hover" style={{background:'var(--neo-bg2)',borderRadius:'var(--neo-radius)',boxShadow:'var(--neo-shadow-out-sm)',padding:'14px 16px',marginBottom:8,cursor:'pointer'}}>
       <div style={{display:'flex',alignItems:'flex-start',gap:10}}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontFamily:"'Barlow Condensed'",fontSize:16,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--neo-text)',marginBottom:2}}>{m.name}</div>

@@ -127,7 +127,47 @@ html, body, #root {
 .frow textarea { resize: vertical; min-height: 70px; }
 .frow.half { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 
-/* ── HOVER UNIVERSAL ──────────────────────────────────────────────────────── */
+/* ── Variáveis Neomórficas ────────────────────────────────────────────────── */
+:root {
+  --neo-bg:           #0f0f0e;
+  --neo-bg2:          #141413;
+  --neo-text:         #e8e4dc;
+  --neo-text2:        #5a5a55;
+  --neo-text3:        #2e2e2b;
+  --neo-gold:         #c8a96e;
+  --neo-gold2:        #8a6e3a;
+  --neo-danger:       #8b3030;
+  --neo-radius:       12px;
+  --neo-radius-sm:    6px;
+  --neo-radius-pill:  999px;
+  --neo-shadow-out:   6px 6px 14px rgba(0,0,0,.55), -3px -3px 8px rgba(255,255,255,.03);
+  --neo-shadow-out-sm:3px 3px 8px rgba(0,0,0,.45), -2px -2px 5px rgba(255,255,255,.025);
+  --neo-shadow-in:    inset 4px 4px 10px rgba(0,0,0,.5), inset -2px -2px 6px rgba(255,255,255,.025);
+  --neo-shadow-in-sm: inset 2px 2px 6px rgba(0,0,0,.45), inset -1px -1px 4px rgba(255,255,255,.02);
+  --neo-glow-gold:    0 0 12px rgba(200,169,110,.3);
+}
+
+/* ── Classe utilitária de hover neomórfico ───────────────────────────────── */
+/* Adiciona .neo-hover a qualquer card/row para efeito consistente */
+.neo-hover {
+  transition: background .15s, box-shadow .15s, transform .15s !important;
+}
+.neo-hover:hover {
+  background: var(--neo-bg2) !important;
+  box-shadow: var(--neo-shadow-out-sm), 0 0 0 1px rgba(200,169,110,.08) !important;
+  transform: translateY(-1px);
+}
+.neo-hover:active {
+  transform: none;
+  box-shadow: var(--neo-shadow-in-sm) !important;
+}
+
+/* Scroll neo */
+.neo-scroll::-webkit-scrollbar { width: 2px; height: 2px; }
+.neo-scroll::-webkit-scrollbar-track { background: transparent; }
+.neo-scroll::-webkit-scrollbar-thumb { background: var(--neo-gold2); border-radius: 2px; }
+
+
 
 /* Cards neomórficos — artigos, modelos, serviços MO, KC rows */
 .bib-art-card,

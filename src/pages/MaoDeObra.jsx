@@ -177,7 +177,7 @@ function ServicoCard({ s, showToast }) {
   }
 
   return (
-    <div onClick={()=>setOpen(o=>!o)}
+    <div onClick={()=>setOpen(o=>!o)} className="neo-hover"
       style={{background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out-sm)',marginBottom:5,cursor:'pointer',overflow:'hidden',
         borderLeft: s.tipo==='visita' ? '2px solid #4a8fa8' : s.tipo==='opcional' ? '2px solid var(--neo-gold2)' : '2px solid transparent'}}>
       <div style={{padding:'10px 12px'}}>
