@@ -17,10 +17,27 @@ const TIPO_COLOR = { standard:'var(--neo-text2)', visita:'#4a8fa8', opcional:'va
 function f2(n) { return parseFloat(n||0).toFixed(2) }
 
 export default function MaoDeObra({ showToast }) {
-  const [seccao,  setSeccao]  = useState('Todos')
-  const [search,  setSearch]  = useState('')
-  const [tipo,    setTipo]    = useState('Todos')  // Todos/standard/visita/opcional
+  const [seccao,    setSeccao]    = useState('Todos')
+  const [search,    setSearch]    = useState('')
+  const [tipo,      setTipo]      = useState('Todos')
   const [showTrans, setShowTrans] = useState(false)
+  const [collapsed, setCollapsed] = useState({})   // { sub: bool }
+  const [subOrder,  setSubOrder]  = useState([])   // ordem das subsecções (guardada localmente)
+
+  const toggleCollapsed = (sub) => setCollapsed(p => ({...p, [sub]: !p[sub]}))
+
+  const moveGroup = (sub, dir) => {
+    setSubOrder(prev => {
+      const subs = prev.length > 0 ? prev : Object.keys(grupos)
+      const idx = subs.indexOf(sub)
+      if (idx < 0) return subs
+      const newIdx = idx + dir
+      if (newIdx < 0 || newIdx >= subs.length) return subs
+      const arr = [...subs]
+      const tmp = arr[idx]; arr[idx] = arr[newIdx]; arr[newIdx] = tmp
+      return arr
+    })
+  }
 
   const filtered = useMemo(() => {
     return MAO_DE_OBRA.filter(s => {
@@ -102,16 +119,49 @@ export default function MaoDeObra({ showToast }) {
             Sem resultados
           </div>
         )}
-        {Object.entries(grupos).map(([sub,items])=>(
-          <div key={sub} style={{marginBottom:12}}>
-            <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,fontWeight:700,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--neo-gold2)',marginBottom:6,paddingLeft:2}}>
-              {sub}
-            </div>
-            {items.map(s=>(
-              <ServicoCard key={s.id} s={s} showToast={showToast}/>
-            ))}
-          </div>
-        ))}
+        {(() => {
+          const allSubs = Object.keys(grupos)
+          const orderedSubs = subOrder.length > 0
+            ? [...subOrder.filter(s => allSubs.includes(s)), ...allSubs.filter(s => !subOrder.includes(s))]
+            : allSubs
+          return orderedSubs.map((sub, idx) => {
+            const items = grupos[sub]
+            if (!items) return null
+            const isOpen = !collapsed[sub]
+            return (
+              <div key={sub} style={{marginBottom:6,borderRadius:'var(--neo-radius-sm)',overflow:'hidden',border:'1px solid rgba(255,255,255,0.05)'}}>
+                {/* Header subsecção */}
+                <div style={{display:'flex',alignItems:'center',background:'var(--neo-bg2)',padding:'8px 12px',gap:8}}>
+                  {/* Reordenação */}
+                  <div style={{display:'flex',flexDirection:'column',gap:2,flexShrink:0}}>
+                    <button onClick={()=>moveGroup(sub,-1)} disabled={idx===0} style={{background:'transparent',border:'none',cursor:idx===0?'default':'pointer',color:idx===0?'var(--neo-text3)':'var(--neo-text2)',fontSize:9,lineHeight:1,padding:'1px 3px'}}>▲</button>
+                    <button onClick={()=>moveGroup(sub,1)} disabled={idx===orderedSubs.length-1} style={{background:'transparent',border:'none',cursor:idx===orderedSubs.length-1?'default':'pointer',color:idx===orderedSubs.length-1?'var(--neo-text3)':'var(--neo-text2)',fontSize:9,lineHeight:1,padding:'1px 3px'}}>▼</button>
+                  </div>
+                  {/* Nome + colapsar */}
+                  <button onClick={()=>toggleCollapsed(sub)} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'space-between',background:'transparent',border:'none',cursor:'pointer',textAlign:'left',gap:8}}>
+                    <span style={{fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:700,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--neo-gold2)'}}>
+                      {sub}
+                    </span>
+                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+                      <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'var(--neo-text2)',letterSpacing:'0.08em'}}>
+                        {items.length} serviço{items.length!==1?'s':''}
+                      </span>
+                      <span style={{fontSize:9,color:'var(--neo-text2)',display:'inline-block',transform:isOpen?'rotate(0deg)':'rotate(-90deg)',transition:'transform .2s'}}>▾</span>
+                    </div>
+                  </button>
+                </div>
+                {/* Itens */}
+                {isOpen&&(
+                  <div style={{padding:'6px 6px 4px'}}>
+                    {items.map(s=>(
+                      <ServicoCard key={s.id} s={s} showToast={showToast}/>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })
+        })()}
       </div>
 
       {/* Modal transversais */}
@@ -177,7 +227,7 @@ function ServicoCard({ s, showToast }) {
   }
 
   return (
-    <div onClick={()=>setOpen(o=>!o)} className="neo-hover"
+    <div onClick={()=>setOpen(o=>!o)}
       style={{background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out-sm)',marginBottom:5,cursor:'pointer',overflow:'hidden',
         borderLeft: s.tipo==='visita' ? '2px solid #4a8fa8' : s.tipo==='opcional' ? '2px solid var(--neo-gold2)' : '2px solid transparent'}}>
       <div style={{padding:'10px 12px'}}>
@@ -185,17 +235,17 @@ function ServicoCard({ s, showToast }) {
         {/* Linha principal */}
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <div style={{flex:1,minWidth:0}}>
-            <div className="neo-h1" style={{fontSize:12,fontWeight:400,color:'var(--neo-text)',lineHeight:1.3,marginBottom:3,whiteSpace:open?'normal':'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+            <div style={{fontSize:12,fontWeight:400,color:'var(--neo-text)',lineHeight:1.3,marginBottom:3,whiteSpace:open?'normal':'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
               {s.nome}
             </div>
             <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'nowrap'}}>
               {/* Tipo */}
-              <span className="neo-h2" style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:TIPO_COLOR[s.tipo]||'var(--neo-text2)'}}>
+              <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:TIPO_COLOR[s.tipo]||'var(--neo-text2)'}}>
                 {TIPO_LABEL[s.tipo]||s.tipo}
               </span>
               <span style={{color:'rgba(255,255,255,0.1)'}}>·</span>
               {/* Unidade */}
-              <span className="neo-h3" style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--neo-text2)'}}>
+              <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--neo-text2)'}}>
                 {f2(s.pvp)} €/{s.un}
               </span>
             </div>
