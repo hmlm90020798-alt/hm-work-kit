@@ -12,7 +12,6 @@ const GEMINI_MODELS = [
   'gemini-2.0-flash-001',
   'gemini-2.0-flash-lite-001',
 ]
-]
 const GEMINI_API = (model, key) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`
 const LIST_MODELS = (key) =>
