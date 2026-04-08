@@ -4,18 +4,13 @@ import { collection, getDocs } from 'firebase/firestore'
 import { MAO_DE_OBRA } from '../data/maoDeObra'
 import { addToOrcamento } from '../hooks/useOrcamento'
 
-// ── Gemini API ────────────────────────────────────────────────────────────────
-const GEMINI_MODELS = [
-  'gemini-2.5-flash',
-  'gemini-2.5-pro',
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-001',
-  'gemini-2.0-flash-lite-001',
+// ── Groq API ──────────────────────────────────────────────────────────────────
+const GROQ_MODELS = [
+  'llama-3.3-70b-versatile',
+  'llama-3.1-8b-instant',
+  'mixtral-8x7b-32768',
 ]
-const GEMINI_API = (model, key) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`
-const LIST_MODELS = (key) =>
-  `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`
+const GROQ_API = 'https://api.groq.com/openai/v1/chat/completions'
 
 // Secções MO agrupadas para selector
 const MO_SECCOES = [...new Set(MAO_DE_OBRA.map(s => s.seccao))].sort()
@@ -79,7 +74,7 @@ Projecto: ${descricao}`
 }
 
 // ── Chave Gemini guardada no localStorage ────────────────────────────────────
-const KEY_STORAGE = 'hm_gemini_key'
+const KEY_STORAGE = 'hm_groq_key'
 
 export default function IA({ showToast }) {
   const [apiKey,    setApiKey]    = useState(() => localStorage.getItem(KEY_STORAGE) || '')
@@ -121,33 +116,46 @@ export default function IA({ showToast }) {
     let lastErr = ''
     const sleep = (ms) => new Promise(r => setTimeout(r, ms))
 
-    // Tentar cada modelo em sequência até um funcionar
-    for (const model of GEMINI_MODELS) {
+    for (const model of GROQ_MODELS) {
       try {
-        const res = await fetch(GEMINI_API(model, apiKey), {
+        const res = await fetch(GROQ_API, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.2, maxOutputTokens: 2048 }
+            model,
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.2,
+            max_tokens: 2048,
           })
         })
+
+        if (res.status === 401) { lastErr = 'API key inválida — verifica a key Groq'; break }
         if (res.status === 404) { lastErr = `${model} não disponível`; continue }
         if (res.status === 429) {
-          lastErr = 'Limite de pedidos atingido — a aguardar 15s antes de tentar outro modelo…'
+          lastErr = `${model} — limite atingido, a aguardar 10s…`
           setErro(lastErr)
-          await sleep(15000)
+          await sleep(10000)
+          setErro('')
+          continue
+        }
+        if (res.status === 503) {
+          lastErr = `${model} — serviço indisponível, a aguardar 5s…`
+          setErro(lastErr)
+          await sleep(5000)
           setErro('')
           continue
         }
         if (!res.ok) {
           const e = await res.json().catch(()=>({}))
           lastErr = e?.error?.message || `HTTP ${res.status}`
-          if (res.status === 400 && lastErr.includes('API_KEY')) break
           continue
         }
+
         const data = await res.json()
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+        const text = data.choices?.[0]?.message?.content || ''
         const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim()
         const parsed = JSON.parse(clean)
         setResultado(parsed)
@@ -162,21 +170,7 @@ export default function IA({ showToast }) {
       }
     }
 
-    // Nenhum modelo funcionou — tentar listar modelos disponíveis para diagnóstico
-    try {
-      const r = await fetch(LIST_MODELS(apiKey))
-      if (r.ok) {
-        const d = await r.json()
-        const nomes = (d.models||[])
-          .filter(m => m.supportedGenerationMethods?.includes('generateContent'))
-          .map(m => m.name.replace('models/',''))
-        if (nomes.length > 0) {
-          lastErr = `Modelos disponíveis na tua key: ${nomes.slice(0,5).join(', ')}. Contacta o suporte.`
-        }
-      }
-    } catch(_) {}
-
-    setErro(lastErr || 'Não foi possível conectar ao Gemini. Verifica a API key.')
+    setErro(lastErr || 'Não foi possível conectar ao Groq. Verifica a API key.')
     setLoading(false)
   }
 
@@ -231,10 +225,10 @@ export default function IA({ showToast }) {
         {showKey&&(
           <div style={{background:'var(--neo-bg2)',borderRadius:'var(--neo-radius)',boxShadow:'var(--neo-shadow-out-sm)',padding:'16px',marginBottom:16,borderLeft:'2px solid var(--neo-gold)'}}>
             <div style={{fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:700,letterSpacing:'0.18em',textTransform:'uppercase',color:'var(--neo-gold)',marginBottom:10}}>
-              Gemini API Key
+              Groq API Key
             </div>
             <div style={{fontSize:12,fontWeight:300,color:'var(--neo-text2)',lineHeight:1.8,marginBottom:12}}>
-              1. Vai a <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style={{color:'var(--neo-gold)',textDecoration:'none'}}>aistudio.google.com/app/apikey ↗</a><br/>
+              1. Vai a <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" style={{color:'var(--neo-gold)',textDecoration:'none'}}>console.groq.com/keys ↗</a><br/>
               2. Clica em <strong style={{color:'var(--neo-text)'}}>Create API key</strong><br/>
               3. Copia e cola aqui — é gratuito e não precisa de cartão
             </div>
@@ -388,7 +382,7 @@ function KeyInput({ onSave, current }) {
   return(
     <div style={{display:'flex',gap:8}}>
       <input value={val} onChange={e=>setVal(e.target.value)}
-        type="password" placeholder="AIza…"
+        type="password" placeholder="gsk_…"
         className="neo-input" style={{flex:1,fontFamily:'monospace',fontSize:12}}/>
       <button onClick={()=>onSave(val)}
         className="neo-btn neo-btn-gold" style={{height:36,padding:'0 16px',fontSize:9,borderRadius:'var(--neo-radius-pill)',flexShrink:0}}>
