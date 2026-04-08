@@ -1,5 +1,121 @@
 import React, { useState } from 'react'
 
+// ── Guia operacional KC ──────────────────────────────────────────────────────
+const GUIA = [
+  {
+    fase: 'FASE ORÇAMENTO',
+    cor: '#c8a96e',
+    seccoes: [
+      {
+        titulo: '1. Acolhimento e Qualificação',
+        passos: [
+          'Explorar as necessidades do cliente — enquadramento das vantagens das Cozinhas Centralizadas.',
+          'Abertura de Oportunidade em LM CARE. Se não tens licença, recorre ao pedido de proposta ao HUB Orçamentista.',
+          'Agendamento em Scheduler — registar o 1º momento de atendimento caso seja atendimento na hora.',
+        ]
+      },
+      {
+        titulo: '2. 1º Atendimento e Contacto com o HUB Orçamentista',
+        passos: [
+          'Recolher a informação — triar se o interesse é real/imediato.',
+          'Registar a informação em LM CARE — garantir que todos os dados do projecto estão registados na Oportunidade.',
+          'Submeter o FORM\'S Orçamentista — recorre sempre ao HUB (excepção: venda na hora). Garante que te focas no atendimento e venda.',
+          'Coloca sempre a nota "Cozinha Centralizadas" nas notas finais no FORM\'S.',
+          'A equipa do HUB conhece todos os procedimentos e listagem de artigos KC.',
+          'Agendar 2º momento de entrega de proposta no Scheduler — antes do cliente sair da loja (idealmente 48h/72h depois).',
+          'Venda de Visita Técnica (SOP) — garantir a venda e o agendamento da retificação de medidas. Informar o cliente da necessidade de retificação ou assinatura de termo de responsabilidade.',
+          'Códigos a usar para a visita: 49015230 – KC_ORÇ P INST MOBILIÁRIO COZINHA_SFW e 49013434 – Verificação de Medidas Cozinhas.',
+        ],
+        nota: 'Caso o cliente não pretenda adquirir o serviço de retificação, garantir assinatura do termo de responsabilidade e guardar em pasta interna da loja.'
+      },
+      {
+        titulo: '3. Preparação da Proposta',
+        passos: [
+          'Validar Entregáveis do HUB — confirmar a receção do Projecto + Orçamento + Simulação de instalação e financiamento.',
+          'Atualização LM CARE — confirmar que 100% da proposta está espelhada na Oportunidade.',
+          'Conformidade em SOP — garantir que a visita técnica já ocorreu e que todos os dados do parceiro e datas estão alinhados e carregados.',
+          'Ajustar o orçamento final (se necessário) com base nas medidas reais enviadas pelo instalador/parceiro.',
+        ]
+      },
+      {
+        titulo: '4. 2º Atendimento e Fecho',
+        passos: [
+          'Apresentação de Valor — rever o projecto com o cliente e validar tudo.',
+          'Agendar novo momento em caso de não fechar negócio — deixar em LM CARE nova tarefa para contacto ou marcar novo agendamento.',
+        ],
+        nota: 'Se o cliente decidir adjudicar e não tiver adquirido ainda a Visita Técnica, garantir a venda e o agendamento da retificação de medidas.'
+      },
+      {
+        titulo: '⚡ Regras de Ouro',
+        destaque: true,
+        passos: [
+          'Nunca duplicar ou anular orçamentos do HUB Orçamentista e fazer novos — evita penalizar as taxas de transformação e a produtividade da loja.',
+          'Consultar diariamente o LM CARE para cumprir as tarefas de follow-up e não perder negócios.',
+        ]
+      },
+    ]
+  },
+  {
+    fase: 'FASE DE PEDIDO',
+    cor: '#4a9ec0',
+    seccoes: [
+      {
+        titulo: '1. Fase de Transformação (Configuração do Pedido)',
+        passos: [
+          'Modo Multitransação — usar o modo multitransação para toda a venda.',
+        ],
+        subseccoes: [
+          {
+            sub: 'Mobiliário, Portas e Complementares',
+            passos: [
+              'Garantir que todos os artigos estão em PF — artigos do pedido de cozinhas centralizadas devem ficar todos em PF.',
+              'Garantir entrega em SFW.',
+              'Alinhar data de todos os artigos.',
+              'Isolar artigos fora do projecto centralizado em pedidos à parte.',
+              'Garantir que é colocado no pedido o código 49015288 - PROJETO COZINHAS SFW para facilitar o seguimento da entrega.',
+            ]
+          },
+          {
+            sub: 'Tampos (Pedra e Compósito) — Processos com Marmorista',
+            passos: [
+              'Separar tampo em pedido isolado.',
+              'Colocar todas as linhas do tampo com PF em pausa.',
+              'Designação complementar Pyxis — colocar na designação complementar o nº da OS de instalação.',
+              'Alinhar todas as datas dos PF em pausa.',
+              'Carregar dados/documentos em SOP — upload dos documentos necessários à retificação do marmorista.',
+            ]
+          },
+          {
+            sub: 'Serviço de Instalação (quando existe)',
+            passos: [
+              'Vender Serviço de Instalação — usar o código 49015229 (Instalação Módulos Cozinha).',
+              'Caso não seja possível colocar os códigos de instalação no pedido de produto, garantir a colocação do código de tracking 49014163.',
+              'Upload no SOP (se necessário actualizar) — carregar os documentos do projecto final.',
+              'Garantir data de instalação alinhada — agendar para no mínimo 3 dias úteis após a entrega total da mercadoria.',
+            ]
+          },
+        ]
+      },
+      {
+        titulo: '2. Fase de Validação e Pagamento',
+        passos: [
+          'Validar todos os campos antes da confirmação — atenção: não são permitidas alterações após a validação.',
+          'Garantir o pagamento total no prazo máximo de 48 horas — os pedidos cozinhas centralizadas têm de ser 100% liquidados.',
+          'Registar em LM CARE a conversão — alterar estado da oportunidade para "Fechada Ganha".',
+          'Registar em LM CARE os pendentes — gerar os pendentes de Produto e de Instalação (se aplicável).',
+        ]
+      },
+      {
+        titulo: '✅ VENDA CONCLUÍDA COM SUCESSO',
+        destaque: true,
+        passos: [
+          'Garantir sempre a colocação de referências KC em Orçamento e Multitransação — as que não tenham esta designação não seguirão o mesmo circuito e tempos de promessa.',
+        ]
+      },
+    ]
+  },
+]
+
 // ── Catálogo KC — dados estáticos (actualizar quando o ficheiro mudar) ──────
 const KC_DATA = [
   { cat:'KC · Complementares', sub:'Frentes de Gaveta Interiores', items:[
@@ -277,10 +393,15 @@ const ALL_ITEMS = KC_DATA.flatMap(g => g.items.map(i => ({ ...i, cat: g.cat, sub
 const CATS = ['Todas', ...new Set(KC_DATA.map(g => g.cat))]
 
 export default function KC({ showToast }) {
+  const [tab,       setTab]       = useState('guia')
   const [search,    setSearch]    = useState('')
   const [activeCat, setActiveCat] = useState('Todas')
   const [activeSub, setActiveSub] = useState('')
   const [catOpen,   setCatOpen]   = useState(false)
+
+  const KC_BLUE     = '#4a9ec0'
+  const KC_BLUE_DIM = 'rgba(74,158,192,0.15)'
+  const KC_GOLD     = '#c8a96e'
 
   // subs da categoria activa
   const subsForCat = activeCat === 'Todas' ? [] :
@@ -294,7 +415,6 @@ export default function KC({ showToast }) {
     return mc && ms && mq
   })
 
-  // agrupar por sub para exibição
   const grouped = filtered.reduce((acc, i) => {
     const key = i.cat + '||' + i.sub
     if (!acc[key]) acc[key] = { cat: i.cat, sub: i.sub, items: [] }
@@ -303,23 +423,97 @@ export default function KC({ showToast }) {
   }, {})
 
   const selectCat = (c) => { setActiveCat(c); setActiveSub(''); setCatOpen(false) }
-
   const copy = (ref) => {
     navigator.clipboard.writeText(ref).catch(() => {})
     showToast('Referência copiada — ' + ref)
   }
 
-  // cor accent KC — azul
-  const KC_BLUE = '#4a9ec0'
-  const KC_BLUE_DIM = 'rgba(74,158,192,0.15)'
+  const TAB_BTN = (id, label) => (
+    <button onClick={() => setTab(id)} style={{
+      background: 'transparent', border: 'none', cursor: 'pointer',
+      padding: '10px 20px', borderBottom: tab === id ? `2px solid ${id === 'guia' ? KC_GOLD : KC_BLUE}` : '2px solid transparent',
+      fontFamily: "'Barlow Condensed'", fontSize: 11, fontWeight: 700, letterSpacing: '0.16em',
+      textTransform: 'uppercase', color: tab === id ? (id === 'guia' ? KC_GOLD : KC_BLUE) : 'var(--neo-text2)',
+      transition: 'all .15s', whiteSpace: 'nowrap',
+    }}>{label}</button>
+  )
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%', overflow:'hidden', background:'var(--neo-bg)' }}>
 
-      {/* TOPBAR */}
-      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', flexShrink:0, borderBottom:'1px solid rgba(255,255,255,0.04)' }}>
+      {/* TABS */}
+      <div style={{ display:'flex', borderBottom:'1px solid rgba(255,255,255,0.06)', flexShrink:0, paddingLeft:8 }}>
+        {TAB_BTN('guia', '📋 Guia Operacional')}
+        {TAB_BTN('refs', '🔍 Referências KC')}
+      </div>
 
-        {/* Selector categoria */}
+      {/* ── TAB GUIA ── */}
+      {tab === 'guia' && (
+        <div style={{ flex:1, overflowY:'auto', padding:'16px' }} className="neo-scroll">
+          {GUIA.map(fase => (
+            <div key={fase.fase} style={{ marginBottom: 28 }}>
+              {/* Cabeçalho fase */}
+              <div style={{
+                display:'flex', alignItems:'center', gap:10, marginBottom:16,
+                paddingBottom:8, borderBottom:`2px solid ${fase.cor}44`
+              }}>
+                <div style={{ width:3, height:22, background:fase.cor, borderRadius:2, flexShrink:0 }}/>
+                <span style={{ fontFamily:"'Barlow Condensed'", fontSize:16, fontWeight:700, letterSpacing:'0.16em', textTransform:'uppercase', color:fase.cor }}>
+                  {fase.fase}
+                </span>
+              </div>
+
+              {fase.seccoes.map((sec, si) => (
+                <div key={si} style={{
+                  marginBottom:14, padding:'12px 14px',
+                  background: sec.destaque ? `${fase.cor}0f` : 'var(--neo-bg2)',
+                  borderRadius:'var(--neo-radius-sm)',
+                  border: sec.destaque ? `1px solid ${fase.cor}33` : '1px solid rgba(255,255,255,0.04)',
+                  boxShadow:'var(--neo-shadow-out-sm)',
+                }}>
+                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color: sec.destaque ? fase.cor : 'var(--neo-text)', marginBottom:10 }}>
+                    {sec.titulo}
+                  </div>
+
+                  {sec.passos && sec.passos.map((p, pi) => (
+                    <div key={pi} style={{ display:'flex', gap:8, marginBottom:6, alignItems:'flex-start' }}>
+                      <span style={{ color:fase.cor, fontSize:10, flexShrink:0, marginTop:3, opacity:.7 }}>▸</span>
+                      <span style={{ fontFamily:"'Barlow'", fontSize:12, fontWeight:300, color:'var(--neo-text)', lineHeight:1.6 }}>{p}</span>
+                    </div>
+                  ))}
+
+                  {sec.subseccoes && sec.subseccoes.map((ss, ssi) => (
+                    <div key={ssi} style={{ marginTop:10, paddingLeft:12, borderLeft:`2px solid ${fase.cor}33` }}>
+                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:fase.cor, marginBottom:6, opacity:.8 }}>
+                        {ss.sub}
+                      </div>
+                      {ss.passos.map((p, pi) => (
+                        <div key={pi} style={{ display:'flex', gap:8, marginBottom:5, alignItems:'flex-start' }}>
+                          <span style={{ color:fase.cor, fontSize:10, flexShrink:0, marginTop:3, opacity:.5 }}>·</span>
+                          <span style={{ fontFamily:"'Barlow'", fontSize:12, fontWeight:300, color:'var(--neo-text2)', lineHeight:1.6 }}>{p}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+
+                  {sec.nota && (
+                    <div style={{ marginTop:8, padding:'8px 10px', background:'rgba(255,255,255,0.03)', borderRadius:6, borderLeft:`2px solid ${fase.cor}55` }}>
+                      <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:fase.cor, opacity:.7 }}>Nota </span>
+                      <span style={{ fontFamily:"'Barlow'", fontSize:11, fontWeight:300, color:'var(--neo-text2)', lineHeight:1.5 }}>{sec.nota}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── TAB REFERÊNCIAS ── */}
+      {tab === 'refs' && (
+        <>
+      {/* TOPBAR refs */}
+      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', flexShrink:0, borderBottom:'1px solid rgba(255,255,255,0.04)' }}>
         <div style={{ position:'relative', flexShrink:0 }}>
           <button onClick={() => setCatOpen(o => !o)} style={{
             background: activeCat !== 'Todas' ? KC_BLUE_DIM : 'var(--neo-bg2)',
@@ -347,8 +541,6 @@ export default function KC({ showToast }) {
             </div>
           )}
         </div>
-
-        {/* Pesquisa */}
         <div style={{ flex:1, position:'relative' }}>
           <input
             value={search} onChange={e => setSearch(e.target.value)}
@@ -360,8 +552,6 @@ export default function KC({ showToast }) {
             : <span style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', color:'var(--neo-text2)', fontSize:14, pointerEvents:'none' }}>⌕</span>
           }
         </div>
-
-        {/* Contador */}
         <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-text2)', flexShrink:0 }}>
           {filtered.length} ref.
         </span>
@@ -398,8 +588,6 @@ export default function KC({ showToast }) {
         )}
         {Object.values(grouped).map(group => (
           <div key={group.cat + group.sub} style={{ marginBottom:20 }}>
-
-            {/* Header grupo */}
             <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6, paddingBottom:6, borderBottom:`1px solid ${KC_BLUE}22` }}>
               <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:700, letterSpacing:'0.18em', textTransform:'uppercase', color: KC_BLUE, opacity:.7 }}>
                 {group.cat.replace('KC · ','')}
@@ -411,14 +599,14 @@ export default function KC({ showToast }) {
                 {group.items.length}
               </span>
             </div>
-
-            {/* Itens */}
             {group.items.map(item => (
               <KCRow key={item.ref} item={item} onCopy={copy} kcBlue={KC_BLUE} />
             ))}
           </div>
         ))}
       </div>
+        </>
+      )}
     </div>
   )
 }
