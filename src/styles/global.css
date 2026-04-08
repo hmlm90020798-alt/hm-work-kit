@@ -148,94 +148,93 @@ html, body, #root {
 }
 
 /* ── Classe utilitária de hover neomórfico ───────────────────────────────── */
-/* Adiciona .neo-hover a qualquer card/row para efeito consistente */
 .neo-hover {
-  transition: background .15s, box-shadow .15s, transform .15s !important;
+  transition: background .2s, box-shadow .2s, transform .18s, border-color .2s !important;
+  position: relative;
 }
 .neo-hover:hover {
-  background: var(--neo-bg2) !important;
-  box-shadow: var(--neo-shadow-out-sm), 0 0 0 1px rgba(200,169,110,.08) !important;
-  transform: translateY(-1px);
+  background: #1c1c1a !important;
+  box-shadow:
+    var(--neo-shadow-out-sm),
+    0 0 0 1px rgba(200,169,110,.18),
+    0 0 18px rgba(200,169,110,.07) !important;
+  transform: translateY(-2px);
+  border-color: rgba(200,169,110,.25) !important;
 }
 .neo-hover:active {
-  transform: none;
+  transform: translateY(0);
   box-shadow: var(--neo-shadow-in-sm) !important;
 }
+/* Hierarquia 1 — texto principal */
+.neo-hover:hover .neo-h1 {
+  color: #f0ede8 !important;
+  text-shadow: 0 0 12px rgba(200,169,110,.45) !important;
+  transition: color .2s, text-shadow .2s;
+}
+/* Hierarquia 2 — texto secundário */
+.neo-hover:hover .neo-h2 {
+  color: #9a9790 !important;
+  transition: color .2s;
+}
+/* Hierarquia 3 — preço / ref */
+.neo-hover:hover .neo-h3 {
+  text-shadow: 0 0 8px rgba(200,169,110,.55) !important;
+  transition: text-shadow .2s;
+}
+/* Linha de destaque esquerda ao hover */
+.neo-hover::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 20%; bottom: 20%;
+  width: 2px;
+  background: linear-gradient(to bottom, transparent, rgba(200,169,110,.5), transparent);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity .2s;
+  pointer-events: none;
+}
+.neo-hover:hover::before { opacity: 1; }
 
 /* ── Dropdowns — altura máxima + scroll ──────────────────────────────────── */
-/* Aplica-se a todos os painéis dropdown da app */
 .neo-dropdown {
-  max-height: calc(5 * 36px);   /* máx 5 itens visíveis */
-  overflow-y: auto;
+  max-height: calc(5 * 38px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   overscroll-behavior: contain;
 }
-.neo-dropdown::-webkit-scrollbar { width: 2px; }
+.neo-dropdown::-webkit-scrollbar { width: 3px; }
+.neo-dropdown::-webkit-scrollbar-track { background: transparent; }
 .neo-dropdown::-webkit-scrollbar-thumb { background: var(--neo-gold2); border-radius: 2px; }
 
-/* ── Contraste global de texto ───────────────────────────────────────────── */
-/* Texto principal mais legível por defeito */
-.neo-screen, .neo-modal {
-  --neo-text: #ede9e1;        /* ligeiramente mais brilhante */
-  --neo-text2: #7a7872;       /* secundário mais visível */
-}
-
-/* Inputs e labels mais contrastados */
-.neo-input, .neo-input-num {
-  color: var(--neo-text) !important;
-  background: var(--neo-bg) !important;
-}
-.neo-input::placeholder, .neo-input-num::placeholder {
-  color: rgba(200,190,175,0.3) !important;
-}
-.neo-label {
-  color: #8a8680 !important;
-  letter-spacing: 0.18em;
-}
-
-/* Segmentos Tampos — destaque nos inputs de medida */
-.neo-seg {
-  background: rgba(200,169,110,.04) !important;
-  border: 1px solid rgba(200,169,110,.1) !important;
-  border-radius: var(--neo-radius-sm) !important;
-  padding: 10px 12px !important;
-}
-.neo-seg .neo-input-num {
-  background: rgba(255,255,255,.04) !important;
-  border-bottom: 1px solid rgba(200,169,110,.25) !important;
-  color: #f0ede8 !important;
-  font-size: 15px !important;
-  font-weight: 500 !important;
-}
-.neo-seg .neo-input-num:focus {
-  border-bottom-color: var(--neo-gold) !important;
-  box-shadow: 0 2px 8px rgba(200,169,110,.15) !important;
-}
-.neo-seg .neo-label {
-  color: var(--neo-gold2) !important;
-}
-
+/* ── Scroll neo ──────────────────────────────────────────────────────────── */
 .neo-scroll::-webkit-scrollbar { width: 2px; height: 2px; }
 .neo-scroll::-webkit-scrollbar-track { background: transparent; }
 .neo-scroll::-webkit-scrollbar-thumb { background: var(--neo-gold2); border-radius: 2px; }
 
+/* ── Contraste global inputs ─────────────────────────────────────────────── */
+.neo-input, .neo-input-num {
+  color: #ede9e1 !important;
+}
+.neo-input::placeholder, .neo-input-num::placeholder {
+  color: rgba(200,190,175,.25) !important;
+}
+.neo-label { color: #8a8680 !important; }
 
+/* ── Segmentos Tampos ────────────────────────────────────────────────────── */
+.neo-seg {
+  background: rgba(200,169,110,.04) !important;
+  border: 1px solid rgba(200,169,110,.1) !important;
+}
+.neo-seg:focus-within {
+  border-color: rgba(200,169,110,.28) !important;
+}
 
-/* Cards neomórficos — artigos, modelos, serviços MO, KC rows */
+/* ── Cards e botões ──────────────────────────────────────────────────────── */
 .bib-art-card,
-.mod-item-card,
-.kc-row,
 [class*="-card"],
 [class*="-item"] {
   transition: box-shadow .18s, transform .18s, border-color .18s;
 }
-.bib-art-card:hover,
-.mod-item-card:hover,
-[class*="-card"]:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0,0,0,.35), 0 0 0 1px rgba(200,169,110,.12) !important;
-}
-
-/* Botões neo genéricos */
 .neo-btn:hover:not(:disabled) {
   filter: brightness(1.12);
   transform: translateY(-1px);
@@ -243,60 +242,23 @@ html, body, #root {
 .neo-btn-gold:hover:not(:disabled) {
   box-shadow: 0 0 12px rgba(200,169,110,.35) !important;
 }
-.neo-btn-ghost:hover:not(:disabled) {
-  color: var(--neo-text) !important;
-}
-
-/* Chips de categoria/sub/filtro */
-.bib-cat-card:hover,
-.bib-sub-chip:hover,
-.neo-chip-sm:hover {
+.neo-btn-ghost:hover:not(:disabled) { color: var(--neo-text) !important; }
+.bib-cat-card:hover, .bib-sub-chip:hover, .neo-chip-sm:hover {
   border-color: rgba(200,169,110,.3) !important;
   color: var(--neo-text) !important;
 }
-
-/* Botões de acção nos cards (copiar, editar, eliminar, orçamento) */
-.bib-act-btn:hover,
-.bib-copy-btn:hover {
+.bib-act-btn:hover, .bib-copy-btn:hover {
   color: var(--neo-text) !important;
   transform: scale(1.15);
 }
-.bib-act-btn.del:hover {
-  color: #c07070 !important;
-}
-
-/* Links externos ↗ */
-a[target="_blank"]:hover {
-  opacity: .75;
-  text-decoration: underline;
-}
-
-/* Itens de menu (MO secções, KC categorias) */
-button[style*="background:'transparent'"]:hover,
-button[style*='background:"transparent"']:hover {
-  color: var(--neo-text, #e8e4dc) !important;
-}
-
-/* Rows KC */
+.bib-act-btn.del:hover { color: #c07070 !important; }
 .kc-row:hover {
   border-left-color: #4a9ec0 !important;
   background: rgba(74,158,192,.06) !important;
 }
-
-/* Toggle estrela e KC badge */
-button[title="Remover KC"]:hover,
-button[onClick*="handleStar"]:hover {
-  transform: scale(1.2);
-}
-
-/* Sugestões rápidas IA */
-button[style*="letterSpacing:'0.08em'"]:hover {
-  color: var(--neo-gold, #c8a96e) !important;
-  border-color: rgba(200,169,110,.25) !important;
-}
-
-/* Cursor pointer em tudo que é clicável mas não tem cursor definido */
+a[target="_blank"]:hover { opacity: .75; text-decoration: underline; }
 button:not([disabled]) { cursor: pointer; }
+
 
 .badge {
   display: inline-block; padding: 3px 8px;
