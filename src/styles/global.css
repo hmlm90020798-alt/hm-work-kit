@@ -127,7 +127,86 @@ html, body, #root {
 .frow textarea { resize: vertical; min-height: 70px; }
 .frow.half { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 
-/* BADGE */
+/* ── HOVER UNIVERSAL ──────────────────────────────────────────────────────── */
+
+/* Cards neomórficos — artigos, modelos, serviços MO, KC rows */
+.bib-art-card,
+.mod-item-card,
+.kc-row,
+[class*="-card"],
+[class*="-item"] {
+  transition: box-shadow .18s, transform .18s, border-color .18s;
+}
+.bib-art-card:hover,
+.mod-item-card:hover,
+[class*="-card"]:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0,0,0,.35), 0 0 0 1px rgba(200,169,110,.12) !important;
+}
+
+/* Botões neo genéricos */
+.neo-btn:hover:not(:disabled) {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+.neo-btn-gold:hover:not(:disabled) {
+  box-shadow: 0 0 12px rgba(200,169,110,.35) !important;
+}
+.neo-btn-ghost:hover:not(:disabled) {
+  color: var(--neo-text) !important;
+}
+
+/* Chips de categoria/sub/filtro */
+.bib-cat-card:hover,
+.bib-sub-chip:hover,
+.neo-chip-sm:hover {
+  border-color: rgba(200,169,110,.3) !important;
+  color: var(--neo-text) !important;
+}
+
+/* Botões de acção nos cards (copiar, editar, eliminar, orçamento) */
+.bib-act-btn:hover,
+.bib-copy-btn:hover {
+  color: var(--neo-text) !important;
+  transform: scale(1.15);
+}
+.bib-act-btn.del:hover {
+  color: #c07070 !important;
+}
+
+/* Links externos ↗ */
+a[target="_blank"]:hover {
+  opacity: .75;
+  text-decoration: underline;
+}
+
+/* Itens de menu (MO secções, KC categorias) */
+button[style*="background:'transparent'"]:hover,
+button[style*='background:"transparent"']:hover {
+  color: var(--neo-text, #e8e4dc) !important;
+}
+
+/* Rows KC */
+.kc-row:hover {
+  border-left-color: #4a9ec0 !important;
+  background: rgba(74,158,192,.06) !important;
+}
+
+/* Toggle estrela e KC badge */
+button[title="Remover KC"]:hover,
+button[onClick*="handleStar"]:hover {
+  transform: scale(1.2);
+}
+
+/* Sugestões rápidas IA */
+button[style*="letterSpacing:'0.08em'"]:hover {
+  color: var(--neo-gold, #c8a96e) !important;
+  border-color: rgba(200,169,110,.25) !important;
+}
+
+/* Cursor pointer em tudo que é clicável mas não tem cursor definido */
+button:not([disabled]) { cursor: pointer; }
+
 .badge {
   display: inline-block; padding: 3px 8px;
   border: 1px solid var(--line2);
