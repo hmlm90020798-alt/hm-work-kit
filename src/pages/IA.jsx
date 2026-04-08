@@ -97,6 +97,7 @@ export default function IA({ showToast }) {
 
     const prompt = buildPrompt(descricao, artigos)
     let lastErr = ''
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms))
 
     // Tentar cada modelo em sequência até um funcionar
     for (const model of GEMINI_MODELS) {
@@ -110,7 +111,13 @@ export default function IA({ showToast }) {
           })
         })
         if (res.status === 404) { lastErr = `${model} não disponível`; continue }
-        if (res.status === 429) { lastErr = 'Limite de pedidos atingido — aguarda um momento'; break }
+        if (res.status === 429) {
+          lastErr = 'Limite de pedidos atingido — a aguardar 15s antes de tentar outro modelo…'
+          setErro(lastErr)
+          await sleep(15000)
+          setErro('')
+          continue
+        }
         if (!res.ok) {
           const e = await res.json().catch(()=>({}))
           lastErr = e?.error?.message || `HTTP ${res.status}`
