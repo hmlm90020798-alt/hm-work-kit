@@ -19,16 +19,43 @@ const PAGES = [
   { id:'tampos',     label:'Tampos',     sub:'Calculadora ANIGRACO' },
   { id:'maodeobra',  label:'Mão de Obra',sub:'Serviços e instalações' },
   { id:'ia',         label:'IA',         sub:'Assistente de orçamentação' },
-  { id:'kc',        label:'KC',       sub:'Cozinhas Centralizadas' },
-  { id:'proposta',  label:'Proposta', sub:'Decomposição do orçamento' },
+  { id:'kc',         label:'KC',         sub:'Cozinhas Centralizadas' },
+  { id:'proposta',   label:'Proposta',   sub:'Decomposição do orçamento' },
 ]
+
+const MENU_ORDER_KEY = 'hm_menu_order'
+
+function loadMenuOrder() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(MENU_ORDER_KEY))
+    if (Array.isArray(saved) && saved.length === PAGES.length) return saved
+  } catch {}
+  return PAGES.map(p => p.id)
+}
 
 function Shell() {
   const { user, loading, logout } = useAuth()
-  const [page, setPage]       = useState('biblioteca')
-  const [menuOpen, setMenuOpen] = useState(true)
+  const [page, setPage]         = useState('biblioteca')
+  const [menuOpen, setMenuOpen]   = useState(true)
+  const [editMenu, setEditMenu]   = useState(false)
+  const [menuOrder, setMenuOrder] = useState(loadMenuOrder)
   const [tampoParaAbrir, setTampoParaAbrir] = useState(null)
   const { msg, visible, showToast } = useToast()
+
+  const orderedPages = menuOrder
+    .map(id => PAGES.find(p => p.id === id))
+    .filter(Boolean)
+
+  const moveMenuItem = (idx, dir) => {
+    setMenuOrder(prev => {
+      const arr = [...prev]
+      const newIdx = idx + dir
+      if (newIdx < 0 || newIdx >= arr.length) return prev
+      const tmp = arr[idx]; arr[idx] = arr[newIdx]; arr[newIdx] = tmp
+      localStorage.setItem(MENU_ORDER_KEY, JSON.stringify(arr))
+      return arr
+    })
+  }
 
   if (loading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#0a0a09' }}>
@@ -83,42 +110,50 @@ function Shell() {
 
           {/* Nav — scroll quando não cabe */}
           <nav style={{ flex:1, overflowY:'auto', padding:'0 28px' }}>
-            {PAGES.map((p, i) => {
+            {orderedPages.map((p, i) => {
               const isActive = page === p.id
               return (
-                <button key={p.id} onClick={() => goTo(p.id)}
-                  style={{
-                    background:'transparent', border:'none',
-                    borderBottom:'1px solid rgba(255,255,255,0.05)',
-                    padding:'clamp(10px, 2vh, 20px) 0', cursor:'pointer',
-                    textAlign:'left', display:'flex', alignItems:'center', justifyContent:'space-between',
-                    gap:16, transition:'all .15s', width:'100%',
-                  }}>
-                  <div>
-                    <div style={{
-                      fontFamily:"'Barlow Condensed'",
-                      fontSize: 'clamp(22px, 4vh, 40px)',
-                      fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase',
-                      color: isActive ? '#c8a96e' : '#f0ede8',
-                      lineHeight:1, transition:'all .2s'
-                    }}>
-                      {p.label}
+                <div key={p.id} style={{ display:'flex', alignItems:'center', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
+
+                  {/* Botões de reordenação — só visíveis em modo edição */}
+                  {editMenu && (
+                    <div style={{ display:'flex', flexDirection:'column', gap:3, marginRight:12, flexShrink:0 }}>
+                      <button onClick={() => moveMenuItem(i,-1)} disabled={i===0}
+                        style={{ background:'transparent', border:'none', cursor:i===0?'default':'pointer', color:i===0?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.35)', fontSize:10, lineHeight:1, padding:'2px 4px' }}>▲</button>
+                      <button onClick={() => moveMenuItem(i,1)} disabled={i===orderedPages.length-1}
+                        style={{ background:'transparent', border:'none', cursor:i===orderedPages.length-1?'default':'pointer', color:i===orderedPages.length-1?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.35)', fontSize:10, lineHeight:1, padding:'2px 4px' }}>▼</button>
                     </div>
-                    <div style={{
-                      fontFamily:"'Barlow Condensed'",
-                      fontSize:'clamp(8px, 1.2vh, 10px)', letterSpacing:'0.14em', textTransform:'uppercase',
-                      color: isActive ? '#8a6e3a' : '#3d3d39',
-                      marginTop:3, transition:'color .2s'
+                  )}
+
+                  <button onClick={() => !editMenu && goTo(p.id)}
+                    style={{
+                      flex:1, background:'transparent', border:'none',
+                      padding:'clamp(10px, 2vh, 20px) 0', cursor: editMenu ? 'default' : 'pointer',
+                      textAlign:'left', display:'flex', alignItems:'center', justifyContent:'space-between',
+                      gap:16, transition:'all .15s', opacity: editMenu ? 0.7 : 1,
                     }}>
-                      {p.sub}
+                    <div>
+                      <div style={{
+                        fontFamily:"'Barlow Condensed'",
+                        fontSize: 'clamp(22px, 4vh, 40px)',
+                        fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase',
+                        color: isActive && !editMenu ? '#c8a96e' : '#f0ede8',
+                        lineHeight:1, transition:'all .2s'
+                      }}>
+                        {p.label}
+                      </div>
+                      <div style={{
+                        fontFamily:"'Barlow Condensed'",
+                        fontSize:'clamp(8px, 1.2vh, 10px)', letterSpacing:'0.14em', textTransform:'uppercase',
+                        color: isActive && !editMenu ? '#8a6e3a' : '#3d3d39',
+                        marginTop:3, transition:'color .2s'
+                      }}>
+                        {p.sub}
+                      </div>
                     </div>
-                  </div>
-                  <span style={{
-                    fontFamily:"'Barlow Condensed'", fontSize:14,
-                    color: isActive ? '#8a6e3a' : '#2a2a27',
-                    transition:'color .2s'
-                  }}>→</span>
-                </button>
+                    {!editMenu && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:14, color: isActive ? '#8a6e3a' : '#2a2a27', transition:'color .2s' }}>→</span>}
+                  </button>
+                </div>
               )
             })}
           </nav>
@@ -133,9 +168,14 @@ function Shell() {
                 {user.email}
               </div>
             </div>
-            <button onClick={logout} style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.08)', borderRadius:20, padding:'6px 14px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'#6a6762', transition:'all .15s' }}>
-              Sair
-            </button>
+            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+              <button onClick={() => setEditMenu(o=>!o)} style={{ background: editMenu ? 'rgba(200,169,110,0.15)' : 'transparent', border:'1px solid rgba(255,255,255,0.08)', borderRadius:20, padding:'6px 12px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color: editMenu ? '#c8a96e' : '#6a6762', transition:'all .15s' }}>
+                {editMenu ? '✓ Feito' : '⇅ Ordenar'}
+              </button>
+              <button onClick={logout} style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.08)', borderRadius:20, padding:'6px 14px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'#6a6762', transition:'all .15s' }}>
+                Sair
+              </button>
+            </div>
           </div>
         </div>
       )}
