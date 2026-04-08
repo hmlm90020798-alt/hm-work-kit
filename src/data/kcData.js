@@ -273,4 +273,119 @@ const KC_DATA = [
 ]
 
 
+const GUIA = [
+  {
+    fase: 'FASE ORÇAMENTO',
+    cor: '#c8a96e',
+    seccoes: [
+      {
+        titulo: '1. Acolhimento e Qualificação',
+        passos: [
+          'Explorar as necessidades do cliente — enquadramento das vantagens das Cozinhas Centralizadas.',
+          'Abertura de Oportunidade em LM CARE. Se não tens licença, recorre ao pedido de proposta ao HUB Orçamentista.',
+          'Agendamento em Scheduler — registar o 1º momento de atendimento caso seja atendimento na hora.',
+        ]
+      },
+      {
+        titulo: '2. 1º Atendimento e Contacto com o HUB Orçamentista',
+        passos: [
+          'Recolher a informação — triar se o interesse é real/imediato.',
+          'Registar a informação em LM CARE — garantir que todos os dados do projecto estão registados na Oportunidade.',
+          'Submeter o FORM\'S Orçamentista — recorre sempre ao HUB (excepção: venda na hora). Garante que te focas no atendimento e venda.',
+          'Coloca sempre a nota "Cozinha Centralizadas" nas notas finais no FORM\'S.',
+          'A equipa do HUB conhece todos os procedimentos e listagem de artigos KC.',
+          'Agendar 2º momento de entrega de proposta no Scheduler — antes do cliente sair da loja (idealmente 48h/72h depois).',
+          'Venda de Visita Técnica (SOP) — garantir a venda e o agendamento da retificação de medidas. Informar o cliente da necessidade de retificação ou assinatura de termo de responsabilidade.',
+          'Códigos a usar para a visita: 49015230 – KC_ORÇ P INST MOBILIÁRIO COZINHA_SFW e 49013434 – Verificação de Medidas Cozinhas.',
+        ],
+        nota: 'Caso o cliente não pretenda adquirir o serviço de retificação, garantir assinatura do termo de responsabilidade e guardar em pasta interna da loja.'
+      },
+      {
+        titulo: '3. Preparação da Proposta',
+        passos: [
+          'Validar Entregáveis do HUB — confirmar a receção do Projecto + Orçamento + Simulação de instalação e financiamento.',
+          'Atualização LM CARE — confirmar que 100% da proposta está espelhada na Oportunidade.',
+          'Conformidade em SOP — garantir que a visita técnica já ocorreu e que todos os dados do parceiro e datas estão alinhados e carregados.',
+          'Ajustar o orçamento final (se necessário) com base nas medidas reais enviadas pelo instalador/parceiro.',
+        ]
+      },
+      {
+        titulo: '4. 2º Atendimento e Fecho',
+        passos: [
+          'Apresentação de Valor — rever o projecto com o cliente e validar tudo.',
+          'Agendar novo momento em caso de não fechar negócio — deixar em LM CARE nova tarefa para contacto ou marcar novo agendamento.',
+        ],
+        nota: 'Se o cliente decidir adjudicar e não tiver adquirido ainda a Visita Técnica, garantir a venda e o agendamento da retificação de medidas.'
+      },
+      {
+        titulo: '⚡ Regras de Ouro',
+        destaque: true,
+        passos: [
+          'Nunca duplicar ou anular orçamentos do HUB Orçamentista e fazer novos — evita penalizar as taxas de transformação e a produtividade da loja.',
+          'Consultar diariamente o LM CARE para cumprir as tarefas de follow-up e não perder negócios.',
+        ]
+      },
+    ]
+  },
+  {
+    fase: 'FASE DE PEDIDO',
+    cor: '#4a9ec0',
+    seccoes: [
+      {
+        titulo: '1. Fase de Transformação (Configuração do Pedido)',
+        passos: [
+          'Modo Multitransação — usar o modo multitransação para toda a venda.',
+        ],
+        subseccoes: [
+          {
+            sub: 'Mobiliário, Portas e Complementares',
+            passos: [
+              'Garantir que todos os artigos estão em PF — artigos do pedido de cozinhas centralizadas devem ficar todos em PF.',
+              'Garantir entrega em SFW.',
+              'Alinhar data de todos os artigos.',
+              'Isolar artigos fora do projecto centralizado em pedidos à parte.',
+              'Garantir que é colocado no pedido o código 49015288 - PROJETO COZINHAS SFW para facilitar o seguimento da entrega.',
+            ]
+          },
+          {
+            sub: 'Tampos (Pedra e Compósito) — Processos com Marmorista',
+            passos: [
+              'Separar tampo em pedido isolado.',
+              'Colocar todas as linhas do tampo com PF em pausa.',
+              'Designação complementar Pyxis — colocar na designação complementar o nº da OS de instalação.',
+              'Alinhar todas as datas dos PF em pausa.',
+              'Carregar dados/documentos em SOP — upload dos documentos necessários à retificação do marmorista.',
+            ]
+          },
+          {
+            sub: 'Serviço de Instalação (quando existe)',
+            passos: [
+              'Vender Serviço de Instalação — usar o código 49015229 (Instalação Módulos Cozinha).',
+              'Caso não seja possível colocar os códigos de instalação no pedido de produto, garantir a colocação do código de tracking 49014163.',
+              'Upload no SOP (se necessário actualizar) — carregar os documentos do projecto final.',
+              'Garantir data de instalação alinhada — agendar para no mínimo 3 dias úteis após a entrega total da mercadoria.',
+            ]
+          },
+        ]
+      },
+      {
+        titulo: '2. Fase de Validação e Pagamento',
+        passos: [
+          'Validar todos os campos antes da confirmação — atenção: não são permitidas alterações após a validação.',
+          'Garantir o pagamento total no prazo máximo de 48 horas — os pedidos cozinhas centralizadas têm de ser 100% liquidados.',
+          'Registar em LM CARE a conversão — alterar estado da oportunidade para "Fechada Ganha".',
+          'Registar em LM CARE os pendentes — gerar os pendentes de Produto e de Instalação (se aplicável).',
+        ]
+      },
+      {
+        titulo: '✅ VENDA CONCLUÍDA COM SUCESSO',
+        destaque: true,
+        passos: [
+          'Garantir sempre a colocação de referências KC em Orçamento e Multitransação — as que não tenham esta designação não seguirão o mesmo circuito e tempos de promessa.',
+        ]
+      },
+    ]
+  },
+]
+
 export { KC_DATA, GUIA }
