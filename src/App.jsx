@@ -6,6 +6,7 @@ import Orcamentos from './pages/Orcamentos'
 import Tampos from './pages/Tampos'
 import MaoDeObra from './pages/MaoDeObra'
 import IA from './pages/IA'
+import KC from './pages/KC'
 import Login from './pages/Login'
 import Toast from './components/Toast'
 import { useToast } from './hooks/useToast'
@@ -17,6 +18,7 @@ const PAGES = [
   { id:'tampos',     label:'Tampos',     sub:'Calculadora ANIGRACO' },
   { id:'maodeobra',  label:'Mão de Obra',sub:'Serviços e instalações' },
   { id:'ia',         label:'IA',         sub:'Assistente de orçamentação' },
+  { id:'kc',         label:'KC',         sub:'Cozinhas Centralizadas' },
 ]
 
 function Shell() {
@@ -144,6 +146,7 @@ function Shell() {
         {page === 'tampos'     && <Tampos     showToast={showToast} abrirCalculo={tampoParaAbrir} onAbrirCalculoDone={()=>setTampoParaAbrir(null)} />}
         {page === 'maodeobra'  && <MaoDeObra  showToast={showToast} />}
         {page === 'ia'         && <IA         showToast={showToast} />}
+        {page === 'kc'         && <KC         showToast={showToast} />}
       </main>
 
       <Toast msg={msg} visible={visible} />
