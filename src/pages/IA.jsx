@@ -329,6 +329,7 @@ export default function IA({ showToast }) {
                 </div>
               )}
             </div>
+            <button onClick={analisar} disabled={!descricao.trim()||!apiKey}
               className="neo-btn neo-btn-gold" style={{width:'100%',height:44,fontSize:11,borderRadius:'var(--neo-radius-pill)',opacity:(!descricao.trim()||!apiKey)?.4:1}}>
               {!apiKey ? 'Configura a API key (⚙)' : 'Analisar projecto'}
             </button>
