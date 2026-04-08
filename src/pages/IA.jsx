@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { db } from '../firebase'
 import { collection, getDocs } from 'firebase/firestore'
 import { MAO_DE_OBRA } from '../data/maoDeObra'
@@ -74,7 +74,7 @@ INSTRUÇÕES OBRIGATÓRIAS:
 Projecto: ${descricao}`
 }
 
-// ── Chave Gemini guardada no localStorage ────────────────────────────────────
+// ── Chave Groq guardada no localStorage ────────────────────────────────────
 const KEY_STORAGE = 'hm_groq_key'
 
 export default function IA({ showToast }) {

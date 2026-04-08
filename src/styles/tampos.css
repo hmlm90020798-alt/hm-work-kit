@@ -1,36 +1,4 @@
-/* ── Neomorfismo Tampos ─────────────────────────────────────────────── */
-:root {
-  --neo-bg:     #1c1c1e;
-  --neo-bg2:    #232325;
-  --neo-light:  #2e2e32;
-  --neo-dark:   #0f0f10;
-  --neo-text:   #e8e6e1;
-  --neo-text2:  #6e6c68;
-  --neo-text3:  #3a3a3c;
-  --neo-gold:   #c8a96e;
-  --neo-gold2:  #8a6e3a;
-  --neo-blue:   #4a8fa8;
-  --neo-danger: #8b3030;
-
-  --neo-shadow-out:
-    4px 4px 10px rgba(0,0,0,0.6),
-    -2px -2px 6px rgba(255,255,255,0.04);
-  --neo-shadow-in:
-    inset 3px 3px 8px rgba(0,0,0,0.6),
-    inset -2px -2px 5px rgba(255,255,255,0.04);
-  --neo-shadow-out-sm:
-    2px 2px 6px rgba(0,0,0,0.5),
-    -1px -1px 3px rgba(255,255,255,0.04);
-  --neo-shadow-in-sm:
-    inset 2px 2px 5px rgba(0,0,0,0.55),
-    inset -1px -1px 3px rgba(255,255,255,0.04);
-  --neo-glow-gold:
-    0 0 12px rgba(200,169,110,0.25),
-    inset 0 0 8px rgba(200,169,110,0.1);
-  --neo-radius: 12px;
-  --neo-radius-sm: 8px;
-  --neo-radius-pill: 50px;
-}
+/* ── Tampos — usa variáveis definidas em global.css ────────────────── */
 
 /* Container principal */
 .neo-screen {

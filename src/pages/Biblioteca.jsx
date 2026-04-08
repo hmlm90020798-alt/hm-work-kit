@@ -11,7 +11,6 @@ const SORT_OPTS = [
   { value:'price_asc',label:'Preço ↑'   },
   { value:'price_desc',label:'Preço ↓'  },
   { value:'supplier', label:'Fornecedor' },
-  { value:'star',     label:'Estrelas'   },
 ]
 
 function sortArts(arts, sort) {

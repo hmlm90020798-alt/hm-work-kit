@@ -37,13 +37,13 @@ export default function MaoDeObra({ showToast }) {
     return next
   })
 
-  const moveGroup = (sub, dir) => {
+  const moveGroup = (sub, dir, currentSubs) => {
     setSubOrder(prev => {
-      const subs = prev.length > 0 ? prev : Object.keys(grupos)
+      const subs = prev.length > 0 ? [...prev] : [...currentSubs]
       const idx = subs.indexOf(sub)
-      if (idx < 0) return subs
+      if (idx < 0) return prev
       const newIdx = idx + dir
-      if (newIdx < 0 || newIdx >= subs.length) return subs
+      if (newIdx < 0 || newIdx >= subs.length) return prev
       const arr = [...subs]
       const tmp = arr[idx]; arr[idx] = arr[newIdx]; arr[newIdx] = tmp
       localStorage.setItem(MO_ORDER_KEY, JSON.stringify(arr))
@@ -146,8 +146,8 @@ export default function MaoDeObra({ showToast }) {
                 <div style={{display:'flex',alignItems:'center',background:'var(--neo-bg2)',padding:'8px 12px',gap:8}}>
                   {/* Reordenação */}
                   <div style={{display:'flex',flexDirection:'column',gap:2,flexShrink:0}}>
-                    <button onClick={()=>moveGroup(sub,-1)} disabled={idx===0} style={{background:'transparent',border:'none',cursor:idx===0?'default':'pointer',color:idx===0?'var(--neo-text3)':'var(--neo-text2)',fontSize:9,lineHeight:1,padding:'1px 3px'}}>▲</button>
-                    <button onClick={()=>moveGroup(sub,1)} disabled={idx===orderedSubs.length-1} style={{background:'transparent',border:'none',cursor:idx===orderedSubs.length-1?'default':'pointer',color:idx===orderedSubs.length-1?'var(--neo-text3)':'var(--neo-text2)',fontSize:9,lineHeight:1,padding:'1px 3px'}}>▼</button>
+                    <button onClick={()=>moveGroup(sub,-1,orderedSubs)} disabled={idx===0} style={{background:'transparent',border:'none',cursor:idx===0?'default':'pointer',color:idx===0?'var(--neo-text3)':'var(--neo-text2)',fontSize:9,lineHeight:1,padding:'1px 3px'}}>▲</button>
+                    <button onClick={()=>moveGroup(sub,1,orderedSubs)} disabled={idx===orderedSubs.length-1} style={{background:'transparent',border:'none',cursor:idx===orderedSubs.length-1?'default':'pointer',color:idx===orderedSubs.length-1?'var(--neo-text3)':'var(--neo-text2)',fontSize:9,lineHeight:1,padding:'1px 3px'}}>▼</button>
                   </div>
                   {/* Nome + colapsar */}
                   <button onClick={()=>toggleCollapsed(sub)} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'space-between',background:'transparent',border:'none',cursor:'pointer',textAlign:'left',gap:8}}>
