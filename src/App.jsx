@@ -79,8 +79,8 @@ function Shell() {
           {/* Linha decorativa */}
           <div style={{ height:1, background:'linear-gradient(90deg, transparent 0%, rgba(200,169,110,0.3) 50%, transparent 100%)', flexShrink:0 }}/>
 
-          {/* Nav */}
-          <nav style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', padding:'0 28px' }}>
+          {/* Nav — scroll quando não cabe */}
+          <nav style={{ flex:1, overflowY:'auto', padding:'0 28px' }}>
             {PAGES.map((p, i) => {
               const isActive = page === p.id
               return (
@@ -88,14 +88,14 @@ function Shell() {
                   style={{
                     background:'transparent', border:'none',
                     borderBottom:'1px solid rgba(255,255,255,0.05)',
-                    padding:'20px 0', cursor:'pointer',
+                    padding:'clamp(10px, 2vh, 20px) 0', cursor:'pointer',
                     textAlign:'left', display:'flex', alignItems:'center', justifyContent:'space-between',
-                    gap:16, transition:'all .15s'
+                    gap:16, transition:'all .15s', width:'100%',
                   }}>
                   <div>
                     <div style={{
                       fontFamily:"'Barlow Condensed'",
-                      fontSize: isActive ? 40 : 34,
+                      fontSize: 'clamp(22px, 4vh, 40px)',
                       fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase',
                       color: isActive ? '#c8a96e' : '#f0ede8',
                       lineHeight:1, transition:'all .2s'
@@ -104,9 +104,9 @@ function Shell() {
                     </div>
                     <div style={{
                       fontFamily:"'Barlow Condensed'",
-                      fontSize:10, letterSpacing:'0.14em', textTransform:'uppercase',
+                      fontSize:'clamp(8px, 1.2vh, 10px)', letterSpacing:'0.14em', textTransform:'uppercase',
                       color: isActive ? '#8a6e3a' : '#3d3d39',
-                      marginTop:4, transition:'color .2s'
+                      marginTop:3, transition:'color .2s'
                     }}>
                       {p.sub}
                     </div>
@@ -122,7 +122,7 @@ function Shell() {
           </nav>
 
           {/* Rodapé */}
-          <div style={{ padding:'20px 28px', borderTop:'1px solid rgba(255,255,255,0.04)', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+          <div style={{ padding:'12px 28px', borderTop:'1px solid rgba(255,255,255,0.04)', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
             <div>
               <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, letterSpacing:'0.1em', textTransform:'uppercase', color:'#f0ede8', marginBottom:2 }}>
                 {user.displayName || ''}
