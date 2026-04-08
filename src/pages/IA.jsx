@@ -17,19 +17,33 @@ const GEMINI_API = (model, key) =>
 const LIST_MODELS = (key) =>
   `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`
 
-// Contexto MO compacto — só standard com PVP ≥ 5€
-const MO_CONTEXT = MAO_DE_OBRA
-  .filter(s => s.tipo === 'standard' && s.pvp >= 5)
-  .map(s => `[${s.id}] ${s.nome} | ${s.pvp}€/${s.un} | ${s.seccao.replace(/^\d+ · /,'')}`)
-  .join('\n')
+// Secções MO agrupadas para selector
+const MO_SECCOES = [...new Set(MAO_DE_OBRA.map(s => s.seccao))].sort()
 
-function buildPrompt(descricao, artigos) {
-  const bib = artigos.length > 0
-    ? artigos.slice(0,200).map(a => {
+// MO filtrado por secções seleccionadas (ou todas se vazio)
+function getMOContext(seccoesSel) {
+  return MAO_DE_OBRA
+    .filter(s => s.tipo === 'standard' && s.pvp >= 5 &&
+      (seccoesSel.length === 0 || seccoesSel.includes(s.seccao)))
+    .map(s => `[${s.id}] ${s.nome} | ${s.pvp}€/${s.un} | ${s.seccao.replace(/^\d+ · /,'')}`)
+    .join('\n')
+}
+
+function buildPrompt(descricao, artigos, catsSelBib, seccoesMO) {
+  // Biblioteca — filtrar por categorias seleccionadas (ou todas se vazio)
+  const artigosFiltrados = catsSelBib.length > 0
+    ? artigos.filter(a => catsSelBib.includes(a.cat))
+    : artigos
+
+  // Limitar a 120 artigos para não exceder tokens
+  const bib = artigosFiltrados.length > 0
+    ? artigosFiltrados.slice(0, 120).map(a => {
         const base = `[${a.ref}] ${a.desc} | ${a.price>0?a.price+'€':''} | ${a.cat}${a.sub?' · '+a.sub:''}`
         return a.notaIA ? `${base} — ⚑ IA: ${a.notaIA}` : base
       }).join('\n')
     : '(biblioteca vazia)'
+
+  const moContext = getMOContext(seccoesMO)
 
   return `És um assistente especializado em orçamentação de obras e instalações.
 Respondes SEMPRE em português de Portugal.
@@ -38,7 +52,7 @@ BIBLIOTECA DE ARTIGOS (ref | descrição | preço | categoria):
 ${bib}
 
 SERVIÇOS DE MÃO DE OBRA (código | nome | preço | secção):
-${MO_CONTEXT}
+${moContext}
 
 INSTRUÇÕES OBRIGATÓRIAS:
 - Usa APENAS itens das listas acima. Usa referências e preços exactos.
@@ -90,14 +104,20 @@ export default function IA({ showToast }) {
     if (trimmed) { localStorage.setItem(KEY_STORAGE, trimmed); setShowKey(false) }
   }
 
-  const [modelUsado, setModelUsado] = useState('')
+  const [modelUsado,  setModelUsado]  = useState('')
+  const [catsSelBib,  setCatsSelBib]  = useState([])
+  const [seccoesMO,   setSeccoesMO]   = useState([])
+  const [showFiltros, setShowFiltros] = useState(false)
+
+  // Categorias disponíveis na biblioteca
+  const catsBib = [...new Set(artigos.map(a => a.cat))].sort()
 
   const analisar = async () => {
     if (!descricao.trim()) { showToast('Descreve o projecto primeiro'); return }
     if (!apiKey) { setShowKey(true); showToast('Configura a API key primeiro'); return }
     setLoading(true); setResultado(null); setErro(''); setAceites({}); setModelUsado('')
 
-    const prompt = buildPrompt(descricao, artigos)
+    const prompt = buildPrompt(descricao, artigos, catsSelBib, seccoesMO)
     let lastErr = ''
     const sleep = (ms) => new Promise(r => setTimeout(r, ms))
 
@@ -250,7 +270,65 @@ export default function IA({ showToast }) {
                 ))}
               </div>
             </div>
-            <button onClick={analisar} disabled={!descricao.trim()||!apiKey}
+            {/* ── FILTROS DE CONTEXTO ── */}
+            <div style={{marginBottom:16}}>
+              <button onClick={()=>setShowFiltros(o=>!o)} style={{
+                display:'flex',alignItems:'center',gap:6,background:'transparent',border:'none',
+                cursor:'pointer',padding:'0 0 8px',
+                fontFamily:"'Barlow Condensed'",fontSize:9,fontWeight:700,letterSpacing:'0.18em',
+                textTransform:'uppercase',color: (catsSelBib.length||seccoesMO.length) ? 'var(--neo-gold)' : 'var(--neo-text2)',
+              }}>
+                ⚙ Contexto da IA
+                {(catsSelBib.length > 0 || seccoesMO.length > 0) && (
+                  <span style={{background:'var(--neo-gold)',color:'#1a1610',borderRadius:10,padding:'1px 6px',fontSize:8,fontWeight:700}}>
+                    {catsSelBib.length + seccoesMO.length}
+                  </span>
+                )}
+                <span style={{fontSize:8,opacity:.5}}>{showFiltros?'▲':'▼'}</span>
+              </button>
+
+              {showFiltros && (
+                <div style={{background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',padding:'12px',boxShadow:'var(--neo-shadow-out-sm)'}}>
+                  <div style={{marginBottom:12}}>
+                    <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text2)',marginBottom:6}}>
+                      Biblioteca — categorias a enviar {catsSelBib.length===0&&<span style={{opacity:.5}}>(todas)</span>}
+                    </div>
+                    <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                      {catsBib.map(c=>(
+                        <button key={c} onClick={()=>setCatsSelBib(p=>p.includes(c)?p.filter(x=>x!==c):[...p,c])} style={{
+                          padding:'3px 10px',borderRadius:'var(--neo-radius-pill)',border:'none',cursor:'pointer',
+                          fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.08em',
+                          background: catsSelBib.includes(c) ? 'linear-gradient(145deg,#d4b87a,#b8924a)' : 'var(--neo-bg)',
+                          color: catsSelBib.includes(c) ? '#1a1610' : 'var(--neo-text2)',
+                          boxShadow: catsSelBib.includes(c) ? 'var(--neo-shadow-in-sm)' : 'var(--neo-shadow-out-sm)',
+                        }}>{c}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text2)',marginBottom:6}}>
+                      Mão de Obra — secções a enviar {seccoesMO.length===0&&<span style={{opacity:.5}}>(todas)</span>}
+                    </div>
+                    <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                      {MO_SECCOES.map(s=>(
+                        <button key={s} onClick={()=>setSeccoesMO(p=>p.includes(s)?p.filter(x=>x!==s):[...p,s])} style={{
+                          padding:'3px 10px',borderRadius:'var(--neo-radius-pill)',border:'none',cursor:'pointer',
+                          fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.08em',
+                          background: seccoesMO.includes(s) ? 'rgba(176,122,204,0.3)' : 'var(--neo-bg)',
+                          color: seccoesMO.includes(s) ? '#b07acc' : 'var(--neo-text2)',
+                          boxShadow: seccoesMO.includes(s) ? 'var(--neo-shadow-in-sm)' : 'var(--neo-shadow-out-sm)',
+                        }}>{s.replace(/^\d+ · /,'')}</button>
+                      ))}
+                    </div>
+                  </div>
+                  {(catsSelBib.length>0||seccoesMO.length>0)&&(
+                    <button onClick={()=>{setCatsSelBib([]);setSeccoesMO([])}} style={{marginTop:10,background:'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--neo-text2)'}}>
+                      ✕ Limpar filtros
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
               className="neo-btn neo-btn-gold" style={{width:'100%',height:44,fontSize:11,borderRadius:'var(--neo-radius-pill)',opacity:(!descricao.trim()||!apiKey)?.4:1}}>
               {!apiKey ? 'Configura a API key (⚙)' : 'Analisar projecto'}
             </button>
