@@ -104,9 +104,23 @@ export default function IA({ showToast }) {
   const [catsSelBib,  setCatsSelBib]  = useState([])
   const [seccoesMO,   setSeccoesMO]   = useState([])
   const [showFiltros, setShowFiltros] = useState(false)
+  const [catsBib,     setCatsBib]     = useState([])
+  const [bibDropOpen, setBibDropOpen] = useState(false)
+  const [moDropOpen,  setMoDropOpen]  = useState(false)
 
-  // Categorias disponíveis na biblioteca
-  const catsBib = [...new Set(artigos.map(a => a.cat))].sort()
+  // Carregar categorias do Firestore (todas, não só as com artigos)
+  useEffect(() => {
+    getDocs(collection(db,'categorias')).then(snap => {
+      const sorted = snap.docs
+        .map(d => ({id:d.id, ...d.data()}))
+        .sort((a,b) => (a.order??999) - (b.order??999))
+        .map(c => c.name)
+      setCatsBib(sorted)
+    }).catch(() => {
+      // fallback: categorias dos artigos
+      setCatsBib([...new Set(artigos.map(a => a.cat))].sort())
+    })
+  }, [])
 
   const analisar = async () => {
     if (!descricao.trim()) { showToast('Descreve o projecto primeiro'); return }
@@ -283,42 +297,87 @@ export default function IA({ showToast }) {
               </button>
 
               {showFiltros && (
-                <div style={{background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',padding:'12px',boxShadow:'var(--neo-shadow-out-sm)'}}>
-                  <div style={{marginBottom:12}}>
-                    <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text2)',marginBottom:6}}>
-                      Biblioteca — categorias a enviar {catsSelBib.length===0&&<span style={{opacity:.5}}>(todas)</span>}
+                <div style={{background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',padding:'12px',boxShadow:'var(--neo-shadow-out-sm)',display:'flex',gap:10}}>
+
+                  {/* Dropdown Biblioteca */}
+                  <div style={{flex:1,position:'relative'}}>
+                    <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text2)',marginBottom:5}}>
+                      Biblioteca {catsSelBib.length>0&&<span style={{color:'var(--neo-gold)',fontWeight:700}}>({catsSelBib.length})</span>}
                     </div>
-                    <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
-                      {catsBib.map(c=>(
-                        <button key={c} onClick={()=>setCatsSelBib(p=>p.includes(c)?p.filter(x=>x!==c):[...p,c])} style={{
-                          padding:'3px 10px',borderRadius:'var(--neo-radius-pill)',border:'none',cursor:'pointer',
-                          fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.08em',
-                          background: catsSelBib.includes(c) ? 'linear-gradient(145deg,#d4b87a,#b8924a)' : 'var(--neo-bg)',
-                          color: catsSelBib.includes(c) ? '#1a1610' : 'var(--neo-text2)',
-                          boxShadow: catsSelBib.includes(c) ? 'var(--neo-shadow-in-sm)' : 'var(--neo-shadow-out-sm)',
-                        }}>{c}</button>
-                      ))}
-                    </div>
+                    <button onClick={()=>{setBibDropOpen(o=>!o);setMoDropOpen(false)}} style={{
+                      width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',
+                      background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-sm)',
+                      boxShadow:'var(--neo-shadow-out-sm)',padding:'8px 12px',cursor:'pointer',
+                      fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.1em',textTransform:'uppercase',
+                      color: catsSelBib.length>0 ? 'var(--neo-gold)' : 'var(--neo-text2)',
+                    }}>
+                      <span>{catsSelBib.length===0 ? 'Todas as categorias' : catsSelBib.join(', ').substring(0,28)+(catsSelBib.join(', ').length>28?'…':'')}</span>
+                      <span style={{fontSize:8,opacity:.5}}>{bibDropOpen?'▲':'▼'}</span>
+                    </button>
+                    {bibDropOpen&&(
+                      <div className="neo-dropdown" style={{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out)',zIndex:50}}>
+                        <button onClick={()=>setCatsSelBib([])} style={{display:'block',width:'100%',padding:'9px 12px',background:catsSelBib.length===0?'var(--neo-bg)':'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.1em',textTransform:'uppercase',color:catsSelBib.length===0?'var(--neo-gold)':'var(--neo-text2)',textAlign:'left'}}>
+                          Todas
+                        </button>
+                        {catsBib.map(c=>(
+                          <button key={c} onClick={()=>setCatsSelBib(p=>p.includes(c)?p.filter(x=>x!==c):[...p,c])} style={{
+                            display:'flex',alignItems:'center',gap:8,width:'100%',padding:'9px 12px',
+                            background:catsSelBib.includes(c)?'var(--neo-bg)':'transparent',
+                            border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",
+                            fontSize:9,letterSpacing:'0.1em',textTransform:'uppercase',
+                            color:catsSelBib.includes(c)?'var(--neo-gold)':'var(--neo-text2)',textAlign:'left',
+                          }}>
+                            <span style={{width:10,height:10,borderRadius:2,border:`1px solid ${catsSelBib.includes(c)?'var(--neo-gold)':'var(--neo-text2)'}`,background:catsSelBib.includes(c)?'var(--neo-gold)':'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:7,color:'#1a1610'}}>
+                              {catsSelBib.includes(c)&&'✓'}
+                            </span>
+                            {c}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text2)',marginBottom:6}}>
-                      Mão de Obra — secções a enviar {seccoesMO.length===0&&<span style={{opacity:.5}}>(todas)</span>}
+
+                  {/* Dropdown MO */}
+                  <div style={{flex:1,position:'relative'}}>
+                    <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text2)',marginBottom:5}}>
+                      Mão de Obra {seccoesMO.length>0&&<span style={{color:'#b07acc',fontWeight:700}}>({seccoesMO.length})</span>}
                     </div>
-                    <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
-                      {MO_SECCOES.map(s=>(
-                        <button key={s} onClick={()=>setSeccoesMO(p=>p.includes(s)?p.filter(x=>x!==s):[...p,s])} style={{
-                          padding:'3px 10px',borderRadius:'var(--neo-radius-pill)',border:'none',cursor:'pointer',
-                          fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.08em',
-                          background: seccoesMO.includes(s) ? 'rgba(176,122,204,0.3)' : 'var(--neo-bg)',
-                          color: seccoesMO.includes(s) ? '#b07acc' : 'var(--neo-text2)',
-                          boxShadow: seccoesMO.includes(s) ? 'var(--neo-shadow-in-sm)' : 'var(--neo-shadow-out-sm)',
-                        }}>{s.replace(/^\d+ · /,'')}</button>
-                      ))}
-                    </div>
+                    <button onClick={()=>{setMoDropOpen(o=>!o);setBibDropOpen(false)}} style={{
+                      width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',
+                      background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-sm)',
+                      boxShadow:'var(--neo-shadow-out-sm)',padding:'8px 12px',cursor:'pointer',
+                      fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.1em',textTransform:'uppercase',
+                      color: seccoesMO.length>0 ? '#b07acc' : 'var(--neo-text2)',
+                    }}>
+                      <span>{seccoesMO.length===0 ? 'Todas as secções' : seccoesMO.map(s=>s.replace(/^\d+ · /,'')).join(', ').substring(0,28)+(seccoesMO.map(s=>s.replace(/^\d+ · /,'')).join(', ').length>28?'…':'')}</span>
+                      <span style={{fontSize:8,opacity:.5}}>{moDropOpen?'▲':'▼'}</span>
+                    </button>
+                    {moDropOpen&&(
+                      <div className="neo-dropdown" style={{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out)',zIndex:50}}>
+                        <button onClick={()=>setSeccoesMO([])} style={{display:'block',width:'100%',padding:'9px 12px',background:seccoesMO.length===0?'var(--neo-bg)':'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.1em',textTransform:'uppercase',color:seccoesMO.length===0?'#b07acc':'var(--neo-text2)',textAlign:'left'}}>
+                          Todas
+                        </button>
+                        {MO_SECCOES.map(s=>(
+                          <button key={s} onClick={()=>setSeccoesMO(p=>p.includes(s)?p.filter(x=>x!==s):[...p,s])} style={{
+                            display:'flex',alignItems:'center',gap:8,width:'100%',padding:'9px 12px',
+                            background:seccoesMO.includes(s)?'var(--neo-bg)':'transparent',
+                            border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",
+                            fontSize:9,letterSpacing:'0.1em',textTransform:'uppercase',
+                            color:seccoesMO.includes(s)?'#b07acc':'var(--neo-text2)',textAlign:'left',
+                          }}>
+                            <span style={{width:10,height:10,borderRadius:2,border:`1px solid ${seccoesMO.includes(s)?'#b07acc':'var(--neo-text2)'}`,background:seccoesMO.includes(s)?'#b07acc':'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:7,color:'#1a1610'}}>
+                              {seccoesMO.includes(s)&&'✓'}
+                            </span>
+                            {s.replace(/^\d+ · /,'')}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
+
                   {(catsSelBib.length>0||seccoesMO.length>0)&&(
-                    <button onClick={()=>{setCatsSelBib([]);setSeccoesMO([])}} style={{marginTop:10,background:'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--neo-text2)'}}>
-                      ✕ Limpar filtros
+                    <button onClick={()=>{setCatsSelBib([]);setSeccoesMO([]);setBibDropOpen(false);setMoDropOpen(false)}} style={{alignSelf:'flex-end',marginBottom:2,background:'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--neo-text2)',whiteSpace:'nowrap'}}>
+                      ✕ Limpar
                     </button>
                   )}
                 </div>
