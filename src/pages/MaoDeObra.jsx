@@ -16,15 +16,26 @@ const TIPO_COLOR = { standard:'var(--neo-text2)', visita:'#4a8fa8', opcional:'va
 
 function f2(n) { return parseFloat(n||0).toFixed(2) }
 
+const MO_ORDER_KEY     = 'hm_mo_sub_order'
+const MO_COLLAPSED_KEY = 'hm_mo_collapsed'
+
 export default function MaoDeObra({ showToast }) {
   const [seccao,    setSeccao]    = useState('Todos')
   const [search,    setSearch]    = useState('')
   const [tipo,      setTipo]      = useState('Todos')
   const [showTrans, setShowTrans] = useState(false)
-  const [collapsed, setCollapsed] = useState({})   // { sub: bool }
-  const [subOrder,  setSubOrder]  = useState([])   // ordem das subsecções (guardada localmente)
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(MO_COLLAPSED_KEY)) || {} } catch { return {} }
+  })
+  const [subOrder, setSubOrder] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(MO_ORDER_KEY)) || [] } catch { return [] }
+  })
 
-  const toggleCollapsed = (sub) => setCollapsed(p => ({...p, [sub]: !p[sub]}))
+  const toggleCollapsed = (sub) => setCollapsed(p => {
+    const next = {...p, [sub]: !p[sub]}
+    localStorage.setItem(MO_COLLAPSED_KEY, JSON.stringify(next))
+    return next
+  })
 
   const moveGroup = (sub, dir) => {
     setSubOrder(prev => {
@@ -35,6 +46,7 @@ export default function MaoDeObra({ showToast }) {
       if (newIdx < 0 || newIdx >= subs.length) return subs
       const arr = [...subs]
       const tmp = arr[idx]; arr[idx] = arr[newIdx]; arr[newIdx] = tmp
+      localStorage.setItem(MO_ORDER_KEY, JSON.stringify(arr))
       return arr
     })
   }
