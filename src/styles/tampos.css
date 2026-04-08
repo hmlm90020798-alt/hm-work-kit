@@ -123,8 +123,8 @@
   padding: 10px 14px;
   font-family: 'Barlow', sans-serif;
   font-size: 14px;
-  font-weight: 300;
-  color: var(--neo-text);
+  font-weight: 400;
+  color: #ede9e1;
   outline: none;
   transition: box-shadow .2s;
   -webkit-appearance: none;
@@ -132,29 +132,32 @@
 .neo-input:focus {
   box-shadow: var(--neo-shadow-in-sm), 0 0 0 1px rgba(200,169,110,0.4);
 }
-.neo-input::placeholder { color: var(--neo-text3); }
+.neo-input::placeholder { color: rgba(200,190,170,.25); }
 
 /* Input número */
 .neo-input-num {
   width: 100%;
-  background: var(--neo-bg);
+  background: rgba(255,255,255,.04);
   border: none;
-  border-radius: var(--neo-radius-sm);
-  box-shadow: var(--neo-shadow-in-sm);
+  border-bottom: 1px solid rgba(200,169,110,.2);
+  border-radius: var(--neo-radius-sm) var(--neo-radius-sm) 0 0;
+  box-shadow: none;
   padding: 8px 12px;
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--neo-text);
+  font-size: 18px;
+  font-weight: 600;
+  color: #f0ede8;
   outline: none;
   text-align: right;
-  transition: box-shadow .2s;
+  transition: border-color .2s, box-shadow .2s;
   -webkit-appearance: none;
 }
 .neo-input-num:focus {
-  box-shadow: var(--neo-shadow-in-sm), 0 0 0 1px rgba(200,169,110,0.4);
+  border-bottom-color: var(--neo-gold);
+  box-shadow: 0 2px 8px rgba(200,169,110,.15);
+  color: #fff;
 }
-.neo-input-num::placeholder { color: var(--neo-text3); }
+.neo-input-num::placeholder { color: rgba(200,190,170,.2); }
 
 /* Label */
 .neo-label {
@@ -164,7 +167,7 @@
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--neo-text2);
+  color: #8a8480;
   margin-bottom: 8px;
 }
 
@@ -268,7 +271,8 @@
 
 /* Segmento de bancada */
 .neo-seg {
-  background: var(--neo-bg);
+  background: rgba(200,169,110,.05);
+  border: 1px solid rgba(200,169,110,.12);
   border-radius: var(--neo-radius-sm);
   box-shadow: var(--neo-shadow-in-sm);
   padding: 12px 14px;
@@ -276,6 +280,11 @@
   display: grid;
   gap: 10px;
   align-items: end;
+  transition: border-color .2s;
+}
+.neo-seg:focus-within {
+  border-color: rgba(200,169,110,.3);
+  box-shadow: var(--neo-shadow-in-sm), 0 0 8px rgba(200,169,110,.08);
 }
 
 /* Linha divisória */

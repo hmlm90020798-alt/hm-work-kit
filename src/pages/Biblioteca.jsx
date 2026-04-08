@@ -212,7 +212,7 @@ export default function Biblioteca({ showToast }) {
             {supplierFilter ? <>{supplierFilter} <span onClick={e=>{e.stopPropagation();setSupplierFilter('');setSupplierOpen(false)}} style={{opacity:.7}}>✕</span></> : 'Marca'}
           </button>
           {supplierOpen&&suppliersAvailable.length>0&&(
-            <div style={{position:'absolute',top:'calc(100% + 6px)',right:0,background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out)',zIndex:50,minWidth:150,overflow:'hidden'}}>
+            <div className="neo-dropdown" style={{position:'absolute',top:'calc(100% + 6px)',right:0,background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out)',zIndex:50,minWidth:150,overflow:'hidden'}}>
               <button onClick={()=>{setSupplierFilter('');setSupplierOpen(false)}} style={{display:'block',width:'100%',padding:'9px 14px',background:!supplierFilter?'var(--neo-bg)':'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.1em',textTransform:'uppercase',color:!supplierFilter?'var(--neo-gold)':'var(--neo-text2)',textAlign:'left'}}>Todas</button>
               {suppliersAvailable.map(s=>(
                 <button key={s} onClick={()=>{setSupplierFilter(s);setSupplierOpen(false)}} style={{display:'block',width:'100%',padding:'9px 14px',background:supplierFilter===s?'var(--neo-bg)':'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.1em',textTransform:'uppercase',color:supplierFilter===s?'var(--neo-gold)':'var(--neo-text2)',textAlign:'left',transition:'background .12s'}}>{s}</button>
@@ -225,7 +225,7 @@ export default function Biblioteca({ showToast }) {
         <div style={{position:'relative',flexShrink:0}}>
           <button onClick={()=>{setSortOpen(o=>!o);setSupplierOpen(false);setCatOpen(false)}} style={{background:'var(--neo-bg2)',border:'none',borderRadius:'var(--neo-radius-pill)',width:34,height:34,cursor:'pointer',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'var(--neo-shadow-out-sm)',color:'var(--neo-text2)'}}>⇅</button>
           {sortOpen&&(
-            <div style={{position:'absolute',top:'calc(100% + 6px)',right:0,background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out)',zIndex:50,minWidth:140,overflow:'hidden'}}>
+            <div className="neo-dropdown" style={{position:'absolute',top:'calc(100% + 6px)',right:0,background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out)',zIndex:50,minWidth:140,overflow:'hidden'}}>
               {SORT_OPTS.filter(o=>o.value!=='star').map(o=>(
                 <button key={o.value} onClick={()=>{setSort(o.value);setSortOpen(false)}} style={{display:'block',width:'100%',padding:'10px 14px',background:sort===o.value?'var(--neo-bg)':'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.1em',textTransform:'uppercase',color:sort===o.value?'var(--neo-gold)':'var(--neo-text2)',textAlign:'left',transition:'background .12s'}}>{o.label}</button>
               ))}

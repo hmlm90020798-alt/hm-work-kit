@@ -527,7 +527,7 @@ export default function KC({ showToast }) {
             <span style={{ fontSize:8, opacity:.6 }}>▼</span>
           </button>
           {catOpen && (
-            <div style={{ position:'absolute', top:'calc(100% + 6px)', left:0, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius-sm)', boxShadow:'var(--neo-shadow-out)', zIndex:50, minWidth:200, overflow:'hidden' }}>
+            <div className="neo-dropdown" style={{ position:'absolute', top:'calc(100% + 6px)', left:0, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius-sm)', boxShadow:'var(--neo-shadow-out)', zIndex:50, minWidth:200, overflow:'hidden' }}>
               {CATS.map(c => (
                 <button key={c} onClick={() => selectCat(c)} style={{
                   display:'block', width:'100%', padding:'10px 14px', background: activeCat===c ? 'var(--neo-bg)' : 'transparent',
@@ -629,12 +629,12 @@ function KCRow({ item, onCopy, kcBlue }) {
       boxShadow:'var(--neo-shadow-out-sm)',
     }}>
       {/* Ref */}
-      <span className="neo-h3" style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700, letterSpacing:'0.06em', color: kcBlue, flexShrink:0, minWidth:80 }}>
+      <span style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700, letterSpacing:'0.06em', color: kcBlue, flexShrink:0, minWidth:80 }}>
         {item.ref}
       </span>
 
       {/* Desc */}
-      <span className="neo-h1" style={{ fontFamily:"'Barlow'", fontSize:12, fontWeight:300, color:'var(--neo-text)', flex:1, lineHeight:1.3 }}>
+      <span style={{ fontFamily:"'Barlow'", fontSize:12, fontWeight:300, color:'var(--neo-text)', flex:1, lineHeight:1.3 }}>
         {item.desc}
       </span>
 
