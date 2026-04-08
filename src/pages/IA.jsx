@@ -25,9 +25,10 @@ const MO_CONTEXT = MAO_DE_OBRA
 
 function buildPrompt(descricao, artigos) {
   const bib = artigos.length > 0
-    ? artigos.slice(0,200).map(a =>
-        `[${a.ref}] ${a.desc} | ${a.price>0?a.price+'€':''} | ${a.cat}${a.sub?' · '+a.sub:''}`
-      ).join('\n')
+    ? artigos.slice(0,200).map(a => {
+        const base = `[${a.ref}] ${a.desc} | ${a.price>0?a.price+'€':''} | ${a.cat}${a.sub?' · '+a.sub:''}`
+        return a.notaIA ? `${base} — ⚑ IA: ${a.notaIA}` : base
+      }).join('\n')
     : '(biblioteca vazia)'
 
   return `És um assistente especializado em orçamentação de obras e instalações.
@@ -41,6 +42,7 @@ ${MO_CONTEXT}
 
 INSTRUÇÕES OBRIGATÓRIAS:
 - Usa APENAS itens das listas acima. Usa referências e preços exactos.
+- Artigos com ⚑ IA: têm instruções específicas — segue-as rigorosamente.
 - Responde APENAS com JSON válido. ZERO texto fora do JSON.
 - Formato exacto:
 

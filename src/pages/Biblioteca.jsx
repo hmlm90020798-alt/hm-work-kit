@@ -45,7 +45,7 @@ export default function Biblioteca({ showToast }) {
   const [catModal, setCatModal]   = useState(false)
   const [importModal, setImportModal] = useState(false)
   const [editId, setEditId]       = useState(null)
-  const [form, setForm]           = useState({ ref:'', desc:'', cat:'', sub:'', price:'', supplier:'', link:'', notes:'' })
+  const [form, setForm] = useState({ ref:'', desc:'', cat:'', sub:'', price:'', supplier:'', link:'', notes:'', notaIA:'' })
 
   useEffect(() => {
     const u1 = onSnapshot(collection(db,'categorias'), snap => {
@@ -110,20 +110,20 @@ export default function Biblioteca({ showToast }) {
 
   const openAdd = () => {
     setEditId(null)
-    setForm({ref:'',desc:'',cat:activeCat!=='Todos'?activeCat:'',sub:activeSub,price:'',supplier:'',link:'',notes:''})
+    setForm({ref:'',desc:'',cat:activeCat!=='Todos'?activeCat:'',sub:activeSub,price:'',supplier:'',link:'',notes:'',notaIA:'',kc:false})
     setArtModal(true)
   }
 
   const openEdit = (a) => {
     setEditId(a.id)
-    setForm({ref:a.ref,desc:a.desc,cat:a.cat,sub:a.sub||'',price:a.price||'',supplier:a.supplier||'',link:a.link||'',notes:a.notes||'',kc:a.kc||false})
+    setForm({ref:a.ref,desc:a.desc,cat:a.cat,sub:a.sub||'',price:a.price||'',supplier:a.supplier||'',link:a.link||'',notes:a.notes||'',notaIA:a.notaIA||'',kc:a.kc||false})
     setArtModal(true)
   }
 
   const saveArt = async () => {
     if (!form.ref.trim()||!form.desc.trim()) { showToast('Referência e descrição obrigatórias'); return }
     const parts = (form.cat+(form.sub?'|'+form.sub:'|')).split('|')
-    const data = {ref:form.ref.trim(),desc:form.desc.trim(),cat:parts[0],sub:parts[1]||'',price:parseFloat(form.price)||0,supplier:form.supplier.trim(),link:form.link.trim(),notes:form.notes.trim(),star:false,kc:form.kc||false}
+    const data = {ref:form.ref.trim(),desc:form.desc.trim(),cat:parts[0],sub:parts[1]||'',price:parseFloat(form.price)||0,supplier:form.supplier.trim(),link:form.link.trim(),notes:form.notes.trim(),notaIA:form.notaIA?.trim()||'',star:false,kc:form.kc||false}
     try {
       if (editId) {
         const prev = arts.find(a=>a.id===editId)
@@ -301,6 +301,15 @@ export default function Biblioteca({ showToast }) {
         </div>
         <div className="frow"><label style={L}>Link</label><input type="url" value={form.link} onChange={e=>setForm(f=>({...f,link:e.target.value}))} placeholder="https://…" style={I}/></div>
         <div className="frow"><label style={L}>Notas</label><textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Observações…" style={{...I,resize:'vertical',minHeight:52}}/></div>
+        <div className="frow">
+          <label style={{...L, color:'#7ec8a0'}}>⚑ Instrução para IA</label>
+          <textarea
+            value={form.notaIA||''}
+            onChange={e=>setForm(f=>({...f,notaIA:e.target.value}))}
+            placeholder={'ex: considerar sempre como base, excepto se indicado outro artigo\nex: usar apenas em cozinhas com tampo de pedra\nex: incluir sempre que houver lava-loiça'}
+            style={{...I, resize:'vertical', minHeight:64, borderLeft:'2px solid #7ec8a044', color:'#7ec8a0'}}
+          />
+        </div>
         <div className="frow" style={{flexDirection:'row',alignItems:'center',gap:12,cursor:'pointer'}} onClick={()=>setForm(f=>({...f,kc:!f.kc}))}>
           <div style={{
             width:36,height:20,borderRadius:10,transition:'background .2s',flexShrink:0,position:'relative',
