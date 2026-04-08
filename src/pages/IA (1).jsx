@@ -8,7 +8,7 @@ import { addToOrcamento } from '../hooks/useOrcamento'
 const GROQ_MODELS = [
   'llama-3.3-70b-versatile',
   'llama-3.1-8b-instant',
-  'mixtral-8x7b-32768',
+  'llama3-70b-8192',
 ]
 const GROQ_API = 'https://api.groq.com/openai/v1/chat/completions'
 
@@ -30,15 +30,16 @@ function buildPrompt(descricao, artigos, catsSelBib, seccoesMO) {
     ? artigos.filter(a => catsSelBib.includes(a.cat))
     : artigos
 
-  // Limitar a 120 artigos para não exceder tokens
+  // Limitar a 60 artigos para não exceder tokens Groq
   const bib = artigosFiltrados.length > 0
-    ? artigosFiltrados.slice(0, 120).map(a => {
+    ? artigosFiltrados.slice(0, 60).map(a => {
         const base = `[${a.ref}] ${a.desc} | ${a.price>0?a.price+'€':''} | ${a.cat}${a.sub?' · '+a.sub:''}`
         return a.notaIA ? `${base} — ⚑ IA: ${a.notaIA}` : base
       }).join('\n')
     : '(biblioteca vazia)'
 
-  const moContext = getMOContext(seccoesMO)
+  // MO — limitar a 80 serviços
+  const moContext = getMOContext(seccoesMO).split('\n').slice(0, 80).join('\n')
 
   return `És um assistente especializado em orçamentação de obras e instalações.
 Respondes SEMPRE em português de Portugal.
