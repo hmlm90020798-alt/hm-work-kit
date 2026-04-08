@@ -148,19 +148,61 @@ html, body, #root {
 }
 
 /* ── Classe utilitária de hover neomórfico ───────────────────────────────── */
-/* Adiciona .neo-hover a qualquer card/row para efeito consistente */
 .neo-hover {
-  transition: background .15s, box-shadow .15s, transform .15s !important;
+  transition: background .2s, box-shadow .2s, transform .18s, border-color .2s !important;
+  position: relative;
 }
+
 .neo-hover:hover {
-  background: var(--neo-bg2) !important;
-  box-shadow: var(--neo-shadow-out-sm), 0 0 0 1px rgba(200,169,110,.08) !important;
-  transform: translateY(-1px);
+  background: #1c1c1a !important;
+  box-shadow:
+    var(--neo-shadow-out-sm),
+    0 0 0 1px rgba(200,169,110,.18),
+    0 0 18px rgba(200,169,110,.07) !important;
+  transform: translateY(-2px);
+  border-color: rgba(200,169,110,.25) !important;
 }
+
 .neo-hover:active {
-  transform: none;
+  transform: translateY(0);
   box-shadow: var(--neo-shadow-in-sm) !important;
 }
+
+/* Hierarquia 1 — texto principal (ref, nome, título) */
+.neo-hover:hover .neo-h1,
+.neo-hover:hover [class*="art-ref"],
+.neo-hover:hover [class*="art-name"] {
+  color: #f0ede8 !important;
+  text-shadow: 0 0 12px rgba(200,169,110,.5) !important;
+  transition: color .2s, text-shadow .2s;
+}
+
+/* Hierarquia 2 — texto secundário (categoria, fornecedor, código) */
+.neo-hover:hover .neo-h2,
+.neo-hover:hover [class*="badge"],
+.neo-hover:hover [class*="art-note"] {
+  color: #9a9790 !important;
+  transition: color .2s;
+}
+
+/* Hierarquia 3 — preço (dourado mais vivo) */
+.neo-hover:hover .neo-h3 {
+  text-shadow: 0 0 8px rgba(200,169,110,.6) !important;
+  transition: text-shadow .2s;
+}
+
+/* Linha de destaque esquerda ao hover */
+.neo-hover::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 20%; bottom: 20%;
+  width: 2px;
+  background: linear-gradient(to bottom, transparent, rgba(200,169,110,.5), transparent);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity .2s;
+}
+.neo-hover:hover::before { opacity: 1; }
 
 /* Scroll neo */
 .neo-scroll::-webkit-scrollbar { width: 2px; height: 2px; }

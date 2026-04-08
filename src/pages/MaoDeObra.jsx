@@ -185,17 +185,17 @@ function ServicoCard({ s, showToast }) {
         {/* Linha principal */}
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:12,fontWeight:400,color:'var(--neo-text)',lineHeight:1.3,marginBottom:3,whiteSpace:open?'normal':'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+            <div className="neo-h1" style={{fontSize:12,fontWeight:400,color:'var(--neo-text)',lineHeight:1.3,marginBottom:3,whiteSpace:open?'normal':'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
               {s.nome}
             </div>
             <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'nowrap'}}>
               {/* Tipo */}
-              <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:TIPO_COLOR[s.tipo]||'var(--neo-text2)'}}>
+              <span className="neo-h2" style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:TIPO_COLOR[s.tipo]||'var(--neo-text2)'}}>
                 {TIPO_LABEL[s.tipo]||s.tipo}
               </span>
               <span style={{color:'rgba(255,255,255,0.1)'}}>·</span>
               {/* Unidade */}
-              <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--neo-text2)'}}>
+              <span className="neo-h3" style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--neo-text2)'}}>
                 {f2(s.pvp)} €/{s.un}
               </span>
             </div>

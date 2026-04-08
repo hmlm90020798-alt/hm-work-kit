@@ -247,7 +247,7 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, cor }) {
         </div>
 
         {/* Linha 2: descrição */}
-        <div style={{ fontSize:13, fontWeight:300, color:'var(--neo-text)', marginBottom:8, lineHeight:1.4 }}>
+        <div className="neo-h1" style={{ fontSize:13, fontWeight:300, color:'var(--neo-text)', marginBottom:8, lineHeight:1.4 }}>
           {item.desc}
         </div>
 
@@ -256,7 +256,7 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, cor }) {
           {item.c1Ref && <CopyChip label="C1" val={item.c1Ref} copied={!!copied[item.c1Ref]} onCopy={() => onCopy(item.c1Ref, 'C1')}/>}
           {item.refAnigraco && <CopyChip label="Anigraco" val={item.refAnigraco} copied={!!copied[item.refAnigraco]} onCopy={() => onCopy(item.refAnigraco, 'Ref Anigraco')} gold/>}
           {item.cat && !isTampo && (
-            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', letterSpacing:'0.08em', textTransform:'uppercase' }}>
+            <span className="neo-h2" style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', letterSpacing:'0.08em', textTransform:'uppercase' }}>
               {item.cat}
             </span>
           )}

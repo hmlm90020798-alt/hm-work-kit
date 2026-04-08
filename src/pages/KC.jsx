@@ -621,21 +621,20 @@ function KCRow({ item, onCopy, kcBlue }) {
   }
 
   return (
-    <div className="neo-hover"
-      style={{
-        display:'flex', alignItems:'center', gap:10,
-        padding:'8px 10px', marginBottom:3,
-        background:'var(--neo-bg2)', borderRadius:'var(--neo-radius-sm)',
-        borderLeft:`2px solid ${kcBlue}44`,
-        boxShadow:'var(--neo-shadow-out-sm)',
-      }}>
+    <div style={{
+      display:'flex', alignItems:'center', gap:10,
+      padding:'8px 10px', marginBottom:3,
+      background:'var(--neo-bg2)', borderRadius:'var(--neo-radius-sm)',
+      borderLeft:`2px solid ${kcBlue}44`,
+      boxShadow:'var(--neo-shadow-out-sm)',
+    }}>
       {/* Ref */}
-      <span style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700, letterSpacing:'0.06em', color: kcBlue, flexShrink:0, minWidth:80 }}>
+      <span className="neo-h3" style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700, letterSpacing:'0.06em', color: kcBlue, flexShrink:0, minWidth:80 }}>
         {item.ref}
       </span>
 
       {/* Desc */}
-      <span style={{ fontFamily:"'Barlow'", fontSize:12, fontWeight:300, color:'var(--neo-text)', flex:1, lineHeight:1.3 }}>
+      <span className="neo-h1" style={{ fontFamily:"'Barlow'", fontSize:12, fontWeight:300, color:'var(--neo-text)', flex:1, lineHeight:1.3 }}>
         {item.desc}
       </span>
 
