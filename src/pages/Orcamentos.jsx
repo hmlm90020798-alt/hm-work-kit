@@ -16,7 +16,7 @@ const ORIGEM_COLOR = {
 // Origens sem qty — o valor já está calculado
 const SEM_QTY = new Set(['Tampos','Mão de Obra'])
 
-export default function Orcamentos({ showToast, onOpenTampo }) {
+export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCopied }) {
   const [orc,          setOrc]          = useState(null)
   const [copied,       setCopied]       = useState({})
   const [confirmClear, setConfirmClear] = useState(false)
@@ -63,6 +63,8 @@ export default function Orcamentos({ showToast, onOpenTampo }) {
     navigator.clipboard.writeText(val).catch(() => {})
     setCopied(p => ({ ...p, [val]: true }))
     setTimeout(() => setCopied(p => ({ ...p, [val]: false })), 1600)
+    // Marcar como copiado no estado global (só para refs, não para valores numéricos)
+    if (label === 'Referência' || label === 'C1' || label === 'Anigraco') markCopied?.(val)
     showToast(`${label} copiado — ${val}`)
   }
 
@@ -73,6 +75,8 @@ export default function Orcamentos({ showToast, onOpenTampo }) {
       return parts.join('  ')
     }).join('\n')
     navigator.clipboard.writeText(txt).catch(() => {})
+    // Marcar todas as refs como copiadas
+    items.forEach(i => markCopied?.(i.ref))
     showToast('Referências copiadas')
   }
 
@@ -182,6 +186,7 @@ export default function Orcamentos({ showToast, onOpenTampo }) {
                       onOpen={() => handleItemClick(item)}
                       onQty={(ref,qty) => setQty(ref, qty)}
                       cor={cor}
+                      wasCopied={copiedRefs?.has(item.ref)}
                     />
                   ))}
                 </div>
@@ -230,19 +235,24 @@ export default function Orcamentos({ showToast, onOpenTampo }) {
 }
 
 // ── OrcItem ───────────────────────────────────────────────────────────────────
-function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, cor }) {
+function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, cor, wasCopied }) {
   const isTampo = item.origem === 'Tampos'
   const isMO    = item.origem === 'Mão de Obra'
   const semQty  = SEM_QTY.has(item.origem)
   const subtotal = semQty ? (item.price||0) : (item.price||0)*(item.qty||1)
 
   return (
-    <div className="neo-hover" style={{ margin:'0 12px 6px', background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', overflow:'hidden' }}>
+    <div className="neo-hover" style={{
+      margin:'0 12px 6px', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', overflow:'hidden',
+      background: wasCopied ? 'rgba(200,169,110,0.06)' : 'var(--neo-bg2)',
+      borderLeft: wasCopied ? '2px solid rgba(200,169,110,0.4)' : '2px solid transparent',
+      transition:'background .2s, border-color .2s',
+    }}>
       <div style={{ padding:'12px 14px' }}>
 
         {/* Linha 1: ref copiável + ações */}
         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-          <CopyChip val={item.ref} copied={!!copied[item.ref]} onCopy={() => onCopy(item.ref, 'Referência')} mainRef cor={cor}/>
+          <CopyChip val={item.ref} copied={!!copied[item.ref] || wasCopied} onCopy={() => onCopy(item.ref, 'Referência')} mainRef cor={cor}/>
           {isTampo && (
             <button onClick={onOpen} style={{ padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', border:'1px solid rgba(74,143,168,0.4)', background:'transparent', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:'#4a8fa8' }}>
               → Calculadora
@@ -252,7 +262,7 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, cor }) {
         </div>
 
         {/* Linha 2: descrição */}
-        <div className="neo-h1" style={{ fontSize:13, fontWeight:300, color:'var(--neo-text)', marginBottom:8, lineHeight:1.4 }}>
+        <div className="neo-h1" style={{ fontSize:13, fontWeight:300, color: wasCopied ? '#c4c0b8' : 'var(--neo-text)', marginBottom:8, lineHeight:1.4 }}>
           {item.desc}
         </div>
 
@@ -261,12 +271,12 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, cor }) {
           {item.c1Ref && <CopyChip label="C1" val={item.c1Ref} copied={!!copied[item.c1Ref]} onCopy={() => onCopy(item.c1Ref, 'C1')}/>}
           {item.refAnigraco && <CopyChip label="Anigraco" val={item.refAnigraco} copied={!!copied[item.refAnigraco]} onCopy={() => onCopy(item.refAnigraco, 'Ref Anigraco')} gold/>}
           {item.cat && !isTampo && (
-            <span className="neo-h2" style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', letterSpacing:'0.08em', textTransform:'uppercase' }}>
+            <span className="neo-h2" style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'#8a8a82', letterSpacing:'0.08em', textTransform:'uppercase' }}>
               {item.cat}
             </span>
           )}
 
-          {/* Qty — Biblioteca, Modelos e Mão de Obra com medida */}
+          {/* Qty */}
           {!semQty && (
             <div style={{ display:'flex', alignItems:'center', gap:4, marginLeft:'auto' }}>
               <button onClick={()=>onQty(item.ref,(item.qty||1)-1)} style={{ width:22,height:22,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1 }}>−</button>

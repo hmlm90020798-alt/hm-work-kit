@@ -8,7 +8,7 @@ const MO_SECCOES = [...new Set(MAO_DE_OBRA.map(s=>s.seccao))].sort()
 
 const CONTEXTOS = ['Cozinha','Casa de Banho','Quarto','Escritório','Parceiro','Outro']
 
-export default function Modelos({ showToast }) {
+export default function Modelos({ showToast, copiedRefs, markCopied }) {
   const [modelos, setModelos] = useState([])
   const [artigos, setArtigos] = useState([])
   const [detailId, setDetailId] = useState(null)  // só guardamos o ID
@@ -224,7 +224,9 @@ export default function Modelos({ showToast }) {
               onQty={(qty)=>updateQty(item.artId,qty)}
               onRemove={()=>removeItem(item.artId)}
               onStar={()=>toggleStar(item.artId)}
-              showToast={showToast}/>
+              showToast={showToast}
+              wasCopied={copiedRefs?.has(item.ref)}
+              onCopied={markCopied}/>
           ))}
         </div>
 
@@ -450,7 +452,7 @@ function ModelCard({m,total,onOpen,onDel,onAdd,onEdit}){
 }
 
 // ── ItemRow ───────────────────────────────────────────────────────────────────
-function ItemRow({item,onQty,onRemove,onStar,showToast}){
+function ItemRow({item,onQty,onRemove,onStar,showToast,wasCopied,onCopied}){
   const [open,   setOpen]   = useState(false)
   const [copied, setCopied] = useState(false)
   const isMO = item.origem === 'maodeobra'
@@ -460,13 +462,16 @@ function ItemRow({item,onQty,onRemove,onStar,showToast}){
     e.stopPropagation()
     navigator.clipboard.writeText(item.ref).catch(()=>{})
     setCopied(true);setTimeout(()=>setCopied(false),1600)
+    onCopied?.(item.ref)
     showToast('Copiado — '+item.ref)
   }
 
   return(
     <div onClick={()=>setOpen(o=>!o)}
       style={{padding:'10px 16px',borderBottom:'1px solid rgba(255,255,255,0.05)',cursor:'pointer',
-        borderLeft: isMO ? '2px solid #b07acc' : '2px solid transparent'}}>
+        borderLeft: isMO ? '2px solid #b07acc' : wasCopied ? '2px solid rgba(200,169,110,0.5)' : '2px solid transparent',
+        background: wasCopied ? 'rgba(200,169,110,0.03)' : 'transparent',
+        transition:'background .2s'}}>
       <div style={{display:'flex',alignItems:'center',gap:8}}>
         {/* Estrela */}
         <button onClick={e=>{e.stopPropagation();onStar()}} style={{background:'transparent',border:'none',cursor:'pointer',fontSize:13,color:item.star?'#f0c040':'var(--neo-text2)',flexShrink:0,padding:'2px'}}>
@@ -476,20 +481,23 @@ function ItemRow({item,onQty,onRemove,onStar,showToast}){
         {/* Ref + copy */}
         <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
           <span style={{fontFamily:"'Barlow Condensed'",fontSize:14,fontWeight:700,letterSpacing:'0.08em',color:isMO?'#b07acc':'var(--neo-gold)'}}>{item.ref}</span>
-          <button onClick={copy} style={{background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-pill)',padding:'2px 7px',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,color:copied?'var(--neo-gold)':'var(--neo-text2)',boxShadow:copied?'var(--neo-shadow-in-sm),var(--neo-glow-gold)':'var(--neo-shadow-out-sm)',transition:'all .15s'}}>
-            {copied?'✓':'⎘'}
+          <button onClick={copy} style={{background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-pill)',padding:'2px 7px',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,
+            color: copied||wasCopied ? 'var(--neo-gold)' : '#7a7a72',
+            boxShadow: copied||wasCopied ? 'var(--neo-shadow-in-sm),var(--neo-glow-gold)' : 'var(--neo-shadow-out-sm)',
+            transition:'all .15s'}}>
+            {copied||wasCopied?'✓':'⎘'}
           </button>
         </div>
 
         {/* Desc + badges */}
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:12,fontWeight:300,color:'var(--neo-text)',whiteSpace:open?'normal':'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.4}}>
+          <div style={{fontSize:12,fontWeight:300,color: wasCopied ? '#c4c0b8' : 'var(--neo-text)',whiteSpace:open?'normal':'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.4}}>
             {item.desc}
           </div>
           {!open&&<div style={{display:'flex',gap:6,alignItems:'center',marginTop:2,flexWrap:'nowrap',overflow:'hidden'}}>
-            {label&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-text2)',background:'var(--neo-bg)',padding:'2px 7px',borderRadius:'var(--neo-radius-pill)',flexShrink:0}}>{label}</span>}
+            {label&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:'#8a8a82',background:'var(--neo-bg)',padding:'2px 7px',borderRadius:'var(--neo-radius-pill)',flexShrink:0}}>{label}</span>}
             {item.price>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:12,fontWeight:700,color:'var(--neo-gold)',whiteSpace:'nowrap'}}>{item.price.toFixed(2)} €</span>}
-            {item.supplier&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--neo-text2)',whiteSpace:'nowrap'}}>{item.supplier}</span>}
+            {item.supplier&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.08em',textTransform:'uppercase',color:'#8a8a82',whiteSpace:'nowrap'}}>{item.supplier}</span>}
           </div>}
         </div>
 

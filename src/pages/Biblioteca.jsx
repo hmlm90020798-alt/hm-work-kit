@@ -27,7 +27,7 @@ function sortArts(arts, sort) {
   })
 }
 
-export default function Biblioteca({ showToast }) {
+export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCopied }) {
   const [cats, setCats]           = useState([])
   const [arts, setArts]           = useState([])
   const [activeCat, setActiveCat] = useState('Todos')
@@ -45,11 +45,6 @@ export default function Biblioteca({ showToast }) {
   const [importModal, setImportModal] = useState(false)
   const [editId, setEditId]       = useState(null)
   const [form, setForm] = useState({ ref:'', desc:'', cat:'', sub:'', price:'', supplier:'', link:'', notes:'', notaIA:'' })
-  // Refs copiadas na sessão actual — persiste até limpar filtro/categoria ou fechar app
-  const [copiedRefs, setCopiedRefs] = useState(new Set())
-
-  const markCopied = (ref) => setCopiedRefs(prev => new Set([...prev, ref]))
-  const clearCopied = () => setCopiedRefs(new Set())
 
   useEffect(() => {
     const u1 = onSnapshot(collection(db,'categorias'), snap => {

@@ -35,12 +35,18 @@ function loadMenuOrder() {
 
 function Shell() {
   const { user, loading, logout } = useAuth()
-  const [page, setPage]         = useState('biblioteca')
+  const [page, setPage]           = useState('biblioteca')
   const [menuOpen, setMenuOpen]   = useState(true)
   const [editMenu, setEditMenu]   = useState(false)
   const [menuOrder, setMenuOrder] = useState(loadMenuOrder)
   const [tampoParaAbrir, setTampoParaAbrir] = useState(null)
   const { msg, visible, showToast } = useToast()
+
+  // ── Estado global de referências copiadas ─────────────────────────────────
+  // Partilhado por todas as páginas — persiste enquanto a sessão estiver aberta
+  const [copiedRefs, setCopiedRefs] = useState(new Set())
+  const markCopied  = (ref) => setCopiedRefs(prev => new Set([...prev, ref]))
+  const clearCopied = () => setCopiedRefs(new Set())
 
   const orderedPages = menuOrder
     .map(id => PAGES.find(p => p.id === id))
@@ -67,6 +73,9 @@ function Shell() {
 
   const goTo = (id) => { setPage(id); setMenuOpen(false) }
 
+  // Props de cópia partilhadas por todas as páginas
+  const copyProps = { copiedRefs, markCopied, clearCopied }
+
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden', background:'#0a0a09' }}>
 
@@ -92,6 +101,19 @@ function Shell() {
           HM·<span style={{ color:'#c8a96e' }}>WK</span>
         </div>
 
+        {/* Contador de cópias + botão limpar — visível no header quando há refs copiadas */}
+        {copiedRefs.size > 0 && (
+          <button onClick={clearCopied} title="Limpar marcações de referências copiadas"
+            style={{ position:'absolute', right:60, top:'50%', transform:'translateY(-50%)',
+              background:'rgba(200,169,110,0.12)', border:'1px solid rgba(200,169,110,0.3)',
+              borderRadius:'var(--neo-radius-pill)', padding:'4px 10px', cursor:'pointer',
+              fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:700, letterSpacing:'0.1em',
+              textTransform:'uppercase', color:'#c8a96e', display:'flex', alignItems:'center', gap:5,
+              whiteSpace:'nowrap' }}>
+            ✓ {copiedRefs.size} <span style={{ opacity:.6, fontWeight:400 }}>limpar</span>
+          </button>
+        )}
+
         {/* Avatar */}
         {user.photoURL
           ? <img src={user.photoURL} alt="" style={{ width:30, height:30, borderRadius:'50%', border:'1px solid rgba(255,255,255,0.08)' }}/>
@@ -115,7 +137,7 @@ function Shell() {
               return (
                 <div key={p.id} style={{ display:'flex', alignItems:'center', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
 
-                  {/* Botões de reordenação — só visíveis em modo edição */}
+                  {/* Botões de reordenação */}
                   {editMenu && (
                     <div style={{ display:'flex', flexDirection:'column', gap:3, marginRight:12, flexShrink:0 }}>
                       <button onClick={() => moveMenuItem(i,-1)} disabled={i===0}
@@ -182,14 +204,14 @@ function Shell() {
 
       {/* PÁGINA */}
       <main style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
-        {page === 'biblioteca' && <Biblioteca showToast={showToast} />}
-        {page === 'modelos'    && <Modelos    showToast={showToast} />}
-        {page === 'orcamentos' && <Orcamentos showToast={showToast} onOpenTampo={(c)=>{ setTampoParaAbrir(c); setPage('tampos') }} />}
-        {page === 'tampos'     && <Tampos     showToast={showToast} abrirCalculo={tampoParaAbrir} onAbrirCalculoDone={()=>setTampoParaAbrir(null)} />}
-        {page === 'maodeobra'  && <MaoDeObra  showToast={showToast} />}
-        {page === 'ia'         && <IA         showToast={showToast} />}
-        {page === 'kc'        && <KC       showToast={showToast} />}
-        {page === 'proposta'  && <Proposta showToast={showToast} />}
+        {page === 'biblioteca' && <Biblioteca showToast={showToast} {...copyProps} />}
+        {page === 'modelos'    && <Modelos    showToast={showToast} {...copyProps} />}
+        {page === 'orcamentos' && <Orcamentos showToast={showToast} {...copyProps} onOpenTampo={(c)=>{ setTampoParaAbrir(c); setPage('tampos') }} />}
+        {page === 'tampos'     && <Tampos     showToast={showToast} {...copyProps} abrirCalculo={tampoParaAbrir} onAbrirCalculoDone={()=>setTampoParaAbrir(null)} />}
+        {page === 'maodeobra'  && <MaoDeObra  showToast={showToast} {...copyProps} />}
+        {page === 'ia'         && <IA         showToast={showToast} {...copyProps} />}
+        {page === 'kc'         && <KC         showToast={showToast} {...copyProps} />}
+        {page === 'proposta'   && <Proposta   showToast={showToast} />}
       </main>
 
       <Toast msg={msg} visible={visible} />

@@ -7,7 +7,7 @@ import { addToOrcamento } from '../hooks/useOrcamento'
 import { ANIGRACO, TRANSPORTE, TIPOS_PEDRA, TIPOS_ALL } from '../data/anigracoData'
 import { calcPeca, novoProjeto, totProj, uuid, f2, c1fmt } from '../hooks/useTampos'
 
-export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone}){
+export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone, copiedRefs, markCopied}){
   const [calculos,setCalculos]=useState([])
   const [orcamentos,setOrcamentos]=useState([])
   const [current,setCurrent]=useState(null)
