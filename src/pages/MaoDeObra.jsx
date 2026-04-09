@@ -19,7 +19,7 @@ function f2(n) { return parseFloat(n||0).toFixed(2) }
 const MO_ORDER_KEY     = 'hm_mo_sub_order'
 const MO_COLLAPSED_KEY = 'hm_mo_collapsed'
 
-export default function MaoDeObra({ showToast }) {
+export default function MaoDeObra({ showToast, copiedRefs, markCopied }) {
   const [seccao,    setSeccao]    = useState('Todos')
   const [search,    setSearch]    = useState('')
   const [tipo,      setTipo]      = useState('Todos')
@@ -166,7 +166,9 @@ export default function MaoDeObra({ showToast }) {
                 {isOpen&&(
                   <div style={{padding:'6px 6px 4px'}}>
                     {items.map(s=>(
-                      <ServicoCard key={s.id} s={s} showToast={showToast}/>
+                      <ServicoCard key={s.id} s={s} showToast={showToast}
+                        wasCopied={copiedRefs?.has(s.id)}
+                        markCopied={markCopied}/>
                     ))}
                   </div>
                 )}
@@ -188,7 +190,9 @@ export default function MaoDeObra({ showToast }) {
               Adicionados automaticamente — deslocação e KM extra
             </div>
             {TRANSVERSAIS.map(s=>(
-              <ServicoCard key={s.id} s={s} showToast={showToast}/>
+              <ServicoCard key={s.id} s={s} showToast={showToast}
+                wasCopied={copiedRefs?.has(s.id)}
+                markCopied={markCopied}/>
             ))}
           </div>
         </div>
@@ -197,8 +201,7 @@ export default function MaoDeObra({ showToast }) {
   )
 }
 
-// ── ServicoCard — card expansível ─────────────────────────────────────────────
-function ServicoCard({ s, showToast }) {
+function ServicoCard({ s, showToast, wasCopied, markCopied }) {
   const [open,    setOpen]    = useState(false)
   const [qty,     setQty]     = useState('')
   const [copiedId, setCopiedId] = useState(false)
@@ -213,6 +216,7 @@ function ServicoCard({ s, showToast }) {
     e.stopPropagation()
     navigator.clipboard.writeText(s.id).catch(()=>{})
     setCopiedId(true); setTimeout(()=>setCopiedId(false),1600)
+    markCopied?.(s.id)
     showToast('Código copiado — '+s.id)
   }
 
@@ -238,26 +242,32 @@ function ServicoCard({ s, showToast }) {
     setAdded(true); setTimeout(()=>setAdded(false),1800)
   }
 
+  const isMarked = wasCopied || copiedId
+
   return (
     <div onClick={()=>setOpen(o=>!o)}
-      style={{background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out-sm)',marginBottom:5,cursor:'pointer',overflow:'hidden',
-        borderLeft: s.tipo==='visita' ? '2px solid #4a8fa8' : s.tipo==='opcional' ? '2px solid var(--neo-gold2)' : '2px solid transparent'}}>
+      style={{borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out-sm)',marginBottom:5,cursor:'pointer',overflow:'hidden',
+        background: isMarked ? 'rgba(200,169,110,0.05)' : 'var(--neo-bg2)',
+        borderLeft: s.tipo==='visita' ? '2px solid #4a8fa8'
+          : s.tipo==='opcional' ? '2px solid var(--neo-gold2)'
+          : isMarked ? '2px solid rgba(200,169,110,0.45)'
+          : '2px solid transparent',
+        transition:'background .2s, border-color .2s',
+      }}>
       <div style={{padding:'10px 12px'}}>
 
         {/* Linha principal */}
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:12,fontWeight:400,color:'var(--neo-text)',lineHeight:1.3,marginBottom:3,whiteSpace:open?'normal':'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+            <div style={{fontSize:12,fontWeight:400,color: isMarked ? '#c4c0b8' : 'var(--neo-text)',lineHeight:1.3,marginBottom:3,whiteSpace:open?'normal':'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
               {s.nome}
             </div>
             <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'nowrap'}}>
-              {/* Tipo */}
               <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:TIPO_COLOR[s.tipo]||'var(--neo-text2)'}}>
                 {TIPO_LABEL[s.tipo]||s.tipo}
               </span>
               <span style={{color:'rgba(255,255,255,0.1)'}}>·</span>
-              {/* Unidade */}
-              <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--neo-text2)'}}>
+              <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.08em',textTransform:'uppercase',color:'#8a8a82'}}>
                 {f2(s.pvp)} €/{s.un}
               </span>
             </div>
@@ -278,14 +288,16 @@ function ServicoCard({ s, showToast }) {
             )}
 
             {/* Código copiável */}
-            <button onClick={copyId} style={{display:'flex',alignItems:'center',gap:4,background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-pill)',padding:'4px 9px',cursor:'pointer',boxShadow:copiedId?'var(--neo-shadow-in-sm),var(--neo-glow-gold)':'var(--neo-shadow-out-sm)',transition:'all .15s'}}>
-              <span style={{fontFamily:"'Barlow Condensed'",fontSize:11,fontWeight:600,letterSpacing:'0.06em',color:copiedId?'var(--neo-gold)':'var(--neo-text)'}}>{s.id}</span>
-              <span style={{fontSize:9,color:copiedId?'var(--neo-gold)':'var(--neo-text2)'}}>{copiedId?'✓':'⎘'}</span>
+            <button onClick={copyId} style={{display:'flex',alignItems:'center',gap:4,background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-pill)',padding:'4px 9px',cursor:'pointer',
+              boxShadow: isMarked ? 'var(--neo-shadow-in-sm),var(--neo-glow-gold)' : 'var(--neo-shadow-out-sm)',
+              transition:'all .15s'}}>
+              <span style={{fontFamily:"'Barlow Condensed'",fontSize:11,fontWeight:600,letterSpacing:'0.06em',color: isMarked ? 'var(--neo-gold)' : 'var(--neo-text)'}}>{s.id}</span>
+              <span style={{fontSize:9,color: isMarked ? 'var(--neo-gold)' : 'var(--neo-text2)'}}>{isMarked?'✓':'⎘'}</span>
             </button>
 
             {/* PVP copiável */}
             <button onClick={copyPvp} style={{display:'flex',alignItems:'center',gap:3,background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-pill)',padding:'4px 9px',cursor:'pointer',boxShadow:copiedPvp?'var(--neo-shadow-in-sm),var(--neo-glow-gold)':'var(--neo-shadow-out-sm)',transition:'all .15s',minWidth:60,justifyContent:'center'}}>
-              <span style={{fontFamily:"'Barlow Condensed'",fontSize:12,fontWeight:700,color:copiedPvp?'var(--neo-gold)':'var(--neo-gold)'}}>{f2(isMedida&&qtyNum>0?total:s.pvp)} €</span>
+              <span style={{fontFamily:"'Barlow Condensed'",fontSize:12,fontWeight:700,color:'var(--neo-gold)'}}>{f2(isMedida&&qtyNum>0?total:s.pvp)} €</span>
               <span style={{fontSize:9,color:copiedPvp?'var(--neo-gold)':'var(--neo-text2)'}}>{copiedPvp?'✓':'⎘'}</span>
             </button>
 
