@@ -49,7 +49,7 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone, cop
     })
 
   if(current) return <Calculadora current={current} setCurrent={setCurrent}
-    orcamentos={orcamentos} showToast={showToast} markCopied={markCopied} onBack={async()=>{
+    orcamentos={orcamentos} showToast={showToast} markCopied={markCopied} copiedRefs={copiedRefs} onBack={async()=>{
       // Auto-guardar se tiver nome ou peças preenchidas
       if(current.nome?.trim()||(current.pecas||[]).some(p=>p.desc)){
         try {
@@ -194,7 +194,7 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone, cop
 }
 
 // ── Calculadora ────────────────────────────────────────────────────────────
-function Calculadora({current,setCurrent,showToast,onBack,markCopied}){
+function Calculadora({current,setCurrent,showToast,onBack,markCopied,copiedRefs}){
   const [tab,setTab]=useState('pecas')
   const [matModal,setMatModal]=useState(null) // 'A' | 'B'
   const [formulaOpen,setFormulaOpen]=useState(false)
@@ -592,13 +592,13 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
               {res.m2>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:10,color:'var(--neo-gold)',letterSpacing:'0.06em'}}>{res.m2.toFixed(3)} m²</span>}
               {res.pvp>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:10,color:'var(--neo-text2)',marginLeft:'auto'}}>{f2(res.pvp)} €</span>}
             </div>
-            {esp&&<RefRow label="Tampo / m²" c1={esp.c1} pvp={esp.pvp} refAnigraco={esp.refAnigraco||null} calc={res.m2>0?`${res.m2.toFixed(3)} m² × ${f2(esp.pvp)} = ${f2(res.pvpTampo)} €`:null} showToast={showToast} markCopied={markCopied}/>}
+            {esp&&<RefRow label="Tampo / m²" c1={esp.c1} pvp={esp.pvp} refAnigraco={esp.refAnigraco||null} calc={res.m2>0?`${res.m2.toFixed(3)} m² × ${f2(esp.pvp)} = ${f2(res.pvpTampo)} €`:null} showToast={showToast} markCopied={markCopied} copiedRefs={copiedRefs}/>}
             {(p.acabamentos||[]).map(a=>{
               const base=acabDisp.find(x=>x.nome===a.nome)
               if(!base)return null
               const qty=base.unidade==='ml'?parseFloat(a.qty)||0:parseInt(a.qty)||0
               const tot=qty>0?base.pvp*qty:null
-              return<RefRow key={a.nome} label={a.nome} c1={base.c1} pvp={base.pvp} unidade={base.unidade} refAnigraco={base.refAnigraco||null} calc={qty>0?`${qty} ${base.unidade} = ${f2(tot)} €`:null} showToast={showToast} markCopied={markCopied}/>
+              return<RefRow key={a.nome} label={a.nome} c1={base.c1} pvp={base.pvp} unidade={base.unidade} refAnigraco={base.refAnigraco||null} calc={qty>0?`${qty} ${base.unidade} = ${f2(tot)} €`:null} showToast={showToast} markCopied={markCopied} copiedRefs={copiedRefs}/>
             })}
           </div>
         })}
@@ -617,13 +617,13 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
               {res.m2>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:10,color:'#4a8fa8',letterSpacing:'0.06em'}}>{res.m2.toFixed(3)} m²</span>}
               {res.pvp>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:10,color:'var(--neo-text2)',marginLeft:'auto'}}>{f2(res.pvp)} €</span>}
             </div>
-            {esp&&<RefRow label="Tampo / m²" c1={esp.c1} pvp={esp.pvp} refAnigraco={esp.refAnigraco||null} calc={res.m2>0?`${res.m2.toFixed(3)} m² × ${f2(esp.pvp)} = ${f2(res.pvpTampo)} €`:null} showToast={showToast} markCopied={markCopied}/>}
+            {esp&&<RefRow label="Tampo / m²" c1={esp.c1} pvp={esp.pvp} refAnigraco={esp.refAnigraco||null} calc={res.m2>0?`${res.m2.toFixed(3)} m² × ${f2(esp.pvp)} = ${f2(res.pvpTampo)} €`:null} showToast={showToast} markCopied={markCopied} copiedRefs={copiedRefs}/>}
             {(p.acabamentos||[]).map(a=>{
               const base=acabDisp.find(x=>x.nome===a.nome)
               if(!base)return null
               const qty=base.unidade==='ml'?parseFloat(a.qty)||0:parseInt(a.qty)||0
               const tot=qty>0?base.pvp*qty:null
-              return<RefRow key={a.nome} label={a.nome} c1={base.c1} pvp={base.pvp} unidade={base.unidade} refAnigraco={base.refAnigraco||null} calc={qty>0?`${qty} ${base.unidade} = ${f2(tot)} €`:null} showToast={showToast} markCopied={markCopied}/>
+              return<RefRow key={a.nome} label={a.nome} c1={base.c1} pvp={base.pvp} unidade={base.unidade} refAnigraco={base.refAnigraco||null} calc={qty>0?`${qty} ${base.unidade} = ${f2(tot)} €`:null} showToast={showToast} markCopied={markCopied} copiedRefs={copiedRefs}/>
             })}
           </div>
         })}
@@ -631,7 +631,7 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
         {/* Transporte */}
         {current.transporte&&<>
           <div style={{padding:'10px 16px 4px',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text)'}}>Transporte</div>
-          <RefRow label={current.transporte.label} c1={current.transporte.c1} pvp={current.transporte.pvp} showToast={showToast} markCopied={markCopied}/>
+          <RefRow label={current.transporte.label} c1={current.transporte.c1} pvp={current.transporte.pvp} showToast={showToast} markCopied={markCopied} copiedRefs={copiedRefs}/>
         </>}
 
         {/* Total PVP para referência */}
@@ -766,28 +766,38 @@ function FormulaPanel({margem,setMargem,c1Auto,showToast}){
 }
 
 // ── RefRow — linha de referência com C1, PVP, ref Anigraco e cálculo ─────────
-function RefRow({label,c1,pvp,unidade,refAnigraco,calc,showToast,markCopied}){
-  return<div style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+function RefRow({label,c1,pvp,unidade,refAnigraco,calc,showToast,markCopied,copiedRefs}){
+  const c1Key       = c1fmt(c1)
+  const wasCopiedC1 = copiedRefs?.has(c1Key)
+  const wasCopiedAn = refAnigraco ? copiedRefs?.has(refAnigraco) : false
+  const anyWasCopied = wasCopiedC1 || wasCopiedAn
+
+  return<div style={{
+    borderBottom:'1px solid rgba(255,255,255,0.05)',
+    background: anyWasCopied ? 'rgba(200,169,110,0.04)' : 'transparent',
+    borderLeft: anyWasCopied ? '2px solid rgba(200,169,110,0.4)' : '2px solid transparent',
+    transition:'background .2s, border-color .2s',
+  }}>
     <div style={{display:'flex',alignItems:'center',padding:'9px 16px',gap:10}}>
       <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:12,color:'var(--neo-text)',fontWeight:400}}>
-          {label}{unidade&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-text2)',marginLeft:6}}>/{unidade}</span>}
+        <div style={{fontSize:12,color: anyWasCopied ? '#c4c0b8' : 'var(--neo-text)',fontWeight:400}}>
+          {label}{unidade&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'#8a8a82',marginLeft:6}}>/{unidade}</span>}
         </div>
         {refAnigraco&&(
           <div style={{display:'flex',alignItems:'center',gap:6,marginTop:3}}>
-            <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--neo-text2)'}}>Anigraco</span>
-            <CopyVal val={refAnigraco} label="Ref Anigraco" showToast={showToast} markCopied={markCopied}/>
+            <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.12em',textTransform:'uppercase',color:'#8a8a82'}}>Anigraco</span>
+            <CopyVal val={refAnigraco} label="Ref Anigraco" showToast={showToast} markCopied={markCopied} wasCopied={wasCopiedAn}/>
           </div>
         )}
         {calc&&<div style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-gold)',letterSpacing:'0.06em',marginTop:3}}>{calc}</div>}
       </div>
       <div style={{display:'flex',gap:8,alignItems:'center',flexShrink:0}}>
         <div style={{textAlign:'right'}}>
-          <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'var(--neo-text2)',letterSpacing:'0.1em',marginBottom:2}}>C1</div>
-          <CopyVal val={c1fmt(c1)} label="C1" showToast={showToast} markCopied={markCopied}/>
+          <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'#8a8a82',letterSpacing:'0.1em',marginBottom:2}}>C1</div>
+          <CopyVal val={c1Key} label="C1" showToast={showToast} markCopied={markCopied} wasCopied={wasCopiedC1}/>
         </div>
         <div style={{textAlign:'right'}}>
-          <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'var(--neo-text2)',letterSpacing:'0.1em',marginBottom:2}}>PVP</div>
+          <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'#8a8a82',letterSpacing:'0.1em',marginBottom:2}}>PVP</div>
           <CopyVal val={f2(pvp)} label="PVP" showToast={showToast} gold/>
         </div>
       </div>
@@ -841,16 +851,22 @@ function MaterialModal({tipoProjeto,onSelect,onClose}){
 }
 
 // ── CopyVal ────────────────────────────────────────────────────────────────
-function CopyVal({val,label,showToast,gold,large,markCopied}){
+function CopyVal({val,label,showToast,gold,large,markCopied,wasCopied}){
   const [copied,setCopied]=useState(false)
-  return<button className={`neo-copy ${copied?'copied':''}`} onClick={()=>{
+  const isActive = copied || wasCopied
+  return<button className={`neo-copy ${isActive?'copied':''}`} onClick={()=>{
     navigator.clipboard.writeText(val).catch(()=>{})
     setCopied(true);setTimeout(()=>setCopied(false),1600)
-    // Marcar como copiado no estado global — só C1 e Ref Anigraco, não PVP
     if(markCopied && label!=='PVP') markCopied(val)
     showToast(`${label} copiado — ${val}`)
-  }} style={gold&&!copied?{color:'var(--neo-gold)'}:{}}>
+  }} style={{
+    ...(gold && !isActive ? {color:'var(--neo-gold)'} : {}),
+    ...(wasCopied && !copied ? {
+      color:'var(--neo-gold)',
+      boxShadow:'var(--neo-shadow-in-sm), var(--neo-glow-gold)',
+    } : {}),
+  }}>
     <span style={{fontSize:large?16:12,fontWeight:large?700:400}}>{val}</span>
-    <span className="neo-copy-icon">{copied?'✓':'⎘'}</span>
+    <span className="neo-copy-icon">{isActive?'✓':'⎘'}</span>
   </button>
 }
