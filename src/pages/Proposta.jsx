@@ -85,11 +85,12 @@ export default function Proposta({ showToast }) {
   }, [persist])
 
   // ── Cálculos ───────────────────────────────────────────────────────────────
-  const catSum = cat => cat.items.reduce((s, i) => s + fv(i.val), 0)
-  const known  = state.cats.reduce((s, c) => s + catSum(c), 0)
-  const total  = fv(state.total)
-  const moveis = total - known
-  const isOver = total > 0 && moveis < -0.005
+  const catSum   = cat => cat.items.reduce((s, i) => s + fv(i.val), 0)
+  const known    = state.cats.reduce((s, c) => s + catSum(c), 0)
+  const total    = fv(state.total)
+  const hasTotal = state.total !== '' && total > 0
+  const moveis   = hasTotal ? total - known : null
+  const isOver   = hasTotal && moveis < -0.005
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const setTotal    = e => update(p => ({ ...p, total: e.target.value }))
@@ -181,7 +182,8 @@ export default function Proposta({ showToast }) {
           </div>
         </div>
 
-        {/* MÓVEIS — por diferença */}
+        {/* MÓVEIS — por diferença (só se houver total) */}
+        {hasTotal && (
         <div style={{ ...S.card, borderLeft: `2px solid ${isOver ? '#c07070' : '#4a8fa8'}`, marginBottom: 16 }}>
           <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
@@ -207,6 +209,7 @@ export default function Proposta({ showToast }) {
             </div>
           )}
         </div>
+        )}
 
         {/* CATEGORIAS */}
         {state.cats.map(cat => {
@@ -277,19 +280,31 @@ export default function Proposta({ showToast }) {
         <div style={{ ...S.card, borderTop: '2px solid var(--neo-gold)' }}>
           <div style={{ padding: '12px 14px' }}>
             <div style={{ ...S.label, marginBottom: 12 }}>Resumo</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 12, color: 'var(--neo-text2)', letterSpacing: '0.06em' }}>Móveis</span>
-              <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 12, color: 'var(--neo-text)', fontWeight: 600 }}>{fmt(Math.max(0, moveis))}</span>
-            </div>
+
+            {/* Móveis — só se houver total definido */}
+            {hasTotal && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 12, color: '#4a8fa8', letterSpacing: '0.06em' }}>Móveis</span>
+                <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 12, color: '#4a8fa8', fontWeight: 600 }}>{fmt(Math.max(0, moveis))}</span>
+              </div>
+            )}
+
+            {/* Categorias — sempre visíveis */}
             {state.cats.map(cat => (
               <div key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 12, color: 'var(--neo-text2)', letterSpacing: '0.06em' }}>{cat.name || '—'}</span>
-                <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 12, color: 'var(--neo-text)', fontWeight: 600 }}>{fmt(catSum(cat))}</span>
+                <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 12, color: catSum(cat) > 0 ? 'var(--neo-text)' : 'var(--neo-text2)', fontWeight: catSum(cat) > 0 ? 600 : 400 }}>{fmt(catSum(cat))}</span>
               </div>
             ))}
+
+            {/* Total — se houver total global usa-o, senão mostra a soma das categorias */}
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 8, paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 13, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--neo-text)' }}>Total</span>
-              <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 18, fontWeight: 700, color: 'var(--neo-gold)' }}>{fmt(total)}</span>
+              <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 13, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--neo-text)' }}>
+                {hasTotal ? 'Total' : 'Soma categorias'}
+              </span>
+              <span style={{ fontFamily: "'Barlow Condensed'", fontSize: 18, fontWeight: 700, color: 'var(--neo-gold)' }}>
+                {fmt(hasTotal ? total : known)}
+              </span>
             </div>
           </div>
         </div>

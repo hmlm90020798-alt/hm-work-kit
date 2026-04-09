@@ -45,6 +45,11 @@ export default function Biblioteca({ showToast }) {
   const [importModal, setImportModal] = useState(false)
   const [editId, setEditId]       = useState(null)
   const [form, setForm] = useState({ ref:'', desc:'', cat:'', sub:'', price:'', supplier:'', link:'', notes:'', notaIA:'' })
+  // Refs copiadas na sessão actual — persiste até limpar filtro/categoria ou fechar app
+  const [copiedRefs, setCopiedRefs] = useState(new Set())
+
+  const markCopied = (ref) => setCopiedRefs(prev => new Set([...prev, ref]))
+  const clearCopied = () => setCopiedRefs(new Set())
 
   useEffect(() => {
     const u1 = onSnapshot(collection(db,'categorias'), snap => {
@@ -243,6 +248,11 @@ export default function Biblioteca({ showToast }) {
         <button onClick={() => setImportModal(true)} style={{flexShrink:0,background:'transparent',border:'1px solid var(--neo-gold2)',borderRadius:'var(--neo-radius-pill)',padding:'0 12px',height:34,cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:600,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--neo-gold)',whiteSpace:'nowrap'}}>
           ↑ Import
         </button>
+        {copiedRefs.size > 0 && (
+          <button onClick={clearCopied} title="Limpar marcações de copiado" style={{flexShrink:0,background:'rgba(200,169,110,0.12)',border:'1px solid rgba(200,169,110,0.3)',borderRadius:'var(--neo-radius-pill)',padding:'0 10px',height:34,cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-gold)',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:5}}>
+            ✓ {copiedRefs.size} <span style={{opacity:.6,fontWeight:400}}>limpar</span>
+          </button>
+        )}
         <button className="bib-add-btn" onClick={openAdd}>+ Artigo</button>
       </div>
 
@@ -285,6 +295,8 @@ export default function Biblioteca({ showToast }) {
             onStar={toggleStar}
             onToggleKC={toggleKC}
             showToast={showToast}
+            wasCopied={copiedRefs.has(a.ref)}
+            onCopied={markCopied}
             onAddOrc={() => addToOrcamento({ ref:a.ref, desc:a.desc, cat:a.cat, price:a.price||0, origem:'Biblioteca' }, showToast)}/>
         ))}
       </div>
@@ -346,7 +358,7 @@ export default function Biblioteca({ showToast }) {
 }
 
 // ── ArtCard — card expansível com estrela, link alinhado, contraste melhorado ──
-function ArtCard({ art, onEdit, onDel, onStar, onToggleKC, showToast, onAddOrc }) {
+function ArtCard({ art, onEdit, onDel, onStar, onToggleKC, showToast, onAddOrc, wasCopied, onCopied }) {
   const [open,   setOpen]   = useState(false)
   const [copied, setCopied] = useState(false)
   const [added,  setAdded]  = useState(false)
@@ -356,6 +368,7 @@ function ArtCard({ art, onEdit, onDel, onStar, onToggleKC, showToast, onAddOrc }
     e.stopPropagation()
     navigator.clipboard.writeText(art.ref).catch(()=>{})
     setCopied(true); setTimeout(()=>setCopied(false),1600)
+    onCopied?.(art.ref)
     showToast('Referência copiada — '+art.ref)
   }
 
@@ -378,7 +391,11 @@ function ArtCard({ art, onEdit, onDel, onStar, onToggleKC, showToast, onAddOrc }
   return (
     <div className={`bib-art-card ${open?'expanded':''} ${art.star?'starred':''}`}
       onClick={()=>setOpen(o=>!o)}
-      style={art.kc ? {borderLeft:'3px solid #4a9ec0', boxShadow:'var(--neo-shadow-out), -2px 0 10px rgba(74,158,192,0.18)'} : {}}
+      style={{
+        ...(art.kc ? {borderLeft:'3px solid #4a9ec0', boxShadow:'var(--neo-shadow-out), -2px 0 10px rgba(74,158,192,0.18)'} : {}),
+        ...(wasCopied && !art.kc ? {borderLeft:'3px solid rgba(200,169,110,0.5)', background:'rgba(200,169,110,0.04)'} : {}),
+        ...(wasCopied && art.kc  ? {background:'rgba(200,169,110,0.04)'} : {}),
+      }}
     >
 
       {/* ── LINHA PRINCIPAL (sempre visível) ── */}
@@ -399,22 +416,26 @@ function ArtCard({ art, onEdit, onDel, onStar, onToggleKC, showToast, onAddOrc }
           }}>KC</button>
         )}
 
-        {/* Ref + copy */}
+        {/* Ref + copy — badge ✓ quando wasCopied */}
         <div style={{display:'flex',alignItems:'center',gap:8,minWidth:0,flex:'0 0 auto'}}>
-          <span className="bib-art-ref" style={{color:'var(--neo-gold)',fontSize:16}}>{art.ref}</span>
-          <button onClick={copy} className={`bib-copy-btn ${copied?'copied':''}`} style={{color:copied?'var(--neo-gold)':'var(--neo-text2)'}}>{copied?'✓':'⎘'}</button>
+          <span className="bib-art-ref" style={{color: wasCopied ? 'var(--neo-gold)' : 'var(--neo-gold)',fontSize:16, opacity: wasCopied ? 1 : 0.85}}>{art.ref}</span>
+          <button onClick={copy} className={`bib-copy-btn ${copied?'copied':''}`}
+            style={{color: copied ? 'var(--neo-gold)' : wasCopied ? 'rgba(200,169,110,0.7)' : '#7a7a72',
+                    background: wasCopied && !copied ? 'rgba(200,169,110,0.08)' : undefined}}>
+            {copied ? '✓' : wasCopied ? '✓' : '⎘'}
+          </button>
         </div>
 
         {/* Descrição (truncada quando fechado) */}
         <div style={{flex:1,minWidth:0,overflow:'hidden'}}>
-          <div style={{fontSize:13,color:'var(--neo-text)',fontWeight:300,whiteSpace:open?'normal':'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.4}}>
+          <div style={{fontSize:13,color: wasCopied ? '#c4c0b8' : 'var(--neo-text)',fontWeight:300,whiteSpace:open?'normal':'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.4}}>
             {art.desc}
           </div>
           {/* Badges linha compacta (fechado) */}
           {!open&&<div style={{display:'flex',alignItems:'center',gap:6,marginTop:2,flexWrap:'nowrap',overflow:'hidden'}}>
-            {label&&<span className="bib-badge" style={{color:'var(--neo-text2)',borderColor:'rgba(255,255,255,0.12)'}}>{label}</span>}
+            {label&&<span className="bib-badge" style={{color:'#8a8a82',borderColor:'rgba(255,255,255,0.14)'}}>{label}</span>}
             {art.price>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:700,color:'var(--neo-gold)',letterSpacing:'0.04em',whiteSpace:'nowrap'}}>{art.price.toFixed(2)} €</span>}
-            {art.supplier&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.08em',color:'var(--neo-text2)',textTransform:'uppercase',whiteSpace:'nowrap'}}>{art.supplier}</span>}
+            {art.supplier&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.08em',color:'#8a8a82',textTransform:'uppercase',whiteSpace:'nowrap'}}>{art.supplier}</span>}
           </div>}
         </div>
 
