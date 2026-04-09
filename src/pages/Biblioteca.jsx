@@ -63,14 +63,14 @@ export default function Biblioteca({ showToast }) {
           {id:'limpeza',     name:'Limpeza',                  subs:[]},
           {id:'acessorios',  name:'Acessórios',               subs:[]},
         ]
-        defs.forEach(c => setDoc(doc(db,'categorias',c.id), {name:c.name,subs:c.subs}))
+        defs.forEach(c => setDoc(doc(db,'categorias',c.id), {name:c.name,subs:c.subs}).catch(()=>{}))
       } else {
         setCats(snap.docs.map(d => ({id:d.id,...d.data()})))
       }
-    })
+    }, () => showToast('Erro ao carregar categorias'))
     const u2 = onSnapshot(collection(db,'artigos'), snap => {
       setArts(snap.docs.map(d => ({id:d.id,...d.data()})))
-    })
+    }, () => showToast('Erro ao carregar artigos'))
     return () => { u1(); u2() }
   }, [])
 
@@ -138,20 +138,28 @@ export default function Biblioteca({ showToast }) {
 
   const delArt = async (id, desc) => {
     if (!confirm('Eliminar "'+desc+'"?')) return
-    await deleteDoc(doc(db,'artigos',id))
-    showToast('Eliminado')
+    try {
+      await deleteDoc(doc(db,'artigos',id))
+      showToast('Eliminado')
+    } catch { showToast('Erro ao eliminar — verifica a ligação') }
   }
 
   const toggleStar = async (a) => {
-    await updateDoc(doc(db,'artigos',a.id), {star:!a.star})
+    try {
+      await updateDoc(doc(db,'artigos',a.id), {star:!a.star})
+    } catch { showToast('Erro ao actualizar favorito') }
   }
 
   const toggleKC = async (a) => {
-    await updateDoc(doc(db,'artigos',a.id), {kc:!a.kc})
+    try {
+      await updateDoc(doc(db,'artigos',a.id), {kc:!a.kc})
+    } catch { showToast('Erro ao actualizar KC') }
   }
 
   const saveCat = async (cat) => {
-    await setDoc(doc(db,'categorias',cat.id), {name:cat.name, subs:cat.subs||[], order:cat.order??999})
+    try {
+      await setDoc(doc(db,'categorias',cat.id), {name:cat.name, subs:cat.subs||[], order:cat.order??999})
+    } catch { showToast('Erro ao guardar categoria') }
   }
 
   const L = { fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:600, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--neo-text2)', display:'block', marginBottom:8 }

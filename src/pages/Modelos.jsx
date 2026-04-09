@@ -20,9 +20,11 @@ export default function Modelos({ showToast }) {
 
   useEffect(() => {
     const u1 = onSnapshot(collection(db,'modelos'), snap =>
-      setModelos(snap.docs.map(d=>({id:d.id,...d.data()}))))
+      setModelos(snap.docs.map(d=>({id:d.id,...d.data()}))),
+      () => showToast('Erro ao carregar modelos'))
     const u2 = onSnapshot(collection(db,'artigos'), snap =>
-      setArtigos(snap.docs.map(d=>({id:d.id,...d.data()}))))
+      setArtigos(snap.docs.map(d=>({id:d.id,...d.data()}))),
+      () => showToast('Erro ao carregar artigos'))
     return () => { u1(); u2() }
   }, [])
 
@@ -33,23 +35,27 @@ export default function Modelos({ showToast }) {
   const saveModelo = async () => {
     if (!form.name.trim()) { showToast('Nome obrigatório'); return }
     const data = { name:form.name.trim(), contexto:form.contexto.trim(), notas:form.notas.trim() }
-    if (editId) {
-      const prev = modelos.find(m=>m.id===editId)
-      await setDoc(doc(db,'modelos',editId), {...data, items: prev?.items||[]})
-      showToast('Modelo atualizado')
-    } else {
-      const ref = await addDoc(collection(db,'modelos'), {...data, items:[]})
-      setDetailId(ref.id)  // abre directamente o modelo novo
-      showToast('Modelo criado — adiciona artigos agora')
-    }
-    setModal(false)
+    try {
+      if (editId) {
+        const prev = modelos.find(m=>m.id===editId)
+        await setDoc(doc(db,'modelos',editId), {...data, items: prev?.items||[]})
+        showToast('Modelo atualizado')
+      } else {
+        const ref = await addDoc(collection(db,'modelos'), {...data, items:[]})
+        setDetailId(ref.id)
+        showToast('Modelo criado — adiciona artigos agora')
+      }
+      setModal(false)
+    } catch { showToast('Erro ao guardar modelo') }
   }
 
   const delModelo = async (id, name) => {
     if (!confirm('Eliminar modelo "'+name+'"?')) return
-    await deleteDoc(doc(db,'modelos',id))
-    if (detailId===id) setDetailId(null)
-    showToast('Eliminado')
+    try {
+      await deleteDoc(doc(db,'modelos',id))
+      if (detailId===id) setDetailId(null)
+      showToast('Eliminado')
+    } catch { showToast('Erro ao eliminar') }
   }
 
   const openEdit = (m) => {
@@ -74,27 +80,31 @@ export default function Modelos({ showToast }) {
       notes:    art.notes||'',
       qty:      1
     }]
-    await setDoc(doc(db,'modelos',modelo.id), {...modelo, items})
-    showToast('Artigo adicionado')
+    try {
+      await setDoc(doc(db,'modelos',modelo.id), {...modelo, items})
+      showToast('Artigo adicionado')
+    } catch { showToast('Erro ao adicionar artigo') }
   }
 
   const updateQty = async (artId, qty) => {
     if (!modelo) return
     const items = (modelo.items||[]).map(i => i.artId===artId ? {...i, qty:Math.max(1,qty)} : i)
-    await setDoc(doc(db,'modelos',modelo.id), {...modelo, items})
+    try { await setDoc(doc(db,'modelos',modelo.id), {...modelo, items}) } catch {}
   }
 
   const removeItem = async (artId) => {
     if (!modelo) return
     const items = (modelo.items||[]).filter(i => i.artId!==artId)
-    await setDoc(doc(db,'modelos',modelo.id), {...modelo, items})
-    showToast('Removido')
+    try {
+      await setDoc(doc(db,'modelos',modelo.id), {...modelo, items})
+      showToast('Removido')
+    } catch { showToast('Erro ao remover') }
   }
 
   const toggleStar = async (artId) => {
     if (!modelo) return
     const items = (modelo.items||[]).map(i => i.artId===artId ? {...i,star:!i.star} : i)
-    await setDoc(doc(db,'modelos',modelo.id), {...modelo, items})
+    try { await setDoc(doc(db,'modelos',modelo.id), {...modelo, items}) } catch {}
   }
 
   // ── Adicionar tudo ao orçamento ─────────────────────────────────────────

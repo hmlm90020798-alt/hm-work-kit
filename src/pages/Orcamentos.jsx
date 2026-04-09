@@ -25,7 +25,7 @@ export default function Orcamentos({ showToast, onOpenTampo }) {
   useEffect(() => {
     const unsub = onSnapshot(ORC_REF(), snap => {
       setOrc(snap.exists() ? snap.data() : { items: [] })
-    })
+    }, () => showToast('Erro ao carregar orçamento'))
     return unsub
   }, [])
 
@@ -39,19 +39,24 @@ export default function Orcamentos({ showToast, onOpenTampo }) {
 
   const setQty = async (ref, qty) => {
     const newItems = items.map(i => i.ref === ref ? { ...i, qty: Math.max(1, qty) } : i)
-    await setDoc(ORC_REF(), { ...orc, items: newItems })
+    try { await setDoc(ORC_REF(), { ...orc, items: newItems }) }
+    catch { showToast('Erro ao actualizar quantidade') }
   }
 
   const remove = async (ref) => {
     const newItems = items.filter(i => i.ref !== ref)
-    await setDoc(ORC_REF(), { ...orc, items: newItems })
-    showToast('Removido')
+    try {
+      await setDoc(ORC_REF(), { ...orc, items: newItems })
+      showToast('Removido')
+    } catch { showToast('Erro ao remover item') }
   }
 
   const clearAll = async () => {
-    await deleteDoc(ORC_REF())
-    setConfirmClear(false)
-    showToast('Orçamento limpo')
+    try {
+      await deleteDoc(ORC_REF())
+      setConfirmClear(false)
+      showToast('Orçamento limpo')
+    } catch { showToast('Erro ao limpar orçamento') }
   }
 
   const copyVal = (val, label) => {

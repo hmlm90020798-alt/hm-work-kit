@@ -4,247 +4,9 @@ import { collection, doc, onSnapshot, setDoc, deleteDoc, addDoc } from 'firebase
 import '../styles/tampos.css'
 import ImportModal from '../components/ImportModal'
 import { addToOrcamento } from '../hooks/useOrcamento'
+import { ANIGRACO, TRANSPORTE, TIPOS_PEDRA, TIPOS_ALL } from '../data/anigracoData'
+import { calcPeca, novoProjeto, totProj, uuid, f2, c1fmt } from '../hooks/useTampos'
 
-const ANIGRACO = {
-  GRANITOS:{materiais:[
-    {desc:'VERDE LAVRADOR',   grupo:null,espessuras:{'2cm':{c1:27022,pvp:475},'3cm':{c1:29444,pvp:517}}},
-    {desc:'NEGRO ZIMBABWE',   grupo:null,espessuras:{'2cm':{c1:26656,pvp:468},'3cm':{c1:29912,pvp:526}}},
-    {desc:'AZUL LAVRADOR',    grupo:null,espessuras:{'2cm':{c1:24132,pvp:424},'3cm':{c1:30889,pvp:543}}},
-    {desc:'SHIVAKASHY',       grupo:null,espessuras:{'2cm':{c1:21599,pvp:380},'3cm':{c1:28679,pvp:504}}},
-    {desc:'PATAS DE GATO',    grupo:null,espessuras:{'2cm':{c1:19261,pvp:338},'3cm':{c1:25041,pvp:440}}},
-    {desc:'NEGRO ANGOLA',     grupo:null,espessuras:{'2cm':{c1:16218,pvp:285},'3cm':{c1:19975,pvp:351}}},
-    {desc:'NEGRO IMPALA',     grupo:null,espessuras:{'2cm':{c1:14476,pvp:254},'3cm':{c1:20579,pvp:362}}},
-    {desc:'AMARELO FIGUEIRA', grupo:null,espessuras:{'2cm':{c1:11407,pvp:200},'3cm':{c1:12365,pvp:217}}},
-    {desc:'AMARELO MACIEIRA', grupo:null,espessuras:{'2cm':{c1:10651,pvp:187},'3cm':{c1:11713,pvp:206}}},
-    {desc:'AMARELO VIMIEIRO', grupo:null,espessuras:{'2cm':{c1:12551,pvp:221},'3cm':{c1:13613,pvp:239}}},
-    {desc:'BRANCO CORAL',     grupo:null,espessuras:{'2cm':{c1:10651,pvp:187},'3cm':{c1:11713,pvp:206}}},
-    {desc:'CINZA EVORA',      grupo:null,espessuras:{'2cm':{c1:14551,pvp:256},'3cm':{c1:15613,pvp:274}}},
-    {desc:'PEDRAS SALGADAS',  grupo:null,espessuras:{'2cm':{c1:12551,pvp:221},'3cm':{c1:13613,pvp:239}}},
-    {desc:'CINZA PENALVA',    grupo:null,espessuras:{'2cm':{c1:8874,pvp:156},'3cm':{c1:10999,pvp:193}}},
-    {desc:'CINZA ANTAS',      grupo:null,espessuras:{'2cm':{c1:8874,pvp:156},'3cm':{c1:10999,pvp:193}}},
-    {desc:'CINZA PINHEL',     grupo:null,espessuras:{'2cm':{c1:8874,pvp:156},'3cm':{c1:10617,pvp:187}}},
-    {desc:'ROSA PORRINHO',    grupo:null,espessuras:{'2cm':{c1:8874,pvp:156},'3cm':{c1:10141,pvp:178}}},
-    {desc:'ROSA MONÇÃO',      grupo:null,espessuras:{'2cm':{c1:8874,pvp:156},'3cm':{c1:10141,pvp:178}}},
-  ],acabamentos:[
-    {nome:'RODATAMPO',           c1:1160,pvp:21,unidade:'ml'},
-    {nome:'CORTE BRUTO',         c1:1260,pvp:23,unidade:'un'},
-    {nome:'REBAIXO À FACE',      c1:4410,pvp:80,unidade:'un'},
-    {nome:'TRANSFORMAÇÃO POLIDO',c1:3500,pvp:56,unidade:'un'},
-    {nome:'FURO',                c1:950, pvp:17,unidade:'un'},
-    {nome:'CORTE 1/2 ESQUADRIA', c1:2310,pvp:47,unidade:'un'},
-  ]},
-  SILESTONES:{materiais:[
-    {desc:'LINEN CREAM',       grupo:'PROMOÇÃO',espessuras:{'2cm':{c1:20272,pvp:356},'1.2cm':{c1:17872,pvp:314}}},
-    {desc:'MOTION GREY',       grupo:'PROMOÇÃO',espessuras:{'2cm':{c1:20272,pvp:356},'1.2cm':{c1:17872,pvp:314}}},
-    {desc:'MIAMI WHITE',       grupo:'PROMOÇÃO',espessuras:{'2cm':{c1:20272,pvp:356},'1.2cm':{c1:17872,pvp:314}}},
-    {desc:'LIME DELIGHT',      grupo:'PROMOÇÃO',espessuras:{'2cm':{c1:20272,pvp:356},'1.2cm':{c1:17872,pvp:314}}},
-    {desc:'PERSIAN WHITE',     grupo:'PROMOÇÃO',espessuras:{'2cm':{c1:20272,pvp:356},'1.2cm':{c1:17872,pvp:314}}},
-    {desc:'SIBERIAN',          grupo:'PROMOÇÃO',espessuras:{'2cm':{c1:20272,pvp:356},'1.2cm':{c1:17872,pvp:314}}},
-    {desc:'LAGOON',            grupo:'PROMOÇÃO',espessuras:{'2cm':{c1:20272,pvp:356},'1.2cm':{c1:17872,pvp:314}}},
-    {desc:'CONCRETE PULSE',    grupo:'PROMOÇÃO',espessuras:{'2cm':{c1:20272,pvp:356},'1.2cm':{c1:17872,pvp:314}}},
-    {desc:'CORAL CLAY',        grupo:'PROMOÇÃO',espessuras:{'2cm':{c1:20272,pvp:356},'1.2cm':{c1:17872,pvp:314}}},
-    {desc:'NEGRO TEBAS',       grupo:'PROMOÇÃO',espessuras:{'2cm':{c1:20272,pvp:356},'1.2cm':{c1:17872,pvp:314}}},
-    {desc:'BLANCO MAPLE 14',   grupo:'G1',espessuras:{'2cm':{c1:23064,pvp:405}}},
-    {desc:'BLANCO NORTE 14',   grupo:'G1',espessuras:{'2cm':{c1:23064,pvp:405}}},
-    {desc:'LINEN CREAM',       grupo:'G1',espessuras:{'2cm':{c1:23064,pvp:405}}},
-    {desc:'WHITE STORM 14',    grupo:'G1',espessuras:{'2cm':{c1:23064,pvp:405}}},
-    {desc:'MOTION GREY',       grupo:'G1',espessuras:{'2cm':{c1:23064,pvp:405}}},
-    {desc:'ROUGUI',            grupo:'G1',espessuras:{'2cm':{c1:23064,pvp:405}}},
-    {desc:'GRIS EXPO',         grupo:'G1',espessuras:{'2cm':{c1:23064,pvp:405}}},
-    {desc:'MARENGO',           grupo:'G1',espessuras:{'2cm':{c1:23064,pvp:405}}},
-    {desc:'MIAMI WHITE 17',    grupo:'G2',espessuras:{'2cm':{c1:26784,pvp:471}}},
-    {desc:'LIME DELIGHT',      grupo:'G2',espessuras:{'2cm':{c1:26784,pvp:471}}},
-    {desc:'PERSIAN WHITE',     grupo:'G2',espessuras:{'2cm':{c1:26784,pvp:471}}},
-    {desc:'SIBERIAN',          grupo:'G2',espessuras:{'2cm':{c1:26784,pvp:471}}},
-    {desc:'LAGOON',            grupo:'G2',espessuras:{'2cm':{c1:26784,pvp:471}}},
-    {desc:'CONCRETE PULSE',    grupo:'G2',espessuras:{'2cm':{c1:26784,pvp:471}}},
-    {desc:'CORAL CLAY COLOUR', grupo:'G2',espessuras:{'2cm':{c1:26784,pvp:471}}},
-    {desc:'BRASS RELISH',      grupo:'G2',espessuras:{'2cm':{c1:26784,pvp:471}}},
-    {desc:'CINDER CRAZE',      grupo:'G2',espessuras:{'2cm':{c1:26784,pvp:471}}},
-    {desc:'NIGHT TEBAS',       grupo:'G2',espessuras:{'2cm':{c1:26784,pvp:471}}},
-    {desc:'MIAMI VENA',        grupo:'G3',espessuras:{'2cm':{c1:29672,pvp:521}}},
-    {desc:'BRONZE RIVERS',     grupo:'G3',espessuras:{'2cm':{c1:29672,pvp:521}}},
-    {desc:'SNOWY IBIZA',       grupo:'G3',espessuras:{'2cm':{c1:29672,pvp:521}}},
-    {desc:'DERSERT SILVER',    grupo:'G3',espessuras:{'2cm':{c1:29672,pvp:521}}},
-    {desc:'ET. MARFIL',        grupo:'G3',espessuras:{'2cm':{c1:29672,pvp:521}}},
-    {desc:'CHARCOAL SOAPSTONE',grupo:'G3',espessuras:{'2cm':{c1:29672,pvp:521}}},
-    {desc:'CALACATTA TOVA',    grupo:'G3',espessuras:{'2cm':{c1:29672,pvp:521}}},
-    {desc:'BLANCO ZEUS',       grupo:'G4',espessuras:{'2cm':{c1:40600,pvp:713}}},
-    {desc:'XM NOLITA 23',      grupo:'G4',espessuras:{'2cm':{c1:40600,pvp:713}}},
-    {desc:'ET. STATUARIO',     grupo:'G4',espessuras:{'2cm':{c1:40600,pvp:713}}},
-    {desc:'XM RAW A',          grupo:'G4',espessuras:{'2cm':{c1:40600,pvp:713}}},
-    {desc:'PEARL JASMINE',     grupo:'G4',espessuras:{'2cm':{c1:40600,pvp:713}}},
-    {desc:'XM POBLENOU',       grupo:'G4',espessuras:{'2cm':{c1:40600,pvp:713}}},
-    {desc:'XM FFROM 01',       grupo:'G4',espessuras:{'2cm':{c1:40600,pvp:713}}},
-    {desc:'XM RAW G',          grupo:'G4',espessuras:{'2cm':{c1:40600,pvp:713}}},
-    {desc:'XM FFROM 02',       grupo:'G4',espessuras:{'2cm':{c1:40600,pvp:713}}},
-    {desc:'XM FFROM 03',       grupo:'G4',espessuras:{'2cm':{c1:40600,pvp:713}}},
-    {desc:'XM RAW D',          grupo:'G4',espessuras:{'2cm':{c1:40600,pvp:713}}},
-    {desc:'ET. MARQUINA',      grupo:'G5',espessuras:{'2cm':{c1:46808,pvp:822}}},
-    {desc:'ET CALACATTA GOLD', grupo:'G6',espessuras:{'2cm':{c1:54272,pvp:954}}},
-    {desc:'ETHEREAL NOCTIS',   grupo:'G6',espessuras:{'2cm':{c1:54272,pvp:954}}},
-    {desc:'ETHEREAL GLOW',     grupo:'G6',espessuras:{'2cm':{c1:54272,pvp:954}}},
-    {desc:'XM BLANC ÉLISÉE',   grupo:null,espessuras:{'2cm':{c1:63912,pvp:1123}}},
-    {desc:'XM RIVIÈRE ROSE',   grupo:null,espessuras:{'2cm':{c1:63912,pvp:1123}}},
-    {desc:'VERSAILLES IVORY',  grupo:null,espessuras:{'2cm':{c1:63912,pvp:1123}}},
-    {desc:'ECLECTIC PEARL',    grupo:null,espessuras:{'2cm':{c1:63912,pvp:1123}}},
-    {desc:'VICTORIAN SILVER',  grupo:null,espessuras:{'2cm':{c1:63912,pvp:1123}}},
-    {desc:'XM JARDÍN EMERAL',  grupo:null,espessuras:{'2cm':{c1:63912,pvp:1123}}},
-    {desc:'XM PARISIEN BLEU',  grupo:null,espessuras:{'2cm':{c1:63912,pvp:1123}}},
-    {desc:'ROMANTIC ASH',      grupo:null,espessuras:{'2cm':{c1:63912,pvp:1123}}},
-    {desc:'XM BOHEMIAN FLAME', grupo:null,espessuras:{'2cm':{c1:63912,pvp:1123}}},
-    {desc:'XM CHATEAU BROWN',  grupo:null,espessuras:{'2cm':{c1:63912,pvp:1123}}},
-  ],acabamentos:[
-    {nome:'RODATAMPO',           c1:1320,pvp:24,unidade:'ml'},
-    {nome:'CORTE BRUTO',         c1:1260,pvp:23,unidade:'un'},
-    {nome:'REBAIXO À FACE',      c1:4410,pvp:80,unidade:'un'},
-    {nome:'TRANSFORMAÇÃO POLIDO',c1:35,  pvp:56,unidade:'un'},
-    {nome:'FURO',                c1:950, pvp:17,unidade:'un'},
-    {nome:'CORTE 1/2 ESQUADRIA', c1:2310,pvp:47,unidade:'un'},
-    {nome:'SILICONE',            c1:10,  pvp:18,unidade:'un'},
-  ]},
-  COMPAC:{materiais:[
-    {desc:'GLACIAR',   grupo:'G1',espessuras:{'2cm':{c1:20856,pvp:366}}},
-    {desc:'LUNA',      grupo:'G1',espessuras:{'2cm':{c1:20856,pvp:366}}},
-    {desc:'ALASKA',    grupo:'G1',espessuras:{'2cm':{c1:20856,pvp:366}}},
-    {desc:'ARENA',     grupo:'G1',espessuras:{'2cm':{c1:20856,pvp:366}}},
-    {desc:'CENIZA',    grupo:'G1',espessuras:{'2cm':{c1:20856,pvp:366}}},
-    {desc:'PLOMO',     grupo:'G1',espessuras:{'2cm':{c1:20856,pvp:366}}},
-    {desc:'NOCTURNO',  grupo:'G1',espessuras:{'2cm':{c1:20856,pvp:366}}},
-    {desc:'SNOW',      grupo:null, espessuras:{'2cm':{c1:24512,pvp:431}}},
-    {desc:'MOON',      grupo:null, espessuras:{'2cm':{c1:24512,pvp:431}}},
-    {desc:'SMOKE GREY',grupo:null, espessuras:{'2cm':{c1:24512,pvp:431}}},
-  ],acabamentos:[
-    {nome:'RODATAMPO',           c1:1320,pvp:24,unidade:'ml'},
-    {nome:'CORTE BRUTO',         c1:1260,pvp:26,unidade:'un'},
-    {nome:'REBAIXO À FACE',      c1:4410,pvp:90,unidade:'un'},
-    {nome:'TRANSFORMAÇÃO POLIDO',c1:35,  pvp:56,unidade:'un'},
-    {nome:'FURO',                c1:950, pvp:19,unidade:'un'},
-    {nome:'CORTE 1/2 ESQUADRIA', c1:2310,pvp:47,unidade:'un'},
-    {nome:'SILICONE',            c1:10,  pvp:18,unidade:'un'},
-  ]},
-  DEKTON:{materiais:[
-    {desc:'KEENA',        grupo:'PROMOÇÃO',espessuras:{'2cm':{c1:26584,pvp:467},'1.2cm':{c1:21952,pvp:386}}},
-    {desc:'MARINA',       grupo:'PROMOÇÃO',espessuras:{'2cm':{c1:26584,pvp:467},'1.2cm':{c1:21952,pvp:386}}},
-    {desc:'THALA',        grupo:'PROMOÇÃO',espessuras:{'2cm':{c1:26584,pvp:467},'1.2cm':{c1:21952,pvp:386}}},
-    {desc:'EVOK',         grupo:'PROMOÇÃO',espessuras:{'2cm':{c1:26584,pvp:467},'1.2cm':{c1:21952,pvp:386}}},
-    {desc:'NACRE',        grupo:'PROMOÇÃO',espessuras:{'2cm':{c1:26584,pvp:467},'1.2cm':{c1:21952,pvp:386}}},
-    {desc:'ARGENTIUM',    grupo:'PROMOÇÃO',espessuras:{'2cm':{c1:26584,pvp:467},'1.2cm':{c1:21952,pvp:386}}},
-    {desc:'KELYA',        grupo:'PROMOÇÃO',espessuras:{'2cm':{c1:26584,pvp:467},'1.2cm':{c1:21952,pvp:386}}},
-    {desc:'ENTZO',        grupo:null,      espessuras:{'2cm':{c1:28928,pvp:508},'1.2cm':{c1:23832,pvp:419}}},
-    {desc:'KAIROS 22 KC', grupo:'G0',espessuras:{'2cm':{c1:30320,pvp:533},'1.2cm':{c1:25792,pvp:453}}},
-    {desc:'MONNÉ KC',     grupo:'G0',espessuras:{'2cm':{c1:30320,pvp:533},'1.2cm':{c1:25792,pvp:453}}},
-    {desc:'LUNAR 22 KC',  grupo:'G0',espessuras:{'2cm':{c1:30320,pvp:533},'1.2cm':{c1:25792,pvp:453}}},
-    {desc:'AERIS KC',     grupo:'G0',espessuras:{'2cm':{c1:30320,pvp:533},'1.2cm':{c1:25792,pvp:453}}},
-    {desc:'DANAE KC',     grupo:'G0',espessuras:{'2cm':{c1:30320,pvp:533},'1.2cm':{c1:25792,pvp:453}}},
-    {desc:'DUNNA KC',     grupo:'G0',espessuras:{'2cm':{c1:30320,pvp:533},'1.2cm':{c1:25792,pvp:453}}},
-    {desc:'KOVIK',        grupo:'G0',espessuras:{'2cm':{c1:30320,pvp:533},'1.2cm':{c1:25792,pvp:453}}},
-    {desc:'KEON',         grupo:'G0',espessuras:{'2cm':{c1:30320,pvp:533},'1.2cm':{c1:25792,pvp:453}}},
-    {desc:'TRILIUM',      grupo:'G0',espessuras:{'2cm':{c1:30320,pvp:533},'1.2cm':{c1:25792,pvp:453}}},
-    {desc:'ETER',         grupo:'G0',espessuras:{'2cm':{c1:30320,pvp:533},'1.2cm':{c1:25792,pvp:453}}},
-    {desc:'KEENA',        grupo:'G0',espessuras:{'2cm':{c1:30320,pvp:533},'1.2cm':{c1:25792,pvp:453}}},
-    {desc:'THALA',        grupo:'G0',espessuras:{'2cm':{c1:30320,pvp:533},'1.2cm':{c1:25792,pvp:453}}},
-    {desc:'EVOK',         grupo:'G0',espessuras:{'2cm':{c1:30320,pvp:533},'1.2cm':{c1:25792,pvp:453}}},
-    {desc:'HALO KC',      grupo:'G1',espessuras:{'2cm':{c1:44112,pvp:775},'1.2cm':{c1:37912,pvp:666}}},
-    {desc:'NACRE KC',     grupo:'G1',espessuras:{'2cm':{c1:44112,pvp:775},'1.2cm':{c1:37912,pvp:666}}},
-    {desc:'SIRIUS25',     grupo:'G1',espessuras:{'2cm':{c1:44112,pvp:775},'1.2cm':{c1:37912,pvp:666}}},
-    {desc:'KRETA',        grupo:'G1',espessuras:{'2cm':{c1:44112,pvp:775},'1.2cm':{c1:37912,pvp:666}}},
-    {desc:'KIRA',         grupo:'G1',espessuras:{'2cm':{c1:44112,pvp:775},'1.2cm':{c1:37912,pvp:666}}},
-    {desc:'BROMO',        grupo:'G1',espessuras:{'2cm':{c1:44112,pvp:775},'1.2cm':{c1:37912,pvp:666}}},
-    {desc:'AURA 22 KC',   grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'ZENITH KC',    grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'POLAR KC',     grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'MARINA KC',    grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'SANDIK KC',    grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'ALBARIUM 22 KC',grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'ARGENTIUM KC', grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'NEBBIA KC',    grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'TREVI KC',     grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'MARMORIO KC',  grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'SABBIA KC',    grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'AVA KC',       grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'AVORIO KC',    grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'ADIA KC',      grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'UMBER',        grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'NEBU KC',      grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'GRIGIO KC',    grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'SOKE',         grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'CEPPO KC',     grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'GRAFITE',      grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'LAOS',         grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'KELYA',        grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'DOMOOS 25',    grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'KEDAR',        grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'ZIRA',         grupo:'G2',espessuras:{'2cm':{c1:52048,pvp:915},'1.2cm':{c1:44304,pvp:778}}},
-    {desc:'UYUNI KC',     grupo:'G3',espessuras:{'2cm':{c1:60272,pvp:1324},'1.2cm':{c1:48218,pvp:847}}},
-    {desc:'NEURAL KC',    grupo:'G3',espessuras:{'2cm':{c1:60272,pvp:1324},'1.2cm':{c1:48218,pvp:847}}},
-    {desc:'REM KC',       grupo:'G3',espessuras:{'2cm':{c1:60272,pvp:1324},'1.2cm':{c1:48218,pvp:847}}},
-    {desc:'NARA',         grupo:'G3',espessuras:{'2cm':{c1:60272,pvp:1324},'1.2cm':{c1:48218,pvp:847}}},
-    {desc:'NATURA 22 KC', grupo:'G3',espessuras:{'2cm':{c1:60272,pvp:1324},'1.2cm':{c1:48218,pvp:847}}},
-    {desc:'VIGIL KC',     grupo:'G3',espessuras:{'2cm':{c1:60272,pvp:1324},'1.2cm':{c1:48218,pvp:847}}},
-    {desc:'LAURENT',      grupo:'G3',espessuras:{'2cm':{c1:60272,pvp:1324},'1.2cm':{c1:48218,pvp:847}}},
-    {desc:'SOMNIA',       grupo:'G3',espessuras:{'2cm':{c1:60272,pvp:1324},'1.2cm':{c1:48218,pvp:847}}},
-    {desc:'MORPHEUS KC',  grupo:'G3',espessuras:{'2cm':{c1:60272,pvp:1324},'1.2cm':{c1:48218,pvp:847}}},
-    {desc:'REVERIE KC',   grupo:'G3',espessuras:{'2cm':{c1:60272,pvp:1324},'1.2cm':{c1:48218,pvp:847}}},
-    {desc:'HELENA 22 KC', grupo:'G4',espessuras:{'2cm':{c1:72240,pvp:1587},'1.2cm':{c1:57792,pvp:1015}}},
-    {desc:'LUCID KC',     grupo:'G4',espessuras:{'2cm':{c1:72240,pvp:1587},'1.2cm':{c1:57792,pvp:1015}}},
-    {desc:'BERGEN KC',    grupo:'G4',espessuras:{'2cm':{c1:72240,pvp:1587},'1.2cm':{c1:57792,pvp:1015}}},
-    {desc:'TRANCE KC',    grupo:'G4',espessuras:{'2cm':{c1:72240,pvp:1587},'1.2cm':{c1:57792,pvp:1015}}},
-    {desc:'AWAKE KC',     grupo:'G4',espessuras:{'2cm':{c1:72240,pvp:1587},'1.2cm':{c1:57792,pvp:1015}}},
-    {desc:'ARGA KC',      grupo:'G4',espessuras:{'2cm':{c1:72240,pvp:1587},'1.2cm':{c1:57792,pvp:1015}}},
-    {desc:'KHALO KC',     grupo:'G4',espessuras:{'2cm':{c1:72240,pvp:1587},'1.2cm':{c1:57792,pvp:1015}}},
-  ],acabamentos:[
-    {nome:'RODATAMPO',           c1:3200,pvp:59, unidade:'ml'},
-    {nome:'CORTE BRUTO',         c1:3200,pvp:66, unidade:'un'},
-    {nome:'REBAIXO À FACE',      c1:5670,pvp:116,unidade:'un'},
-    {nome:'TRANSFORMAÇÃO POLIDO',c1:5000,pvp:90, unidade:'un'},
-    {nome:'FURO',                c1:1260,pvp:26, unidade:'un'},
-    {nome:'CORTE 1/2 ESQUADRIA', c1:2840,pvp:58, unidade:'un'},
-    {nome:'SILICONE',            c1:10,  pvp:18, unidade:'un'},
-  ]},
-}
-
-const TRANSPORTE=[
-  {label:'VISEU',   c1:19000,pvp:300},
-  {label:'> 30 KM', c1:30000,pvp:480},
-  {label:'> 50 KM', c1:45000,pvp:720},
-]
-
-const TIPOS_PEDRA=['GRANITOS','SILESTONES','COMPAC','DEKTON']
-const TIPOS_ALL=[...TIPOS_PEDRA]
-
-function uuid(){return Math.random().toString(36).slice(2,9)}
-function f2(n){return parseFloat(n||0).toFixed(2)}
-function c1fmt(c1){return Math.round(c1).toString()}  // cêntimos inteiros, ex: 21519
-
-function calcPeca(p){
-  const m2=(p.segmentos||[]).reduce((s,sg)=>s+(parseFloat(sg.comp)||0)*(parseFloat(sg.larg)||0),0)
-  let pvpTampo=0,c1Tampo=0,esp=null
-  if(TIPOS_PEDRA.includes(p.tipo)&&p.desc){
-    const mat=ANIGRACO[p.tipo]
-    const ref=mat?.materiais.find(m=>m.desc===p.desc&&m.grupo===p.grupo)||mat?.materiais.find(m=>m.desc===p.desc)
-    esp=ref?.espessuras[p.espessura]
-    if(esp){pvpTampo=esp.pvp*m2;c1Tampo=esp.c1*m2}
-  }else{
-    pvpTampo=(parseFloat(p.precoPvp)||0)*m2
-    c1Tampo=(parseFloat(p.precoC1)||0)*100*m2
-  }
-  const pvpAcab=(p.acabamentos||[]).reduce((s,a)=>s+(a.pvp||0)*(a.qty||0),0)
-  const c1Acab=(p.acabamentos||[]).reduce((s,a)=>s+(a.c1||0)*(a.qty||0),0)
-  return{m2,pvpTampo,c1Tampo,pvpAcab,c1Acab,pvp:pvpTampo+pvpAcab,c1raw:c1Tampo+c1Acab,esp}
-}
-
-function novoProjeto(tipo){
-  return{
-    id:null,nome:'',contacto:'',tipo,modo:'simples',
-    pecas:[{id:uuid(),label:'Peça 1',tipo,desc:'',grupo:null,espessura:'2cm',
-            segmentos:[{id:uuid(),label:'Seg.1',comp:'',larg:''}],acabamentos:[]}],
-    opcaoB:null,
-    transporte:null,desconto:'',descontoTipo:'%',notas:''
-  }
-}
-
-// ── Lista principal ────────────────────────────────────────────────────────
 export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone}){
   const [calculos,setCalculos]=useState([])
   const [orcamentos,setOrcamentos]=useState([])
@@ -263,18 +25,12 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone}){
   },[abrirCalculo])
 
   useEffect(()=>{
-    const u1=onSnapshot(collection(db,'tampos'),snap=>setCalculos(snap.docs.map(d=>({id:d.id,...d.data()}))))
-    const u2=onSnapshot(collection(db,'orcamentos'),snap=>setOrcamentos(snap.docs.map(d=>({id:d.id,...d.data()}))))
+    const u1=onSnapshot(collection(db,'tampos'),snap=>setCalculos(snap.docs.map(d=>({id:d.id,...d.data()}))),
+      ()=>showToast('Erro ao carregar cálculos'))
+    const u2=onSnapshot(collection(db,'orcamentos'),snap=>setOrcamentos(snap.docs.map(d=>({id:d.id,...d.data()}))),
+      ()=>{})
     return()=>{u1();u2()}
   },[])
-
-  const totProj=(c)=>{
-    let pvp=0,c1=0
-    ;(c.pecas||[]).forEach(p=>{const r=calcPeca(p);pvp+=r.pvp;c1+=r.c1raw})
-    if(c.transporte){pvp+=c.transporte.pvp;c1+=c.transporte.c1}
-    const desc=parseFloat(c.desconto)>0?(c.descontoTipo==='%'?pvp*(parseFloat(c.desconto)/100):parseFloat(c.desconto)):0
-    return{pvp:pvp-desc,c1}
-  }
 
   // Materiais filtrados para a listagem
   const todosOsMateriais = TIPOS_ALL.flatMap(tipo=>
@@ -296,9 +52,11 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone}){
     orcamentos={orcamentos} showToast={showToast} onBack={async()=>{
       // Auto-guardar se tiver nome ou peças preenchidas
       if(current.nome?.trim()||(current.pecas||[]).some(p=>p.desc)){
-        const data={...current};delete data.id
-        if(current.id){await setDoc(doc(db,'tampos',current.id),data)}
-        else{const r=await addDoc(collection(db,'tampos'),data);setCurrent(c=>({...c,id:r.id}))}
+        try {
+          const data={...current};delete data.id
+          if(current.id){await setDoc(doc(db,'tampos',current.id),data)}
+          else{const r=await addDoc(collection(db,'tampos'),data);setCurrent(c=>({...c,id:r.id}))}
+        } catch { showToast('Erro ao guardar cálculo') }
       }
       setCurrent(null)
     }}/>
@@ -313,7 +71,13 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone}){
             onClick={()=>setImportModal(true)}>↑ Import</button>
           {calculos.length>0&&(
             <button className="neo-btn neo-btn-danger" style={{height:26,fontSize:8}}
-              onClick={()=>{if(confirm('Limpar todos os cálculos?'))calculos.forEach(c=>deleteDoc(doc(db,'tampos',c.id)))}}>
+              onClick={async()=>{
+                if(confirm('Limpar todos os cálculos?')){
+                  try {
+                    await Promise.all(calculos.map(c=>deleteDoc(doc(db,'tampos',c.id))))
+                  } catch { showToast('Erro ao limpar cálculos') }
+                }
+              }}>
               Limpar tudo
             </button>
           )}
@@ -338,7 +102,7 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone}){
                     <div style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-text2)',letterSpacing:'0.08em'}}>{c.tipo}{c.contacto?' · '+c.contacto:''}</div>
                   </div>
                   <div style={{fontFamily:"'Barlow Condensed'",fontSize:16,fontWeight:700,color:'var(--neo-gold)',flexShrink:0}}>{f2(res.pvp)} €</div>
-                  <button onClick={e=>{e.stopPropagation();if(confirm('Eliminar?'))deleteDoc(doc(db,'tampos',c.id))}}
+                  <button onClick={e=>{e.stopPropagation();if(confirm('Eliminar?'))deleteDoc(doc(db,'tampos',c.id)).catch(()=>showToast('Erro ao eliminar'))}}
                     style={{background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text2)',fontSize:13,padding:'4px',lineHeight:1,flexShrink:0}}>✕</button>
                 </div>
               )
