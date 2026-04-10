@@ -285,13 +285,13 @@ function ServicoCard({ s, showToast, wasCopied, markCopied }) {
 
   return (
     <div onClick={()=>setOpen(o=>!o)}
+      className="mo-card"
       style={{borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out-sm)',marginBottom:5,cursor:'pointer',overflow:'hidden',
         background: isMarked ? 'rgba(200,169,110,0.05)' : 'var(--neo-bg2)',
         borderLeft: s.tipo==='visita' ? '2px solid #4a8fa8'
           : s.tipo==='opcional' ? '2px solid var(--neo-gold2)'
           : isMarked ? '2px solid rgba(200,169,110,0.45)'
           : '2px solid transparent',
-        transition:'background .2s, border-color .2s',
       }}>
       <div style={{padding:'10px 12px'}}>
 

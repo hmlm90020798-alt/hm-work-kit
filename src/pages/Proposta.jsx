@@ -216,7 +216,7 @@ export default function Proposta({ showToast }) {
           const sum    = catSum(cat)
           const isOpen = !state.collapsed[cat.id]
           return (
-            <div key={cat.id} style={S.card}>
+            <div key={cat.id} style={S.card} className="proposta-cat">
 
               {/* Header categoria */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderBottom: isOpen ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>

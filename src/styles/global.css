@@ -605,3 +605,171 @@ a[target="_blank"]:hover { opacity: .75; text-decoration: underline; }
   color: #c8c4bc !important;
   background: #1e1e1c !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HOVER NEON — extensão a todas as classes de card/item da app
+   Em vez de editar cada JSX, extendemos neo-hover via CSS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Biblioteca — cards de artigo ───────────────────────────────────────── */
+.bib-art-card {
+  transition: background .2s, box-shadow .25s, transform .18s, border-color .2s;
+  position: relative;
+}
+.bib-art-card:hover {
+  background: #191e22 !important;
+  box-shadow:
+    var(--neo-shadow-out-sm),
+    0 0 0 1px rgba(56,189,248,.22),
+    0 0 20px rgba(56,189,248,.18),
+    0 0 45px rgba(56,189,248,.06) !important;
+  transform: translateY(-2px);
+  border-color: rgba(56,189,248,.3) !important;
+  z-index: 1;
+}
+/* Cards KC — borda azul já existe, hover reforça */
+.bib-art-card[style*="4a9ec0"]:hover {
+  box-shadow:
+    var(--neo-shadow-out-sm),
+    0 0 0 1px rgba(56,189,248,.4),
+    0 0 22px rgba(56,189,248,.25),
+    -2px 0 14px rgba(74,158,192,.3) !important;
+}
+/* Linha neon azul à esquerda */
+.bib-art-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 12%; bottom: 12%;
+  width: 2px;
+  background: linear-gradient(to bottom, transparent, rgba(56,189,248,.6) 40%, rgba(56,189,248,.6) 60%, transparent);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity .22s;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 0 6px rgba(56,189,248,.3);
+}
+.bib-art-card:hover::before { opacity: 1; }
+
+/* ── Biblioteca — cards de categoria ────────────────────────────────────── */
+.bib-cat-card {
+  transition: all .18s;
+  position: relative;
+}
+.bib-cat-card:hover:not(.active) {
+  border-color: rgba(56,189,248,.35) !important;
+  box-shadow: var(--neo-shadow-out-sm), 0 0 10px rgba(56,189,248,.15) !important;
+  transform: translateY(-1px);
+  background: #191e22 !important;
+}
+
+/* ── Tampos — cálculos guardados e painéis neo-surface clicáveis ─────────── */
+.neo-surface[style*="cursor:'pointer'"],
+.neo-surface[style*='cursor:"pointer"'],
+.neo-surface[style*="cursor:pointer"] {
+  transition: background .2s, box-shadow .25s, transform .18s !important;
+  position: relative;
+}
+.neo-surface[style*="cursor:'pointer'"]:hover,
+.neo-surface[style*='cursor:"pointer"']:hover,
+.neo-surface[style*="cursor:pointer"]:hover {
+  background: #191e22 !important;
+  box-shadow:
+    var(--neo-shadow-out-sm),
+    0 0 0 1px rgba(56,189,248,.2),
+    0 0 18px rgba(56,189,248,.16) !important;
+  transform: translateY(-2px);
+}
+
+/* ── Tampos — RefRow (linhas de referência C1/PVP) ──────────────────────── */
+/* RefRow usa borderBottom e padding — adicionar hover de linha */
+.neo-well div[style*="borderBottom"],
+div[style*="borderBottom:'1px solid rgba(255,255,255,0.05)'"] {
+  transition: background .15s, padding-left .15s;
+}
+div[style*="borderBottom:'1px solid rgba(255,255,255,0.05)'"]:hover {
+  background: rgba(56,189,248,.04) !important;
+  padding-left: 20px !important;
+  border-left: 2px solid rgba(56,189,248,.4) !important;
+}
+
+/* ── MaoDeObra — ServicoCard (tem classe .mo-card adicionada no JSX) ─────── */
+.mo-card {
+  transition: background .2s, box-shadow .25s, transform .18s, border-color .2s;
+  position: relative;
+}
+.mo-card:hover {
+  background: #191e22 !important;
+  box-shadow:
+    var(--neo-shadow-out-sm),
+    0 0 0 1px rgba(56,189,248,.22),
+    0 0 18px rgba(56,189,248,.16) !important;
+  transform: translateY(-2px);
+  border-color: rgba(56,189,248,.35) !important;
+}
+.mo-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 12%; bottom: 12%;
+  width: 2px;
+  background: linear-gradient(to bottom, transparent, rgba(56,189,248,.6) 40%, rgba(56,189,248,.6) 60%, transparent);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity .22s;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 0 6px rgba(56,189,248,.3);
+}
+.mo-card:hover::before { opacity: 1; }
+
+/* ── IA — CatCard e sugestões (têm .ia-card e .ia-suggestion adicionados) ── */
+.ia-card {
+  transition: box-shadow .25s, transform .18s, border-color .2s, opacity .2s;
+  position: relative;
+}
+.ia-card:hover {
+  box-shadow:
+    var(--neo-shadow-out-sm),
+    0 0 0 1px rgba(56,189,248,.2),
+    0 0 16px rgba(56,189,248,.14) !important;
+  transform: translateY(-1px);
+}
+.ia-suggestion {
+  transition: all .18s;
+}
+.ia-suggestion:hover {
+  background: #191e22 !important;
+  border-color: rgba(56,189,248,.35) !important;
+  box-shadow: var(--neo-shadow-out-sm), 0 0 10px rgba(56,189,248,.15) !important;
+  color: #e4f4fc !important;
+  transform: translateY(-1px);
+}
+
+/* ── Proposta — cards de categoria (têm .proposta-cat adicionado) ────────── */
+.proposta-cat {
+  transition: box-shadow .2s, transform .18s;
+  position: relative;
+}
+.proposta-cat:hover {
+  box-shadow:
+    var(--neo-shadow-out-sm),
+    0 0 0 1px rgba(56,189,248,.2),
+    0 0 14px rgba(56,189,248,.13) !important;
+  transform: translateY(-1px);
+}
+
+/* ── Orçamentos — OrcItem já tem neo-hover, reforço aqui ────────────────── */
+/* (OrcItem.jsx já usa neo-hover — já tem o efeito) */
+
+/* ── Modelos — ModelCard já tem neo-hover ───────────────────────────────── */
+/* (já funciona) */
+
+/* ── App — itens do menu principal ─────────────────────────────────────── */
+/* Os botões de menu têm style inline — aplicamos via selector */
+nav > div > button:hover {
+  opacity: 1 !important;
+}
+nav > div > button:hover > div > div:first-child {
+  text-shadow: 0 0 20px rgba(56,189,248,.35) !important;
+  color: #e4f4fc !important;
+}

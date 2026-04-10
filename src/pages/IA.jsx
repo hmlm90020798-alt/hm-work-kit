@@ -284,7 +284,8 @@ export default function IA({ showToast }) {
                   'Instalação de sistema de ar condicionado em apartamento T3',
                 ].map(s => (
                   <button key={s} onClick={() => setDescricao(s)}
-                    style={{ padding: '6px 12px', borderRadius: 'var(--neo-radius-pill)', border: 'none', background: 'var(--neo-bg2)', boxShadow: 'var(--neo-shadow-out-sm)', cursor: 'pointer', fontFamily: "'Barlow Condensed'", fontSize: 9, fontWeight: 500, letterSpacing: '0.08em', color: 'var(--neo-text2)', textAlign: 'left', lineHeight: 1.4 }}>
+                    className="ia-suggestion"
+                    style={{ padding: '6px 12px', borderRadius: 'var(--neo-radius-pill)', border: '1px solid rgba(255,255,255,0.07)', background: 'var(--neo-bg2)', boxShadow: 'var(--neo-shadow-out-sm)', cursor: 'pointer', fontFamily: "'Barlow Condensed'", fontSize: 9, fontWeight: 500, letterSpacing: '0.08em', color: 'var(--neo-text2)', textAlign: 'left', lineHeight: 1.4 }}>
                     {s}
                   </button>
                 ))}
@@ -524,7 +525,7 @@ function CatCard({ cat, aceite, onToggle }) {
     ? cor === 'var(--neo-gold)' ? 'rgba(200,169,110,0.35)' : cor === '#b07acc' ? 'rgba(176,122,204,0.35)' : 'rgba(74,143,168,0.35)'
     : 'rgba(255,255,255,0.05)'
   return (
-    <div style={{ marginBottom: 12, borderRadius: 'var(--neo-radius)', overflow: 'hidden', boxShadow: 'var(--neo-shadow-out-sm)', border: `1px solid ${borderCol}`, opacity: aceite ? 1 : .5, transition: 'opacity .2s,border .2s' }}>
+    <div className="ia-card" style={{ marginBottom: 12, borderRadius: 'var(--neo-radius)', overflow: 'hidden', boxShadow: 'var(--neo-shadow-out-sm)', border: `1px solid ${borderCol}`, opacity: aceite ? 1 : .5, transition: 'opacity .2s,border .2s' }}>
       <div style={{ display: 'flex', alignItems: 'center', padding: '12px 14px', background: 'var(--neo-bg2)', gap: 10 }}>
         <button onClick={onToggle} style={{ width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer', background: aceite ? cor : 'var(--neo-bg)', boxShadow: aceite ? 'var(--neo-shadow-in-sm)' : 'var(--neo-shadow-out-sm)', position: 'relative', transition: 'all .2s', flexShrink: 0 }}>
           <div style={{ position: 'absolute', top: 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', left: aceite ? 18 : 2, transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }} />
