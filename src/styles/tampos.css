@@ -506,3 +506,39 @@
   background: var(--neo-bg);
   box-shadow: var(--neo-shadow-in-sm), var(--neo-glow-gold);
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE — Tampos mobile
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 639px) {
+
+  /* Topbar — compactar */
+  .neo-topbar {
+    padding: 0 12px !important;
+    height: 48px !important;
+    gap: 6px !important;
+  }
+
+  /* Tabs Peças/Referências — mais compactas */
+  .neo-tabs { margin: 8px 12px !important; }
+
+  /* Painéis neo-surface — padding reduzido */
+  .neo-surface { border-radius: 8px !important; }
+
+  /* Segmentos — empilhar campos em coluna */
+  .neo-seg {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* Inputs numéricos — fonte ligeiramente menor */
+  .neo-input-num { font-size: 16px !important; }
+
+  /* Botões de transporte — 1 por linha em ecrãs muito pequenos */
+}
+
+@media (max-width: 359px) {
+  .neo-transp { padding: 8px 4px !important; font-size: 10px; }
+}

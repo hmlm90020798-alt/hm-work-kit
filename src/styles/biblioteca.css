@@ -283,3 +283,93 @@
   font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
   color: var(--neo-text2);
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE — mobile first
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Topbar: 2 linhas no mobile ─────────────────────────────────────────── */
+@media (max-width: 639px) {
+
+  .bib-topbar {
+    flex-wrap: wrap;
+    height: auto !important;
+    min-height: 52px;
+    padding: 8px 10px !important;
+    gap: 7px !important;
+    align-items: center;
+  }
+
+  /* Linha 1: categoria (flex-shrink) + pesquisa (flex-grow) */
+  .bib-topbar .bib-cat-btn  { order: 1; flex-shrink: 0; max-width: 130px; }
+  .bib-topbar > div:nth-child(2) { order: 2; flex: 1 1 0; min-width: 0; }
+
+  /* Linha 2: todos os filtros + acções — em scroll horizontal */
+  .bib-topbar > button,
+  .bib-topbar > div:not(:nth-child(2)) {
+    order: 3;
+    flex-shrink: 0;
+  }
+
+  /* Esconder Import no mobile (funcionalidade secundária) */
+  .bib-topbar .bib-import-btn { display: none; }
+
+  /* + Artigo mais compacto */
+  .bib-add-btn {
+    padding: 6px 12px !important;
+    font-size: 9px !important;
+  }
+}
+
+/* ── ArtCard: layout compacto no mobile ─────────────────────────────────── */
+@media (max-width: 479px) {
+
+  .bib-art-card { padding: 10px 10px !important; }
+
+  /* Ref + copy: fonte menor */
+  .bib-art-ref { font-size: 13px !important; }
+
+  /* Botões de acção — esconder ✎ e ✕ por defeito, mostrar só no expanded */
+  .bib-art-card:not(.expanded) .bib-act-btn { display: none !important; }
+
+  /* No expanded, mostrar todos os botões */
+  .bib-art-card.expanded .bib-act-btn { display: flex !important; }
+
+  /* + Orç mais compacto */
+  .bib-art-card .bib-orc-btn {
+    padding: 3px 7px !important;
+    font-size: 8px !important;
+  }
+
+  /* Link ↗ mais pequeno */
+  .bib-art-card a[target="_blank"] {
+    width: 24px !important;
+    height: 24px !important;
+    font-size: 10px !important;
+  }
+
+  /* Descrição — dar mais espaço no mobile */
+  .bib-art-card .bib-art-desc-wrap {
+    min-width: 0;
+    flex: 1 !important;
+  }
+}
+
+/* ── Grelha de categorias — 2 colunas no mobile ─────────────────────────── */
+@media (max-width: 479px) {
+  .bib-cat-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 6px !important;
+  }
+  .bib-cat-card { padding: 10px 10px !important; }
+  .bib-cat-card-name { font-size: 11px !important; }
+}
+
+/* ── Modal artigo — padding reduzido ────────────────────────────────────── */
+@media (max-width: 479px) {
+  .neo-modal { padding: 20px 14px 28px !important; }
+  .frow.half {
+    grid-template-columns: 1fr !important;  /* empilhar campos no mobile */
+  }
+}

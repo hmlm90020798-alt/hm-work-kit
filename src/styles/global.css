@@ -923,3 +923,125 @@ div[style*="borderBottom:'1px solid rgba(255,255,255,0.05)'"]:hover {
   border-color: transparent;
 }
 .neo-transp.active div { color: #0f0d08 !important; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE GLOBAL — ajustes mobile para todas as páginas
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Topbars gerais ─────────────────────────────────────────────────────── */
+@media (max-width: 639px) {
+  .neo-topbar {
+    padding: 0 12px !important;
+    gap: 6px !important;
+  }
+
+  /* Títulos de secção mais pequenos */
+  .neo-topbar span {
+    font-size: 11px !important;
+  }
+}
+
+/* ── Modais — ocupar mais ecrã no mobile ────────────────────────────────── */
+@media (max-width: 639px) {
+  .neo-modal {
+    padding: 20px 14px 32px !important;
+    max-height: 94vh !important;
+  }
+  .neo-modal-head {
+    font-size: 14px !important;
+    margin-bottom: 16px !important;
+  }
+  .frow { margin-bottom: 18px !important; }
+  .frow.half {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Dropdowns — largura mínima maior no mobile ─────────────────────────── */
+@media (max-width: 639px) {
+  .neo-dropdown {
+    min-width: 160px !important;
+  }
+}
+
+/* ── Cards e listas — padding reduzido ──────────────────────────────────── */
+@media (max-width: 479px) {
+  .neo-surface { border-radius: 8px !important; }
+
+  /* Chips mais compactos */
+  .neo-chip-sm {
+    padding: 4px 8px !important;
+    font-size: 8px !important;
+  }
+
+  /* Botões de acção */
+  .neo-btn {
+    height: 30px !important;
+    padding: 0 12px !important;
+    font-size: 9px !important;
+  }
+}
+
+/* ── Orçamentos — OrcItem compacto ─────────────────────────────────────── */
+@media (max-width: 479px) {
+  /* Grupos colapsáveis — header mais compacto */
+  .neo-hover[style*="margin:'0 12px"] {
+    margin: 0 8px 5px !important;
+  }
+}
+
+/* ── MaoDeObra — topbar multi-linha ────────────────────────────────────── */
+@media (max-width: 639px) {
+  .neo-topbar[style*="flexWrap"] {
+    padding: 8px 10px !important;
+    height: auto !important;
+    min-height: 48px !important;
+  }
+}
+
+/* ── IA — textarea mais compacta ────────────────────────────────────────── */
+@media (max-width: 479px) {
+  textarea.neo-input {
+    min-height: 100px !important;
+  }
+}
+
+/* ── Proposta — inputs de valor ────────────────────────────────────────── */
+@media (max-width: 479px) {
+  /* Input de valor mais estreito */
+  input[type="number"][style*="width: 100"] {
+    font-size: 18px !important;
+  }
+}
+
+/* ── Touch targets — mínimo 44px para acessibilidade ───────────────────── */
+@media (max-width: 639px) {
+  button, a[role="button"] {
+    min-height: 36px;
+  }
+  /* Excepção para botões muito pequenos decorativos */
+  .bib-act-btn, .neo-modal-close, .neo-qty-btn {
+    min-height: 28px !important;
+  }
+}
+
+/* ── Scroll horizontal suave em listas de chips ────────────────────────── */
+.bib-subs, [style*="overflowX:'auto'"], [style*='overflowX:"auto"'] {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.bib-subs::-webkit-scrollbar { display: none; }
+
+/* ── Prevenir zoom em inputs iOS ────────────────────────────────────────── */
+@media (max-width: 639px) {
+  input, textarea, select {
+    font-size: 16px !important;   /* iOS não faz zoom se >= 16px */
+  }
+  /* Excepções — labels e chips onde queremos fonte pequena */
+  .neo-chip-sm, .neo-label, .bib-badge,
+  [style*="fontSize:9"], [style*="fontSize:8"],
+  [style*="fontSize:'9px'"], [style*="fontSize:'8px'"] {
+    font-size: inherit !important;
+  }
+}

@@ -240,7 +240,7 @@ export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCop
           )}
         </div>
 
-        <button onClick={() => setImportModal(true)} style={{flexShrink:0,background:'transparent',border:'1px solid var(--neo-gold2)',borderRadius:'var(--neo-radius-pill)',padding:'0 12px',height:34,cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:600,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--neo-gold)',whiteSpace:'nowrap'}}>
+        <button onClick={() => setImportModal(true)} className="bib-import-btn" style={{flexShrink:0,background:'transparent',border:'1px solid var(--neo-gold2)',borderRadius:'var(--neo-radius-pill)',padding:'0 12px',height:34,cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:600,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--neo-gold)',whiteSpace:'nowrap'}}>
           ↑ Import
         </button>
         {copiedRefs.size > 0 && (
@@ -436,7 +436,7 @@ function ArtCard({ art, onEdit, onDel, onStar, onToggleKC, showToast, onAddOrc, 
 
         {/* Ícones direita */}
         <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0}} onClick={e=>e.stopPropagation()}>
-          <button onClick={handleAddOrc} style={{padding:'4px 10px',borderRadius:'var(--neo-radius-pill)',border:'none',background:added?'linear-gradient(145deg,#d4b87a,#b8924a)':'var(--neo-bg2)',boxShadow:added?'var(--neo-shadow-in-sm),var(--neo-glow-gold)':'var(--neo-shadow-out-sm)',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:added?'#1a1610':'var(--neo-text2)',transition:'all .2s',whiteSpace:'nowrap'}}>
+          <button onClick={handleAddOrc} className="bib-orc-btn" style={{padding:'4px 10px',borderRadius:'var(--neo-radius-pill)',border:'none',background:added?'linear-gradient(145deg,#d4b87a,#b8924a)':'var(--neo-bg2)',boxShadow:added?'var(--neo-shadow-in-sm),var(--neo-glow-gold)':'var(--neo-shadow-out-sm)',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:added?'#1a1610':'var(--neo-text2)',transition:'all .2s',whiteSpace:'nowrap'}}>
             {added?'✓ Orç':'+ Orç'}
           </button>
           {art.link&&(
