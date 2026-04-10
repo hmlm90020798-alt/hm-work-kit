@@ -95,7 +95,7 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone, cop
             {calculos.map(c=>{
               const res=totProj(c)
               return(
-                <div key={c.id} className="neo-surface" style={{padding:'11px 14px',marginBottom:6,display:'flex',alignItems:'center',gap:10,cursor:'pointer'}}
+                <div key={c.id} className="neo-surface tampo-calc" style={{padding:'11px 14px',marginBottom:6,display:'flex',alignItems:'center',gap:10,cursor:'pointer'}}
                   onClick={()=>setCurrent({...c})}>
                   <div style={{flex:1}}>
                     <div style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--neo-text)',marginBottom:1}}>{c.nome||'Sem nome'}</div>
@@ -147,7 +147,7 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone, cop
               const pvpMin=Math.min(...esps.map(([,v])=>v.pvp))
               const pvpMax=Math.max(...esps.map(([,v])=>v.pvp))
               return(
-                <div key={i} style={{
+                <div key={i} className="tampo-mat" style={{
                   background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',
                   boxShadow:'var(--neo-shadow-out-sm)',marginBottom:5,
                   padding:'11px 14px',display:'flex',alignItems:'center',gap:12
@@ -772,11 +772,11 @@ function RefRow({label,c1,pvp,unidade,refAnigraco,calc,showToast,markCopied,copi
   const wasCopiedAn = refAnigraco ? copiedRefs?.has(refAnigraco) : false
   const anyWasCopied = wasCopiedC1 || wasCopiedAn
 
-  return<div style={{
+  return<div className="tampo-ref-row" style={{
     borderBottom:'1px solid rgba(255,255,255,0.05)',
     background: anyWasCopied ? 'rgba(200,169,110,0.04)' : 'transparent',
     borderLeft: anyWasCopied ? '2px solid rgba(200,169,110,0.4)' : '2px solid transparent',
-    transition:'background .2s, border-color .2s',
+    transition:'background .2s, border-color .2s, padding-left .18s',
   }}>
     <div style={{display:'flex',alignItems:'center',padding:'9px 16px',gap:10}}>
       <div style={{flex:1,minWidth:0}}>
@@ -830,7 +830,7 @@ function MaterialModal({tipoProjeto,onSelect,onClose}){
       <div className="neo-scroll neo-well" style={{maxHeight:'42vh',overflowY:'auto',padding:'4px 0'}}>
         {lista.map((m,i)=>{
           const esps=Object.entries(m.espessuras)
-          return<div key={i} onClick={()=>onSelect(tipo,m.desc,m.grupo,esps[0][0])}
+          return<div key={i} className="tampo-modal-item" onClick={()=>onSelect(tipo,m.desc,m.grupo,esps[0][0])}
             style={{padding:'11px 14px',borderBottom:'1px solid rgba(255,255,255,0.04)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
             <div>
               <div style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,letterSpacing:'0.06em',textTransform:'uppercase',color:'var(--neo-text)'}}>{m.desc}</div>
