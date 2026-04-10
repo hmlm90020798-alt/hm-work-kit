@@ -170,85 +170,99 @@ export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCop
     <>
     <div className="bib-screen">
 
-      {/* TOPBAR */}
+      {/* TOPBAR — duas linhas no mobile, uma linha no desktop */}
       <div className="bib-topbar">
-        <button className={`bib-cat-btn ${catOpen?'open':''}`} onClick={() => { setCatOpen(o=>!o); setSortOpen(false); setSupplierOpen(false) }}>
-          <span className="bib-cat-btn-label">{activeCat}{activeSub ? ' · '+activeSub : ''}</span>
-          <span className="bib-cat-btn-arrow">▼</span>
-        </button>
 
-        <div style={{flex:1,position:'relative'}}>
-          <input className="bib-search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Pesquisar artigo, referência…"/>
-          {search
-            ? <button onClick={()=>setSearch('')} style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text2)',fontSize:13,lineHeight:1}}>✕</button>
-            : <span style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',color:'var(--neo-text2)',fontSize:14,pointerEvents:'none'}}>⌕</span>
-          }
-        </div>
-
-        {/* Estrelas — filtro toggle */}
-        <button onClick={()=>setOnlyStars(o=>!o)} title="Só estrelas" style={{
-          flexShrink:0,background:onlyStars?'linear-gradient(145deg,#d4b87a,#b8924a)':'var(--neo-bg2)',
-          border:'none',borderRadius:'var(--neo-radius-pill)',width:34,height:34,
-          cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',
-          boxShadow:onlyStars?'var(--neo-shadow-in-sm),var(--neo-glow-gold)':'var(--neo-shadow-out-sm)',
-          color:onlyStars?'#1a1610':'var(--neo-text2)',transition:'all .2s',
-        }}>★</button>
-
-        {/* KC — filtro toggle */}
-        <button onClick={()=>setOnlyKC(o=>!o)} title="Só artigos KC" style={{
-          flexShrink:0,
-          background:onlyKC?'linear-gradient(145deg,#6ec6e8,#3a7a9e)':'var(--neo-bg2)',
-          border:'none',borderRadius:'var(--neo-radius-pill)',padding:'0 10px',height:34,
-          cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:700,
-          letterSpacing:'0.14em',
-          boxShadow:onlyKC?'var(--neo-shadow-in-sm),0 0 8px rgba(110,198,232,0.4)':'var(--neo-shadow-out-sm)',
-          color:onlyKC?'#0f1e26':'var(--neo-text2)',transition:'all .2s',whiteSpace:'nowrap',
-        }}>KC</button>
-
-        {/* Marca */}
-        <div style={{position:'relative',flexShrink:0}}>
-          <button onClick={()=>{setSupplierOpen(o=>!o);setSortOpen(false);setCatOpen(false)}} style={{
-            background:supplierFilter?'linear-gradient(145deg,#d4b87a,#b8924a)':'var(--neo-bg2)',
-            border:'none',borderRadius:'var(--neo-radius-pill)',padding:'0 12px',height:34,
-            cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:600,
-            letterSpacing:'0.1em',textTransform:'uppercase',
-            color:supplierFilter?'#1a1610':'var(--neo-text2)',
-            boxShadow:supplierFilter?'var(--neo-shadow-in-sm),var(--neo-glow-gold)':'var(--neo-shadow-out-sm)',
-            display:'flex',alignItems:'center',gap:5,whiteSpace:'nowrap',transition:'all .2s',
-          }}>
-            {supplierFilter ? <>{supplierFilter} <span onClick={e=>{e.stopPropagation();setSupplierFilter('');setSupplierOpen(false)}} style={{opacity:.7}}>✕</span></> : 'Marca'}
+        {/* ── LINHA 1: categoria + pesquisa ── */}
+        <div className="bib-topbar-row1">
+          <button className={`bib-cat-btn ${catOpen?'open':''}`} onClick={() => { setCatOpen(o=>!o); setSortOpen(false); setSupplierOpen(false) }}>
+            <span className="bib-cat-btn-label">{activeCat}{activeSub ? ' · '+activeSub : ''}</span>
+            <span className="bib-cat-btn-arrow">▼</span>
           </button>
-          {supplierOpen&&suppliersAvailable.length>0&&(
-            <div className="neo-dropdown" style={{position:'absolute',top:'calc(100% + 6px)',right:0,background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out)',zIndex:50,minWidth:150,overflow:'hidden'}}>
-              <button onClick={()=>{setSupplierFilter('');setSupplierOpen(false)}} style={{display:'block',width:'100%',padding:'9px 14px',background:!supplierFilter?'var(--neo-bg)':'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.1em',textTransform:'uppercase',color:!supplierFilter?'var(--neo-gold)':'var(--neo-text2)',textAlign:'left'}}>Todas</button>
-              {suppliersAvailable.map(s=>(
-                <button key={s} onClick={()=>{setSupplierFilter(s);setSupplierOpen(false)}} style={{display:'block',width:'100%',padding:'9px 14px',background:supplierFilter===s?'var(--neo-bg)':'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.1em',textTransform:'uppercase',color:supplierFilter===s?'var(--neo-gold)':'var(--neo-text2)',textAlign:'left',transition:'background .12s'}}>{s}</button>
-              ))}
-            </div>
-          )}
+
+          <div style={{flex:1,position:'relative'}}>
+            <input className="bib-search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Pesquisar artigo, referência…"/>
+            {search
+              ? <button onClick={()=>setSearch('')} style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text2)',fontSize:13,lineHeight:1}}>✕</button>
+              : <span style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',color:'var(--neo-text2)',fontSize:14,pointerEvents:'none'}}>⌕</span>
+            }
+          </div>
         </div>
 
-        {/* Ordenar */}
-        <div style={{position:'relative',flexShrink:0}}>
-          <button onClick={()=>{setSortOpen(o=>!o);setSupplierOpen(false);setCatOpen(false)}} style={{background:'var(--neo-bg2)',border:'none',borderRadius:'var(--neo-radius-pill)',width:34,height:34,cursor:'pointer',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'var(--neo-shadow-out-sm)',color:'var(--neo-text2)'}}>⇅</button>
-          {sortOpen&&(
-            <div className="neo-dropdown" style={{position:'absolute',top:'calc(100% + 6px)',right:0,background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out)',zIndex:50,minWidth:140,overflow:'hidden'}}>
-              {SORT_OPTS.filter(o=>o.value!=='star').map(o=>(
-                <button key={o.value} onClick={()=>{setSort(o.value);setSortOpen(false)}} style={{display:'block',width:'100%',padding:'10px 14px',background:sort===o.value?'var(--neo-bg)':'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.1em',textTransform:'uppercase',color:sort===o.value?'var(--neo-gold)':'var(--neo-text2)',textAlign:'left',transition:'background .12s'}}>{o.label}</button>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* ── LINHA 2: filtros + acções ── */}
+        <div className="bib-topbar-row2">
 
-        <button onClick={() => setImportModal(true)} className="bib-import-btn" style={{flexShrink:0,background:'transparent',border:'1px solid var(--neo-gold2)',borderRadius:'var(--neo-radius-pill)',padding:'0 12px',height:34,cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:600,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--neo-gold)',whiteSpace:'nowrap'}}>
-          ↑ Import
-        </button>
-        {copiedRefs.size > 0 && (
-          <button onClick={clearCopied} title="Limpar marcações de copiado" style={{flexShrink:0,background:'rgba(200,169,110,0.12)',border:'1px solid rgba(200,169,110,0.3)',borderRadius:'var(--neo-radius-pill)',padding:'0 10px',height:34,cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-gold)',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:5}}>
-            ✓ {copiedRefs.size} <span style={{opacity:.6,fontWeight:400}}>limpar</span>
+          {/* Estrelas */}
+          <button onClick={()=>setOnlyStars(o=>!o)} title="Só estrelas" style={{
+            flexShrink:0,background:onlyStars?'linear-gradient(145deg,#d4b87a,#b8924a)':'var(--neo-bg2)',
+            border:'none',borderRadius:'var(--neo-radius-pill)',width:34,height:34,
+            cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',
+            boxShadow:onlyStars?'var(--neo-shadow-in-sm),var(--neo-glow-gold)':'var(--neo-shadow-out-sm)',
+            color:onlyStars?'#1a1610':'var(--neo-text2)',transition:'all .2s',
+          }}>★</button>
+
+          {/* KC */}
+          <button onClick={()=>setOnlyKC(o=>!o)} title="Só artigos KC" style={{
+            flexShrink:0,
+            background:onlyKC?'linear-gradient(145deg,#6ec6e8,#3a7a9e)':'var(--neo-bg2)',
+            border:'none',borderRadius:'var(--neo-radius-pill)',padding:'0 10px',height:34,
+            cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:700,
+            letterSpacing:'0.14em',
+            boxShadow:onlyKC?'var(--neo-shadow-in-sm),0 0 8px rgba(110,198,232,0.4)':'var(--neo-shadow-out-sm)',
+            color:onlyKC?'#0f1e26':'var(--neo-text2)',transition:'all .2s',whiteSpace:'nowrap',
+          }}>KC</button>
+
+          {/* Marca */}
+          <div style={{position:'relative',flexShrink:0}}>
+            <button onClick={()=>{setSupplierOpen(o=>!o);setSortOpen(false);setCatOpen(false)}} style={{
+              background:supplierFilter?'linear-gradient(145deg,#d4b87a,#b8924a)':'var(--neo-bg2)',
+              border:'none',borderRadius:'var(--neo-radius-pill)',padding:'0 12px',height:34,
+              cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:600,
+              letterSpacing:'0.1em',textTransform:'uppercase',
+              color:supplierFilter?'#1a1610':'var(--neo-text2)',
+              boxShadow:supplierFilter?'var(--neo-shadow-in-sm),var(--neo-glow-gold)':'var(--neo-shadow-out-sm)',
+              display:'flex',alignItems:'center',gap:5,whiteSpace:'nowrap',transition:'all .2s',
+            }}>
+              {supplierFilter ? <>{supplierFilter} <span onClick={e=>{e.stopPropagation();setSupplierFilter('');setSupplierOpen(false)}} style={{opacity:.7}}>✕</span></> : 'Marca'}
+            </button>
+            {supplierOpen&&suppliersAvailable.length>0&&(
+              <div className="neo-dropdown" style={{position:'absolute',top:'calc(100% + 6px)',right:0,background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out)',zIndex:50,minWidth:150,overflow:'hidden'}}>
+                <button onClick={()=>{setSupplierFilter('');setSupplierOpen(false)}} style={{display:'block',width:'100%',padding:'9px 14px',background:!supplierFilter?'var(--neo-bg)':'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.1em',textTransform:'uppercase',color:!supplierFilter?'var(--neo-gold)':'var(--neo-text2)',textAlign:'left'}}>Todas</button>
+                {suppliersAvailable.map(s=>(
+                  <button key={s} onClick={()=>{setSupplierFilter(s);setSupplierOpen(false)}} style={{display:'block',width:'100%',padding:'9px 14px',background:supplierFilter===s?'var(--neo-bg)':'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.1em',textTransform:'uppercase',color:supplierFilter===s?'var(--neo-gold)':'var(--neo-text2)',textAlign:'left',transition:'background .12s'}}>{s}</button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Ordenar */}
+          <div style={{position:'relative',flexShrink:0}}>
+            <button onClick={()=>{setSortOpen(o=>!o);setSupplierOpen(false);setCatOpen(false)}} style={{background:'var(--neo-bg2)',border:'none',borderRadius:'var(--neo-radius-pill)',width:34,height:34,cursor:'pointer',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'var(--neo-shadow-out-sm)',color:'var(--neo-text2)'}}>⇅</button>
+            {sortOpen&&(
+              <div className="neo-dropdown" style={{position:'absolute',top:'calc(100% + 6px)',right:0,background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out)',zIndex:50,minWidth:140,overflow:'hidden'}}>
+                {SORT_OPTS.filter(o=>o.value!=='star').map(o=>(
+                  <button key={o.value} onClick={()=>{setSort(o.value);setSortOpen(false)}} style={{display:'block',width:'100%',padding:'10px 14px',background:sort===o.value?'var(--neo-bg)':'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.1em',textTransform:'uppercase',color:sort===o.value?'var(--neo-gold)':'var(--neo-text2)',textAlign:'left',transition:'background .12s'}}>{o.label}</button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Import — escondido no mobile via CSS */}
+          <button onClick={() => setImportModal(true)} className="bib-import-btn" style={{flexShrink:0,background:'transparent',border:'1px solid var(--neo-gold2)',borderRadius:'var(--neo-radius-pill)',padding:'0 12px',height:34,cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:600,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--neo-gold)',whiteSpace:'nowrap'}}>
+            ↑ Import
           </button>
-        )}
-        <button className="bib-add-btn" onClick={openAdd}>+ Artigo</button>
+
+          {/* Limpar cópias */}
+          {copiedRefs.size > 0 && (
+            <button onClick={clearCopied} title="Limpar marcações de copiado" style={{flexShrink:0,background:'rgba(200,169,110,0.12)',border:'1px solid rgba(200,169,110,0.3)',borderRadius:'var(--neo-radius-pill)',padding:'0 10px',height:34,cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-gold)',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:5}}>
+              ✓ {copiedRefs.size} <span style={{opacity:.6,fontWeight:400}}>limpar</span>
+            </button>
+          )}
+
+          {/* + Artigo */}
+          <button className="bib-add-btn" onClick={openAdd}>+ Artigo</button>
+
+        </div>
       </div>
 
       {/* PAINEL CATEGORIAS */}
