@@ -260,3 +260,261 @@ a[target="_blank"]:hover { opacity: .75; text-decoration: underline; }
   border: 1px solid rgba(200,169,110,.1) !important;
 }
 .neo-seg:focus-within { border-color: rgba(200,169,110,.28) !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADIÇÕES — Abril 2026
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Contraste textos secundários — melhorado globalmente ──────────────── */
+/* neo-text2 era #5a5a55 — demasiado escuro para labels e badges */
+:root {
+  --neo-text2: #7a7a72;   /* era #5a5a55 — +contraste */
+}
+
+/* ── neo-chip-sm — estado base e activo ─────────────────────────────────── */
+.neo-chip-sm {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 5px 12px; border-radius: var(--neo-radius-pill);
+  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--neo-bg2);
+  box-shadow: var(--neo-shadow-out-sm);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--neo-text2);
+  cursor: pointer; transition: all .18s;
+  white-space: nowrap;
+}
+.neo-chip-sm:hover:not(.active) {
+  border-color: rgba(200,169,110,.3) !important;
+  color: var(--neo-text) !important;
+}
+.neo-chip-sm.active {
+  background: linear-gradient(145deg, #d4b87a, #b8924a);
+  box-shadow: var(--neo-shadow-in-sm), 0 0 12px rgba(200,169,110,.35);
+  border-color: transparent;
+  color: #1a1610;
+  font-weight: 700;
+}
+
+/* ── neo-tab — tabs principais (ex: Peças / Referências nos Tampos) ─────── */
+.neo-tabs {
+  display: flex;
+  background: var(--neo-bg);
+  border-radius: var(--neo-radius-pill);
+  padding: 3px;
+  box-shadow: var(--neo-shadow-in-sm);
+  gap: 2px;
+}
+.neo-tab {
+  flex: 1; height: 30px;
+  border: none; border-radius: var(--neo-radius-pill);
+  background: transparent;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--neo-text2);
+  cursor: pointer; transition: all .18s;
+}
+.neo-tab:hover:not(.active) { color: var(--neo-text); }
+.neo-tab.active {
+  background: linear-gradient(145deg, #d4b87a, #b8924a);
+  box-shadow: var(--neo-shadow-out-sm), 0 0 10px rgba(200,169,110,.3);
+  color: #1a1610;
+  font-weight: 700;
+}
+
+/* ── neo-btn — base e variantes ─────────────────────────────────────────── */
+.neo-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; border-radius: var(--neo-radius-pill);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  cursor: pointer; transition: all .18s; white-space: nowrap;
+  height: 34px; padding: 0 16px;
+}
+.neo-btn-gold {
+  background: linear-gradient(145deg, #d4b87a, #b8924a);
+  box-shadow: var(--neo-shadow-out-sm);
+  color: #1a1610;
+}
+.neo-btn-gold:hover:not(:disabled) {
+  box-shadow: var(--neo-shadow-out-sm), 0 0 14px rgba(200,169,110,.4) !important;
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+.neo-btn-ghost {
+  background: var(--neo-bg2);
+  box-shadow: var(--neo-shadow-out-sm);
+  color: var(--neo-text2);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.neo-btn-ghost:hover:not(:disabled) {
+  color: var(--neo-text) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  transform: translateY(-1px);
+}
+.neo-btn-danger {
+  background: transparent;
+  color: var(--neo-danger);
+  border: 1px solid var(--neo-danger);
+  box-shadow: var(--neo-shadow-out-sm);
+}
+.neo-btn-danger:hover:not(:disabled) {
+  background: rgba(139,48,48,.15);
+  box-shadow: var(--neo-shadow-out-sm), 0 0 10px rgba(139,48,48,.25);
+  transform: translateY(-1px);
+}
+.neo-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── neo-copy — botão de copiar com estado ──────────────────────────────── */
+.neo-copy {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--neo-bg); border: none;
+  border-radius: var(--neo-radius-pill);
+  padding: 3px 9px;
+  box-shadow: var(--neo-shadow-out-sm);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--neo-text);
+  cursor: pointer; transition: all .15s;
+}
+.neo-copy:hover { color: var(--neo-gold); }
+.neo-copy.copied,
+.neo-copy:has(.neo-copy-icon:not(:empty)) {
+  box-shadow: var(--neo-shadow-in-sm), var(--neo-glow-gold);
+  color: var(--neo-gold);
+}
+.neo-copy.copied { box-shadow: var(--neo-shadow-in-sm), var(--neo-glow-gold); color: var(--neo-gold); }
+.neo-copy-icon { font-size: 9px; color: var(--neo-text2); transition: color .15s; }
+.neo-copy.copied .neo-copy-icon { color: var(--neo-gold); }
+
+/* ── neo-screen / neo-topbar / neo-surface / neo-well ───────────────────── */
+.neo-screen {
+  display: flex; flex-direction: column;
+  height: 100%; overflow: hidden;
+  background: var(--neo-bg); color: var(--neo-text);
+  font-family: 'Barlow', sans-serif;
+}
+.neo-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px; height: 52px;
+  background: var(--neo-bg); flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4);
+}
+.neo-surface {
+  background: var(--neo-bg2);
+  border-radius: var(--neo-radius-sm);
+  box-shadow: var(--neo-shadow-out-sm);
+}
+.neo-well {
+  background: var(--neo-bg);
+  border-radius: var(--neo-radius-sm);
+  box-shadow: var(--neo-shadow-in-sm);
+}
+
+/* ── neo-input / neo-input-num / neo-label ──────────────────────────────── */
+.neo-input {
+  width: 100%;
+  background: var(--neo-bg);
+  border: none; border-radius: var(--neo-radius-sm);
+  box-shadow: var(--neo-shadow-in-sm);
+  padding: 10px 14px;
+  font-family: 'Barlow', sans-serif;
+  font-size: 13px; font-weight: 300;
+  color: #ede9e1 !important;
+  outline: none; transition: box-shadow .15s;
+}
+.neo-input:focus { box-shadow: var(--neo-shadow-in-sm), 0 0 0 1px rgba(200,169,110,.25); }
+.neo-input::placeholder { color: rgba(200,190,175,.25) !important; }
+.neo-input-num {
+  background: var(--neo-bg);
+  border: none; border-bottom: 1px solid var(--neo-gold2);
+  padding: 6px 4px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 18px; font-weight: 400;
+  color: #ede9e1 !important; outline: none;
+  transition: border-color .15s; width: 100%;
+}
+.neo-input-num:focus { border-bottom-color: var(--neo-gold); }
+.neo-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: #8a8680 !important; display: block; margin-bottom: 8px;
+}
+
+/* ── neo-overlay / neo-modal / neo-modal-head / neo-modal-close ─────────── */
+.neo-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.88);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 200; opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+@media (min-width: 600px) {
+  .neo-overlay { align-items: center; }
+}
+.neo-overlay.open { opacity: 1; pointer-events: all; }
+.neo-modal {
+  background: var(--neo-bg2);
+  border-radius: var(--neo-radius) var(--neo-radius) 0 0;
+  border: 1px solid rgba(255,255,255,.06);
+  width: 100%; max-width: 560px;
+  padding: 24px 20px 32px;
+  max-height: 90vh; overflow-y: auto;
+  transform: translateY(20px); transition: transform .2s;
+}
+@media (min-width: 600px) {
+  .neo-modal { border-radius: var(--neo-radius); transform: translateY(12px); }
+}
+.neo-overlay.open .neo-modal { transform: translateY(0); }
+.neo-modal-head {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 16px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--neo-text);
+  margin-bottom: 20px; padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.neo-modal-close {
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid rgba(255,255,255,.08);
+  border-radius: var(--neo-radius-pill); cursor: pointer;
+  color: var(--neo-text2); font-size: 12px; transition: all .15s;
+}
+.neo-modal-close:hover { color: var(--neo-text); border-color: rgba(255,255,255,.2); }
+.modal-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  margin-top: 24px; padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+
+/* ── Hierarquia de títulos neo ──────────────────────────────────────────── */
+.neo-h1 { color: var(--neo-text); }
+.neo-h2 { color: #8a8a82; }
+.neo-h3 { color: var(--neo-gold); }
+
+/* ── bib-sub-chip e bib-cat-card — estado activo ────────────────────────── */
+.bib-sub-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 4px 12px; border-radius: var(--neo-radius-pill);
+  border: 1px solid rgba(255,255,255,0.07);
+  background: var(--neo-bg2); box-shadow: var(--neo-shadow-out-sm);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--neo-text2); cursor: pointer; transition: all .18s;
+}
+.bib-sub-chip.active {
+  background: linear-gradient(145deg, #d4b87a, #b8924a);
+  box-shadow: var(--neo-shadow-in-sm), 0 0 10px rgba(200,169,110,.3);
+  border-color: transparent; color: #1a1610; font-weight: 700;
+}
+.bib-cat-card.active {
+  background: linear-gradient(145deg, #d4b87a, #b8924a) !important;
+  box-shadow: var(--neo-shadow-in-sm), 0 0 12px rgba(200,169,110,.35) !important;
+  border-color: transparent !important; color: #1a1610 !important;
+}
+.bib-cat-card.active .bib-cat-card-name { color: #1a1610 !important; }
+.bib-cat-card.active .bib-cat-card-count { color: rgba(26,22,16,.6) !important; }
