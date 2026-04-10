@@ -265,10 +265,14 @@ a[target="_blank"]:hover { opacity: .75; text-decoration: underline; }
    ADIÇÕES — Abril 2026
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Contraste textos secundários — melhorado globalmente ──────────────── */
-/* neo-text2 era #5a5a55 — demasiado escuro para labels e badges */
+/* ── Contraste melhorado globalmente ────────────────────────────────────── */
 :root {
-  --neo-text2: #7a7a72;   /* era #5a5a55 — +contraste */
+  /* Textos secundários mais legíveis */
+  --neo-text2: #8a8a82;       /* era #5a5a55 → muito mais legível */
+  --neo-text:  #f0ede8;       /* texto principal — máximo contraste */
+
+  /* Fundos ligeiramente mais claros para maior separação visual */
+  --neo-bg2:   #181816;       /* era #141413 */
 }
 
 /* ── neo-chip-sm — estado base e activo ─────────────────────────────────── */
@@ -290,10 +294,10 @@ a[target="_blank"]:hover { opacity: .75; text-decoration: underline; }
   color: var(--neo-text) !important;
 }
 .neo-chip-sm.active {
-  background: linear-gradient(145deg, #d4b87a, #b8924a);
+  background: linear-gradient(145deg, #e8cc8a, #c8943a);
   box-shadow: var(--neo-shadow-in-sm), 0 0 12px rgba(200,169,110,.35);
   border-color: transparent;
-  color: #1a1610;
+  color: #0f0d08;
   font-weight: 700;
 }
 
@@ -318,9 +322,9 @@ a[target="_blank"]:hover { opacity: .75; text-decoration: underline; }
 }
 .neo-tab:hover:not(.active) { color: var(--neo-text); }
 .neo-tab.active {
-  background: linear-gradient(145deg, #d4b87a, #b8924a);
+  background: linear-gradient(145deg, #e8cc8a, #c8943a);
   box-shadow: var(--neo-shadow-out-sm), 0 0 10px rgba(200,169,110,.3);
-  color: #1a1610;
+  color: #0f0d08;
   font-weight: 700;
 }
 
@@ -335,9 +339,10 @@ a[target="_blank"]:hover { opacity: .75; text-decoration: underline; }
   height: 34px; padding: 0 16px;
 }
 .neo-btn-gold {
-  background: linear-gradient(145deg, #d4b87a, #b8924a);
+  background: linear-gradient(145deg, #e8cc8a, #c8943a);
   box-shadow: var(--neo-shadow-out-sm);
-  color: #1a1610;
+  color: #0f0d08;
+  font-weight: 700;
 }
 .neo-btn-gold:hover:not(:disabled) {
   box-shadow: var(--neo-shadow-out-sm), 0 0 14px rgba(200,169,110,.4) !important;
@@ -507,14 +512,69 @@ a[target="_blank"]:hover { opacity: .75; text-decoration: underline; }
   color: var(--neo-text2); cursor: pointer; transition: all .18s;
 }
 .bib-sub-chip.active {
-  background: linear-gradient(145deg, #d4b87a, #b8924a);
+  background: linear-gradient(145deg, #e8cc8a, #c8943a);
   box-shadow: var(--neo-shadow-in-sm), 0 0 10px rgba(200,169,110,.3);
-  border-color: transparent; color: #1a1610; font-weight: 700;
+  border-color: transparent; color: #0f0d08; font-weight: 700;
 }
 .bib-cat-card.active {
-  background: linear-gradient(145deg, #d4b87a, #b8924a) !important;
+  background: linear-gradient(145deg, #e8cc8a, #c8943a) !important;
   box-shadow: var(--neo-shadow-in-sm), 0 0 12px rgba(200,169,110,.35) !important;
-  border-color: transparent !important; color: #1a1610 !important;
+  border-color: transparent !important; color: #0f0d08 !important;
 }
-.bib-cat-card.active .bib-cat-card-name { color: #1a1610 !important; }
-.bib-cat-card.active .bib-cat-card-count { color: rgba(26,22,16,.6) !important; }
+.bib-cat-card.active .bib-cat-card-name { color: #0f0d08 !important; }
+.bib-cat-card.active .bib-cat-card-count { color: rgba(15,13,8,.6) !important; }
+
+/* ── Contraste adicional — inputs, labels, placeholders ────────────────── */
+/* Garantir legibilidade mesmo em monitores com calibração diferente */
+.neo-input, .neo-input-num, textarea.neo-input {
+  color: #f0ede8 !important;
+  font-weight: 300;
+}
+.neo-input::placeholder, textarea.neo-input::placeholder {
+  color: rgba(240,237,232,.22) !important;
+}
+.neo-label, label.neo-label {
+  color: #9a9690 !important;
+  letter-spacing: 0.2em;
+}
+
+/* Labels da topbar e títulos de secção */
+.neo-topbar span[style*="uppercase"],
+.neo-screen div[style*="uppercase"] {
+  color: var(--neo-text) !important;
+}
+
+/* Textos de subsecção / descrição no menu */
+/* (cor inline no App.jsx — não podemos sobrescrever aqui sem !important) */
+
+/* Separadores e bordas mais visíveis */
+.neo-surface, .neo-well {
+  border: 1px solid rgba(255,255,255,.06);
+}
+
+/* Ghost button — mais legível */
+.neo-btn-ghost {
+  color: #9a9690 !important;
+}
+.neo-btn-ghost:hover:not(:disabled) {
+  color: #f0ede8 !important;
+}
+
+/* Badges e chips inativos — mais legíveis */
+.neo-chip-sm:not(.active) {
+  color: #9a9690;
+}
+.neo-tab:not(.active) {
+  color: #9a9690;
+}
+
+/* Texto dentro de cards expandidos */
+.bib-art-card, .neo-surface {
+  color: var(--neo-text);
+}
+
+/* Toast — mais contrastado */
+.toast {
+  color: #c8c4bc !important;
+  background: #1e1e1c !important;
+}

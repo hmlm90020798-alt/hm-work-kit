@@ -1,5 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { db } from './firebase'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
 import Biblioteca from './pages/Biblioteca'
 import Modelos from './pages/Modelos'
 import Orcamentos from './pages/Orcamentos'
@@ -23,30 +25,58 @@ const PAGES = [
   { id:'proposta',   label:'Proposta',   sub:'Decomposição do orçamento' },
 ]
 
-const MENU_ORDER_KEY = 'hm_menu_order'
+const DEFAULT_ORDER = PAGES.map(p => p.id)
 
-function loadMenuOrder() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(MENU_ORDER_KEY))
-    if (Array.isArray(saved) && saved.length === PAGES.length) return saved
-  } catch {}
-  return PAGES.map(p => p.id)
-}
+// Referência Firestore para preferências do utilizador
+const prefsRef = (uid) => doc(db, 'preferencias', uid)
 
 function Shell() {
   const { user, loading, logout } = useAuth()
   const [page, setPage]           = useState('biblioteca')
   const [menuOpen, setMenuOpen]   = useState(true)
   const [editMenu, setEditMenu]   = useState(false)
-  const [menuOrder, setMenuOrder] = useState(loadMenuOrder)
+  const [menuOrder, setMenuOrder] = useState(DEFAULT_ORDER)
+  const [prefsLoaded, setPrefsLoaded] = useState(false)
   const [tampoParaAbrir, setTampoParaAbrir] = useState(null)
   const { msg, visible, showToast } = useToast()
 
   // ── Estado global de referências copiadas ─────────────────────────────────
-  // Partilhado por todas as páginas — persiste enquanto a sessão estiver aberta
   const [copiedRefs, setCopiedRefs] = useState(new Set())
   const markCopied  = (ref) => setCopiedRefs(prev => new Set([...prev, ref]))
   const clearCopied = () => setCopiedRefs(new Set())
+
+  // ── Carregar preferências do Firestore ────────────────────────────────────
+  useEffect(() => {
+    if (!user) return
+    getDoc(prefsRef(user.uid)).then(snap => {
+      if (snap.exists()) {
+        const data = snap.data()
+        // Ordem do menu — validar que tem todos os ids
+        if (Array.isArray(data.menuOrder) && data.menuOrder.length === PAGES.length) {
+          setMenuOrder(data.menuOrder)
+        }
+      } else {
+        // Primeira vez — tentar migrar do localStorage se existir
+        try {
+          const saved = JSON.parse(localStorage.getItem('hm_menu_order'))
+          if (Array.isArray(saved) && saved.length === PAGES.length) {
+            setMenuOrder(saved)
+            // Guardar no Firestore e limpar localStorage
+            setDoc(prefsRef(user.uid), { menuOrder: saved }, { merge: true }).catch(() => {})
+            localStorage.removeItem('hm_menu_order')
+          }
+        } catch {}
+      }
+      setPrefsLoaded(true)
+    }).catch(() => {
+      // Fallback localStorage se Firestore falhar
+      try {
+        const saved = JSON.parse(localStorage.getItem('hm_menu_order'))
+        if (Array.isArray(saved) && saved.length === PAGES.length) setMenuOrder(saved)
+      } catch {}
+      setPrefsLoaded(true)
+    })
+  }, [user])
 
   const orderedPages = menuOrder
     .map(id => PAGES.find(p => p.id === id))
@@ -58,12 +88,16 @@ function Shell() {
       const newIdx = idx + dir
       if (newIdx < 0 || newIdx >= arr.length) return prev
       const tmp = arr[idx]; arr[idx] = arr[newIdx]; arr[newIdx] = tmp
-      localStorage.setItem(MENU_ORDER_KEY, JSON.stringify(arr))
+      // Guardar no Firestore
+      setDoc(prefsRef(user.uid), { menuOrder: arr }, { merge: true }).catch(() => {
+        // Fallback localStorage
+        localStorage.setItem('hm_menu_order', JSON.stringify(arr))
+      })
       return arr
     })
   }
 
-  if (loading) return (
+  if (loading || !prefsLoaded && user) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#0a0a09' }}>
       <span style={{ fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.24em', color:'#2e2e2b', textTransform:'uppercase' }}>A carregar</span>
     </div>
@@ -72,8 +106,6 @@ function Shell() {
   if (!user) return <Login />
 
   const goTo = (id) => { setPage(id); setMenuOpen(false) }
-
-  // Props de cópia partilhadas por todas as páginas
   const copyProps = { copiedRefs, markCopied, clearCopied }
 
   return (
@@ -86,22 +118,17 @@ function Shell() {
         background:'#0a0a09', flexShrink:0, position:'relative', zIndex:10,
         boxShadow: menuOpen ? 'none' : '0 1px 0 rgba(255,255,255,0.04)'
       }}>
-        {/* Hambúrguer */}
         <button onClick={() => setMenuOpen(o=>!o)} style={{ background:'transparent', border:'none', cursor:'pointer', padding:'6px', display:'flex', flexDirection:'column', gap:5 }}>
-          <span style={{ display:'block', width:22, height:1, background:'rgba(255,255,255,0.4)', transition:'all .25s',
-            transform: menuOpen ? 'rotate(45deg) translateY(3px)' : 'none' }}/>
-          <span style={{ display:'block', width:14, height:1, background:'rgba(255,255,255,0.4)', transition:'all .25s',
-            opacity: menuOpen ? 0 : 1 }}/>
-          {!menuOpen && <span style={{ display:'block', width:22, height:1, background:'rgba(255,255,255,0.4)', transform: menuOpen ? 'rotate(-45deg) translateY(-3px)' : 'none', transition:'all .25s' }}/>}
+          <span style={{ display:'block', width:22, height:1, background:'rgba(255,255,255,0.4)', transition:'all .25s', transform: menuOpen ? 'rotate(45deg) translateY(3px)' : 'none' }}/>
+          <span style={{ display:'block', width:14, height:1, background:'rgba(255,255,255,0.4)', transition:'all .25s', opacity: menuOpen ? 0 : 1 }}/>
+          {!menuOpen && <span style={{ display:'block', width:22, height:1, background:'rgba(255,255,255,0.4)', transition:'all .25s' }}/>}
           {menuOpen  && <span style={{ display:'block', width:22, height:1, background:'rgba(255,255,255,0.4)', transform:'rotate(-45deg) translateY(-3px)', transition:'all .25s' }}/>}
         </button>
 
-        {/* Logo */}
         <div style={{ position:'absolute', left:'50%', transform:'translateX(-50%)', fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:700, letterSpacing:'0.22em', textTransform:'uppercase', color:'#f0ede8', whiteSpace:'nowrap', pointerEvents:'none' }}>
           HM·<span style={{ color:'#c8a96e' }}>WK</span>
         </div>
 
-        {/* Contador de cópias + botão limpar — visível no header quando há refs copiadas */}
         {copiedRefs.size > 0 && (
           <button onClick={clearCopied} title="Limpar marcações de referências copiadas"
             style={{ position:'absolute', right:60, top:'50%', transform:'translateY(-50%)',
@@ -114,30 +141,22 @@ function Shell() {
           </button>
         )}
 
-        {/* Avatar */}
         {user.photoURL
           ? <img src={user.photoURL} alt="" style={{ width:30, height:30, borderRadius:'50%', border:'1px solid rgba(255,255,255,0.08)' }}/>
           : <div style={{ width:30, height:30, borderRadius:'50%', background:'#c8a96e', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'#1a1610' }}>{(user.displayName||'U')[0].toUpperCase()}</div>
         }
       </header>
 
-      {/* MENU — ocupa o ecrã todo */}
+      {/* MENU */}
       {menuOpen && (
-        <div style={{
-          position:'fixed', inset:0, top:52, background:'#0a0a09', zIndex:9,
-          display:'flex', flexDirection:'column', overflow:'hidden'
-        }}>
-          {/* Linha decorativa */}
+        <div style={{ position:'fixed', inset:0, top:52, background:'#0a0a09', zIndex:9, display:'flex', flexDirection:'column', overflow:'hidden' }}>
           <div style={{ height:1, background:'linear-gradient(90deg, transparent 0%, rgba(200,169,110,0.3) 50%, transparent 100%)', flexShrink:0 }}/>
 
-          {/* Nav — scroll quando não cabe */}
           <nav style={{ flex:1, overflowY:'auto', padding:'0 28px' }}>
             {orderedPages.map((p, i) => {
               const isActive = page === p.id
               return (
                 <div key={p.id} style={{ display:'flex', alignItems:'center', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
-
-                  {/* Botões de reordenação */}
                   {editMenu && (
                     <div style={{ display:'flex', flexDirection:'column', gap:3, marginRight:12, flexShrink:0 }}>
                       <button onClick={() => moveMenuItem(i,-1)} disabled={i===0}
@@ -146,30 +165,13 @@ function Shell() {
                         style={{ background:'transparent', border:'none', cursor:i===orderedPages.length-1?'default':'pointer', color:i===orderedPages.length-1?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.35)', fontSize:10, lineHeight:1, padding:'2px 4px' }}>▼</button>
                     </div>
                   )}
-
                   <button onClick={() => !editMenu && goTo(p.id)}
-                    style={{
-                      flex:1, background:'transparent', border:'none',
-                      padding:'clamp(10px, 2vh, 20px) 0', cursor: editMenu ? 'default' : 'pointer',
-                      textAlign:'left', display:'flex', alignItems:'center', justifyContent:'space-between',
-                      gap:16, transition:'all .15s', opacity: editMenu ? 0.7 : 1,
-                    }}>
+                    style={{ flex:1, background:'transparent', border:'none', padding:'clamp(10px, 2vh, 20px) 0', cursor: editMenu ? 'default' : 'pointer', textAlign:'left', display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, transition:'all .15s', opacity: editMenu ? 0.7 : 1 }}>
                     <div>
-                      <div style={{
-                        fontFamily:"'Barlow Condensed'",
-                        fontSize: 'clamp(22px, 4vh, 40px)',
-                        fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase',
-                        color: isActive && !editMenu ? '#c8a96e' : '#f0ede8',
-                        lineHeight:1, transition:'all .2s'
-                      }}>
+                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:'clamp(22px, 4vh, 40px)', fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase', color: isActive && !editMenu ? '#c8a96e' : '#f0ede8', lineHeight:1, transition:'all .2s' }}>
                         {p.label}
                       </div>
-                      <div style={{
-                        fontFamily:"'Barlow Condensed'",
-                        fontSize:'clamp(8px, 1.2vh, 10px)', letterSpacing:'0.14em', textTransform:'uppercase',
-                        color: isActive && !editMenu ? '#8a6e3a' : '#3d3d39',
-                        marginTop:3, transition:'color .2s'
-                      }}>
+                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:'clamp(8px, 1.2vh, 10px)', letterSpacing:'0.14em', textTransform:'uppercase', color: isActive && !editMenu ? '#8a6e3a' : '#5a5a55', marginTop:3, transition:'color .2s' }}>
                         {p.sub}
                       </div>
                     </div>
@@ -180,15 +182,10 @@ function Shell() {
             })}
           </nav>
 
-          {/* Rodapé */}
           <div style={{ padding:'12px 28px', borderTop:'1px solid rgba(255,255,255,0.04)', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
             <div>
-              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, letterSpacing:'0.1em', textTransform:'uppercase', color:'#f0ede8', marginBottom:2 }}>
-                {user.displayName || ''}
-              </div>
-              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'#3d3d39' }}>
-                {user.email}
-              </div>
+              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, letterSpacing:'0.1em', textTransform:'uppercase', color:'#f0ede8', marginBottom:2 }}>{user.displayName || ''}</div>
+              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'#6a6762' }}>{user.email}</div>
             </div>
             <div style={{ display:'flex', gap:8, alignItems:'center' }}>
               <button onClick={() => setEditMenu(o=>!o)} style={{ background: editMenu ? 'rgba(200,169,110,0.15)' : 'transparent', border:'1px solid rgba(255,255,255,0.08)', borderRadius:20, padding:'6px 12px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color: editMenu ? '#c8a96e' : '#6a6762', transition:'all .15s' }}>
@@ -208,7 +205,7 @@ function Shell() {
         {page === 'modelos'    && <Modelos    showToast={showToast} {...copyProps} />}
         {page === 'orcamentos' && <Orcamentos showToast={showToast} {...copyProps} onOpenTampo={(c)=>{ setTampoParaAbrir(c); setPage('tampos') }} />}
         {page === 'tampos'     && <Tampos     showToast={showToast} {...copyProps} abrirCalculo={tampoParaAbrir} onAbrirCalculoDone={()=>setTampoParaAbrir(null)} />}
-        {page === 'maodeobra'  && <MaoDeObra  showToast={showToast} {...copyProps} />}
+        {page === 'maodeobra'  && <MaoDeObra  showToast={showToast} {...copyProps} userId={user.uid} />}
         {page === 'ia'         && <IA         showToast={showToast} {...copyProps} />}
         {page === 'kc'         && <KC         showToast={showToast} {...copyProps} />}
         {page === 'proposta'   && <Proposta   showToast={showToast} />}

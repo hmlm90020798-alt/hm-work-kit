@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
+import { db } from '../firebase'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { MAO_DE_OBRA } from '../data/maoDeObra'
 import { addToOrcamento } from '../hooks/useOrcamento'
 
@@ -16,27 +18,60 @@ const TIPO_COLOR = { standard:'var(--neo-text2)', visita:'#4a8fa8', opcional:'va
 
 function f2(n) { return parseFloat(n||0).toFixed(2) }
 
-const MO_ORDER_KEY     = 'hm_mo_sub_order'
-const MO_COLLAPSED_KEY = 'hm_mo_collapsed'
+// Referência Firestore — preferências MO por utilizador
+const moPrefsRef = (uid) => doc(db, 'preferencias', uid)
 
-export default function MaoDeObra({ showToast, copiedRefs, markCopied }) {
+export default function MaoDeObra({ showToast, copiedRefs, markCopied, userId }) {
   const [seccao,    setSeccao]    = useState('Todos')
   const [search,    setSearch]    = useState('')
   const [tipo,      setTipo]      = useState('Todos')
   const [showTrans, setShowTrans] = useState(false)
-  const [collapsed, setCollapsed] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(MO_COLLAPSED_KEY)) || {} } catch { return {} }
-  })
-  const [subOrder, setSubOrder] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(MO_ORDER_KEY)) || [] } catch { return [] }
-  })
+  const [collapsed, setCollapsed] = useState({})
+  const [subOrder,  setSubOrder]  = useState([])
 
+  // ── Carregar preferências do Firestore ──────────────────────────────────
+  useEffect(() => {
+    if (!userId) return
+    getDoc(moPrefsRef(userId)).then(snap => {
+      if (snap.exists()) {
+        const data = snap.data()
+        if (data.moCollapsed) setCollapsed(data.moCollapsed)
+        if (Array.isArray(data.moSubOrder)) setSubOrder(data.moSubOrder)
+      } else {
+        // Migrar do localStorage se existir
+        try {
+          const savedOrder     = JSON.parse(localStorage.getItem('hm_mo_sub_order')) || []
+          const savedCollapsed = JSON.parse(localStorage.getItem('hm_mo_collapsed'))  || {}
+          if (savedOrder.length || Object.keys(savedCollapsed).length) {
+            setSubOrder(savedOrder)
+            setCollapsed(savedCollapsed)
+            setDoc(moPrefsRef(userId), { moSubOrder: savedOrder, moCollapsed: savedCollapsed }, { merge: true }).catch(() => {})
+            localStorage.removeItem('hm_mo_sub_order')
+            localStorage.removeItem('hm_mo_collapsed')
+          }
+        } catch {}
+      }
+    }).catch(() => {
+      // Fallback localStorage se Firestore falhar
+      try {
+        setSubOrder(JSON.parse(localStorage.getItem('hm_mo_sub_order')) || [])
+        setCollapsed(JSON.parse(localStorage.getItem('hm_mo_collapsed')) || {})
+      } catch {}
+    })
+  }, [userId])
+
+  // ── Persistir collapsed ────────────────────────────────────────────────
   const toggleCollapsed = (sub) => setCollapsed(p => {
     const next = {...p, [sub]: !p[sub]}
-    localStorage.setItem(MO_COLLAPSED_KEY, JSON.stringify(next))
+    if (userId) {
+      setDoc(moPrefsRef(userId), { moCollapsed: next }, { merge: true }).catch(() => {
+        localStorage.setItem('hm_mo_collapsed', JSON.stringify(next))
+      })
+    }
     return next
   })
 
+  // ── Persistir subOrder ─────────────────────────────────────────────────
   const moveGroup = (sub, dir, currentSubs) => {
     setSubOrder(prev => {
       const subs = prev.length > 0 ? [...prev] : [...currentSubs]
@@ -46,7 +81,11 @@ export default function MaoDeObra({ showToast, copiedRefs, markCopied }) {
       if (newIdx < 0 || newIdx >= subs.length) return prev
       const arr = [...subs]
       const tmp = arr[idx]; arr[idx] = arr[newIdx]; arr[newIdx] = tmp
-      localStorage.setItem(MO_ORDER_KEY, JSON.stringify(arr))
+      if (userId) {
+        setDoc(moPrefsRef(userId), { moSubOrder: arr }, { merge: true }).catch(() => {
+          localStorage.setItem('hm_mo_sub_order', JSON.stringify(arr))
+        })
+      }
       return arr
     })
   }
