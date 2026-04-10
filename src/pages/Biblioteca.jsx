@@ -27,11 +27,20 @@ function sortArts(arts, sort) {
   })
 }
 
-export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCopied }) {
+export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCopied, catFiltroInicial, onCatFiltroUsado }) {
   const [cats, setCats]           = useState([])
   const [arts, setArts]           = useState([])
-  const [activeCat, setActiveCat] = useState('Todos')
+  const [activeCat, setActiveCat] = useState(catFiltroInicial || 'Todos')
   const [activeSub, setActiveSub] = useState('')
+
+  // Aplicar filtro de categoria vindo do Projecto (navegação contextual)
+  useEffect(() => {
+    if (catFiltroInicial) {
+      setActiveCat(catFiltroInicial)
+      setActiveSub('')
+      onCatFiltroUsado?.()
+    }
+  }, [catFiltroInicial])
   const [search, setSearch]       = useState('')
   const [sort, setSort]           = useState('ref')
   const [sortOpen, setSortOpen]   = useState(false)

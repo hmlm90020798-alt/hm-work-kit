@@ -10,58 +10,57 @@ import MaoDeObra from './pages/MaoDeObra'
 import IA from './pages/IA'
 import KC from './pages/KC'
 import Proposta from './pages/Proposta'
+import Projecto from './pages/Projecto'
 import Login from './pages/Login'
 import Toast from './components/Toast'
 import { useToast } from './hooks/useToast'
 
 const PAGES = [
-  { id:'biblioteca', label:'Biblioteca', sub:'Artigos e referências' },
-  { id:'modelos',    label:'Modelos',    sub:'Templates de projecto' },
-  { id:'orcamentos', label:'Orçamentos', sub:'Cálculo de material' },
-  { id:'tampos',     label:'Tampos',     sub:'Calculadora ANIGRACO' },
-  { id:'maodeobra',  label:'Mão de Obra',sub:'Serviços e instalações' },
-  { id:'ia',         label:'IA',         sub:'Assistente de orçamentação' },
-  { id:'kc',         label:'KC',         sub:'Cozinhas Centralizadas' },
-  { id:'proposta',   label:'Proposta',   sub:'Decomposição do orçamento' },
+  { id:'projecto',   label:'Novo Projecto', sub:'Guia passo a passo'        },
+  { id:'biblioteca', label:'Biblioteca',    sub:'Artigos e referências'      },
+  { id:'modelos',    label:'Kits',          sub:'Templates de projecto'      },
+  { id:'orcamentos', label:'Orçamentos',    sub:'Cálculo de material'        },
+  { id:'tampos',     label:'Tampos',        sub:'Calculadora ANIGRACO'       },
+  { id:'maodeobra',  label:'Mão de Obra',   sub:'Serviços e instalações'     },
+  { id:'ia',         label:'IA',            sub:'Assistente de orçamentação' },
+  { id:'kc',         label:'KC',            sub:'Cozinhas Centralizadas'     },
+  { id:'proposta',   label:'Proposta',      sub:'Decomposição do orçamento'  },
 ]
 
 const DEFAULT_ORDER = PAGES.map(p => p.id)
-
-// Referência Firestore para preferências do utilizador
 const prefsRef = (uid) => doc(db, 'preferencias', uid)
 
 function Shell() {
   const { user, loading, logout } = useAuth()
-  const [page, setPage]           = useState('biblioteca')
-  const [menuOpen, setMenuOpen]   = useState(true)
-  const [editMenu, setEditMenu]   = useState(false)
-  const [menuOrder, setMenuOrder] = useState(DEFAULT_ORDER)
+  const [page, setPage]             = useState('projecto')   // abre no guia
+  const [menuOpen, setMenuOpen]     = useState(true)
+  const [editMenu, setEditMenu]     = useState(false)
+  const [menuOrder, setMenuOrder]   = useState(DEFAULT_ORDER)
   const [prefsLoaded, setPrefsLoaded] = useState(false)
   const [tampoParaAbrir, setTampoParaAbrir] = useState(null)
+  // filtro de categoria para quando o Projecto navega para a Biblioteca
+  const [bibCatFiltro, setBibCatFiltro] = useState(null)
   const { msg, visible, showToast } = useToast()
 
-  // ── Estado global de referências copiadas ─────────────────────────────────
+  // Estado global de referências copiadas
   const [copiedRefs, setCopiedRefs] = useState(new Set())
   const markCopied  = (ref) => setCopiedRefs(prev => new Set([...prev, ref]))
   const clearCopied = () => setCopiedRefs(new Set())
 
-  // ── Carregar preferências do Firestore ────────────────────────────────────
+  // Carregar preferências do Firestore
   useEffect(() => {
     if (!user) return
     getDoc(prefsRef(user.uid)).then(snap => {
       if (snap.exists()) {
         const data = snap.data()
-        // Ordem do menu — validar que tem todos os ids
         if (Array.isArray(data.menuOrder) && data.menuOrder.length === PAGES.length) {
           setMenuOrder(data.menuOrder)
         }
       } else {
-        // Primeira vez — tentar migrar do localStorage se existir
         try {
           const saved = JSON.parse(localStorage.getItem('hm_menu_order'))
           if (Array.isArray(saved) && saved.length === PAGES.length) {
             setMenuOrder(saved)
-            // Guardar no Firestore e limpar localStorage
             setDoc(prefsRef(user.uid), { menuOrder: saved }, { merge: true }).catch(() => {})
             localStorage.removeItem('hm_menu_order')
           }
@@ -69,7 +68,6 @@ function Shell() {
       }
       setPrefsLoaded(true)
     }).catch(() => {
-      // Fallback localStorage se Firestore falhar
       try {
         const saved = JSON.parse(localStorage.getItem('hm_menu_order'))
         if (Array.isArray(saved) && saved.length === PAGES.length) setMenuOrder(saved)
@@ -78,9 +76,7 @@ function Shell() {
     })
   }, [user])
 
-  const orderedPages = menuOrder
-    .map(id => PAGES.find(p => p.id === id))
-    .filter(Boolean)
+  const orderedPages = menuOrder.map(id => PAGES.find(p => p.id === id)).filter(Boolean)
 
   const moveMenuItem = (idx, dir) => {
     setMenuOrder(prev => {
@@ -88,16 +84,14 @@ function Shell() {
       const newIdx = idx + dir
       if (newIdx < 0 || newIdx >= arr.length) return prev
       const tmp = arr[idx]; arr[idx] = arr[newIdx]; arr[newIdx] = tmp
-      // Guardar no Firestore
       setDoc(prefsRef(user.uid), { menuOrder: arr }, { merge: true }).catch(() => {
-        // Fallback localStorage
         localStorage.setItem('hm_menu_order', JSON.stringify(arr))
       })
       return arr
     })
   }
 
-  if (loading || !prefsLoaded && user) return (
+  if (loading || (!prefsLoaded && user)) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#0a0a09' }}>
       <span style={{ fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.24em', color:'#2e2e2b', textTransform:'uppercase' }}>A carregar</span>
     </div>
@@ -106,7 +100,21 @@ function Shell() {
   if (!user) return <Login />
 
   const goTo = (id) => { setPage(id); setMenuOpen(false) }
+
+  // Navegação a partir do Projecto — permite passar filtro de categoria
+  const navegarDeProjecto = (destino, catFiltro = null) => {
+    setBibCatFiltro(catFiltro)
+    setPage(destino)
+    setMenuOpen(false)
+  }
+
   const copyProps = { copiedRefs, markCopied, clearCopied }
+
+  // Cor de destaque por página — "Novo Projecto" tem cor especial
+  const corPagina = (id) => {
+    if (id === 'projecto') return '#e8cc8a'
+    return '#f0ede8'
+  }
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden', background:'#0a0a09' }}>
@@ -130,7 +138,7 @@ function Shell() {
         </div>
 
         {copiedRefs.size > 0 && (
-          <button onClick={clearCopied} title="Limpar marcações de referências copiadas"
+          <button onClick={clearCopied}
             style={{ position:'absolute', right:60, top:'50%', transform:'translateY(-50%)',
               background:'rgba(200,169,110,0.12)', border:'1px solid rgba(200,169,110,0.3)',
               borderRadius:'var(--neo-radius-pill)', padding:'4px 10px', cursor:'pointer',
@@ -154,7 +162,8 @@ function Shell() {
 
           <nav style={{ flex:1, overflowY:'auto', padding:'0 28px' }}>
             {orderedPages.map((p, i) => {
-              const isActive = page === p.id
+              const isActive  = page === p.id
+              const isGuia    = p.id === 'projecto'
               return (
                 <div key={p.id} style={{ display:'flex', alignItems:'center', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
                   {editMenu && (
@@ -167,16 +176,47 @@ function Shell() {
                   )}
                   <button onClick={() => !editMenu && goTo(p.id)}
                     className="menu-item"
-                    style={{ flex:1, background:'transparent', border:'none', padding:'clamp(10px, 2vh, 20px) 0', cursor: editMenu ? 'default' : 'pointer', textAlign:'left', display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, transition:'all .15s', opacity: editMenu ? 0.7 : 1 }}>
+                    style={{
+                      flex:1, background:'transparent', border:'none',
+                      padding: isGuia ? 'clamp(12px,2.2vh,22px) 0' : 'clamp(10px,2vh,20px) 0',
+                      cursor: editMenu ? 'default' : 'pointer',
+                      textAlign:'left', display:'flex', alignItems:'center', justifyContent:'space-between',
+                      gap:16, transition:'all .15s', opacity: editMenu ? 0.7 : 1,
+                    }}>
                     <div>
-                      <div className="menu-label" style={{ fontFamily:"'Barlow Condensed'", fontSize:'clamp(22px, 4vh, 40px)', fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase', color: isActive && !editMenu ? '#c8a96e' : '#f0ede8', lineHeight:1, transition:'all .25s' }}>
+                      <div className="menu-label" style={{
+                        fontFamily:"'Barlow Condensed'",
+                        fontSize: isGuia ? 'clamp(20px,3.6vh,36px)' : 'clamp(22px,4vh,40px)',
+                        fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase',
+                        color: isActive && !editMenu
+                          ? (isGuia ? '#e8cc8a' : '#c8a96e')
+                          : corPagina(p.id),
+                        lineHeight:1, transition:'all .25s',
+                      }}>
+                        {/* Indicador especial para Novo Projecto */}
+                        {isGuia && !isActive && (
+                          <span style={{
+                            display:'inline-block', width:7, height:7,
+                            borderRadius:'50%', background:'#e8cc8a',
+                            boxShadow:'0 0 8px rgba(232,204,138,0.6)',
+                            marginRight:10, verticalAlign:'middle',
+                            position:'relative', top:-1,
+                          }}/>
+                        )}
                         {p.label}
                       </div>
-                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:'clamp(8px, 1.2vh, 10px)', letterSpacing:'0.14em', textTransform:'uppercase', color: isActive && !editMenu ? '#8a6e3a' : '#5a5a55', marginTop:3, transition:'color .2s' }}>
+                      <div style={{
+                        fontFamily:"'Barlow Condensed'",
+                        fontSize:'clamp(8px,1.2vh,10px)', letterSpacing:'0.14em', textTransform:'uppercase',
+                        color: isActive && !editMenu
+                          ? (isGuia ? '#b8943a' : '#8a6e3a')
+                          : '#5a5a55',
+                        marginTop:3, transition:'color .2s',
+                      }}>
                         {p.sub}
                       </div>
                     </div>
-                    {!editMenu && <span className="menu-arrow" style={{ fontFamily:"'Barlow Condensed'", fontSize:14, color: isActive ? '#8a6e3a' : '#2a2a27', transition:'color .2s, transform .2s' }}>→</span>}
+                    {!editMenu && <span className="menu-arrow" style={{ fontFamily:"'Barlow Condensed'", fontSize:14, color: isActive ? (isGuia ? '#b8943a' : '#8a6e3a') : '#2a2a27', transition:'color .2s, transform .2s' }}>→</span>}
                   </button>
                 </div>
               )
@@ -202,7 +242,8 @@ function Shell() {
 
       {/* PÁGINA */}
       <main style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
-        {page === 'biblioteca' && <Biblioteca showToast={showToast} {...copyProps} />}
+        {page === 'projecto'   && <Projecto   showToast={showToast} onNavegar={navegarDeProjecto} />}
+        {page === 'biblioteca' && <Biblioteca showToast={showToast} {...copyProps} catFiltroInicial={bibCatFiltro} onCatFiltroUsado={()=>setBibCatFiltro(null)} />}
         {page === 'modelos'    && <Modelos    showToast={showToast} {...copyProps} />}
         {page === 'orcamentos' && <Orcamentos showToast={showToast} {...copyProps} onOpenTampo={(c)=>{ setTampoParaAbrir(c); setPage('tampos') }} />}
         {page === 'tampos'     && <Tampos     showToast={showToast} {...copyProps} abrirCalculo={tampoParaAbrir} onAbrirCalculoDone={()=>setTampoParaAbrir(null)} />}

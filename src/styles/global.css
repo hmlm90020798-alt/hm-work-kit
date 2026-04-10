@@ -1045,3 +1045,63 @@ div[style*="borderBottom:'1px solid rgba(255,255,255,0.05)'"]:hover {
     font-size: inherit !important;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PROJECTO — guia passo a passo
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Cards de tipo de projecto ──────────────────────────────────────────── */
+.proj-tipo-card {
+  transition: background .2s, box-shadow .25s, transform .2s, border-color .2s;
+  position: relative;
+}
+.proj-tipo-card:hover {
+  background: #191e22 !important;
+  box-shadow:
+    var(--neo-shadow-out-sm),
+    0 0 0 1px rgba(56,189,248,.25),
+    0 0 22px rgba(56,189,248,.18) !important;
+  transform: translateY(-3px);
+  border-color: rgba(56,189,248,.3) !important;
+}
+.proj-tipo-card:hover span:first-child {
+  filter: drop-shadow(0 0 8px rgba(56,189,248,.5));
+  transform: scale(1.1);
+  display: inline-block;
+  transition: all .2s;
+}
+.proj-tipo-card:active { transform: translateY(0); }
+
+/* ── Cards de componente (checkbox) ────────────────────────────────────── */
+.proj-comp-card {
+  transition: background .18s, box-shadow .2s, border-color .18s !important;
+}
+.proj-comp-card:hover {
+  box-shadow:
+    var(--neo-shadow-out-sm),
+    0 0 0 1px rgba(56,189,248,.2),
+    0 0 14px rgba(56,189,248,.12) !important;
+}
+
+/* ── Cards de kit ───────────────────────────────────────────────────────── */
+.proj-kit-card {
+  transition: background .18s, box-shadow .2s, border-color .18s !important;
+}
+.proj-kit-card:hover {
+  box-shadow:
+    var(--neo-shadow-out-sm),
+    0 0 0 1px rgba(200,169,110,.2),
+    0 0 14px rgba(200,169,110,.1) !important;
+}
+
+/* ── Indicador ponto dourado no menu (Novo Projecto) ────────────────────── */
+/* Animação de pulse no ponto */
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 6px rgba(232,204,138,0.5); opacity: 1; }
+  50%       { box-shadow: 0 0 14px rgba(232,204,138,0.8); opacity: 0.7; }
+}
+.menu-item:first-child span[style*="border-radius:'50%'"],
+span[style*="background:'#e8cc8a'"][style*="borderRadius"] {
+  animation: pulse-gold 2s ease-in-out infinite;
+}
