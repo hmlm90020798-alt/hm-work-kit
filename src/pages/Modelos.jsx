@@ -468,10 +468,11 @@ function ItemRow({item,onQty,onRemove,onStar,showToast,wasCopied,onCopied}){
 
   return(
     <div onClick={()=>setOpen(o=>!o)}
+      className="neo-hover"
       style={{padding:'10px 16px',borderBottom:'1px solid rgba(255,255,255,0.05)',cursor:'pointer',
         borderLeft: isMO ? '2px solid #b07acc' : wasCopied ? '2px solid rgba(200,169,110,0.5)' : '2px solid transparent',
         background: wasCopied ? 'rgba(200,169,110,0.03)' : 'transparent',
-        transition:'background .2s'}}>
+      }}>
       <div style={{display:'flex',alignItems:'center',gap:8}}>
         {/* Estrela */}
         <button onClick={e=>{e.stopPropagation();onStar()}} style={{background:'transparent',border:'none',cursor:'pointer',fontSize:13,color:item.star?'#f0c040':'var(--neo-text2)',flexShrink:0,padding:'2px'}}>

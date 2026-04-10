@@ -764,12 +764,52 @@ div[style*="borderBottom:'1px solid rgba(255,255,255,0.05)'"]:hover {
 /* ── Modelos — ModelCard já tem neo-hover ───────────────────────────────── */
 /* (já funciona) */
 
-/* ── App — itens do menu principal ─────────────────────────────────────── */
-/* Os botões de menu têm style inline — aplicamos via selector */
-nav > div > button:hover {
-  opacity: 1 !important;
+/* ── Menu principal — hover por título ──────────────────────────────────── */
+/* O efeito num menu de títulos grandes deve ser subtil e elegante —        */
+/* sem elevar o card (fica estranho em full-width), só luz e cor            */
+.menu-item {
+  position: relative;
+  transition: opacity .15s;
 }
-nav > div > button:hover > div > div:first-child {
-  text-shadow: 0 0 20px rgba(56,189,248,.35) !important;
-  color: #e4f4fc !important;
+
+/* Linha neon à esquerda — cresce ao hover */
+.menu-item::before {
+  content: '';
+  position: absolute;
+  left: -28px;               /* alinha com o padding do nav */
+  top: 25%; bottom: 25%;
+  width: 3px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(56,189,248,.7) 40%,
+    rgba(56,189,248,.7) 60%,
+    transparent
+  );
+  border-radius: 3px;
+  box-shadow: 0 0 10px rgba(56,189,248,.5), 0 0 20px rgba(56,189,248,.2);
+  opacity: 0;
+  transform: scaleY(0.4);
+  transition: opacity .25s, transform .25s;
+  pointer-events: none;
+}
+.menu-item:hover::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+/* Título — glow azul no hover */
+.menu-item:hover .menu-label {
+  color: #e8f6ff !important;
+  text-shadow:
+    0 0 30px rgba(56,189,248,.4),
+    0 0 60px rgba(56,189,248,.15) !important;
+  letter-spacing: 0.08em !important;
+}
+
+/* Seta → com cor neon */
+.menu-item:hover .menu-arrow {
+  color: rgba(56,189,248,.7) !important;
+  transform: translateX(4px);
+  transition: transform .2s, color .2s;
 }

@@ -166,16 +166,17 @@ function Shell() {
                     </div>
                   )}
                   <button onClick={() => !editMenu && goTo(p.id)}
+                    className="menu-item"
                     style={{ flex:1, background:'transparent', border:'none', padding:'clamp(10px, 2vh, 20px) 0', cursor: editMenu ? 'default' : 'pointer', textAlign:'left', display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, transition:'all .15s', opacity: editMenu ? 0.7 : 1 }}>
                     <div>
-                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:'clamp(22px, 4vh, 40px)', fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase', color: isActive && !editMenu ? '#c8a96e' : '#f0ede8', lineHeight:1, transition:'all .2s' }}>
+                      <div className="menu-label" style={{ fontFamily:"'Barlow Condensed'", fontSize:'clamp(22px, 4vh, 40px)', fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase', color: isActive && !editMenu ? '#c8a96e' : '#f0ede8', lineHeight:1, transition:'all .25s' }}>
                         {p.label}
                       </div>
                       <div style={{ fontFamily:"'Barlow Condensed'", fontSize:'clamp(8px, 1.2vh, 10px)', letterSpacing:'0.14em', textTransform:'uppercase', color: isActive && !editMenu ? '#8a6e3a' : '#5a5a55', marginTop:3, transition:'color .2s' }}>
                         {p.sub}
                       </div>
                     </div>
-                    {!editMenu && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:14, color: isActive ? '#8a6e3a' : '#2a2a27', transition:'color .2s' }}>→</span>}
+                    {!editMenu && <span className="menu-arrow" style={{ fontFamily:"'Barlow Condensed'", fontSize:14, color: isActive ? '#8a6e3a' : '#2a2a27', transition:'color .2s, transform .2s' }}>→</span>}
                   </button>
                 </div>
               )
