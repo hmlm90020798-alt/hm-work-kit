@@ -180,70 +180,131 @@ html, body, #root {
 .neo-dropdown::-webkit-scrollbar-track { background: transparent; }
 .neo-dropdown::-webkit-scrollbar-thumb { background: var(--neo-gold2); border-radius: 2px; }
 
-/* ── Hover neomórfico universal ─────────────────────────────────────────── */
+/* ── Variáveis de neon — hover de itens e botões ────────────────────────── */
+:root {
+  /* Neon azul ciano — hover de itens/cards */
+  --neon-item:       #38bdf8;
+  --neon-item-glow:  rgba(56,189,248,.22);
+  --neon-item-line:  rgba(56,189,248,.6);
+
+  /* Neon laranja âmbar — hover de botões (surpreendente no tema escuro/dourado) */
+  --neon-btn:        #fb923c;
+  --neon-btn-glow:   rgba(251,146,60,.3);
+  --neon-btn-border: rgba(251,146,60,.6);
+}
+
+/* ── Hover de itens / cards — neon azul ciano ───────────────────────────── */
 .neo-hover {
-  transition: background .2s, box-shadow .2s, transform .18s, border-color .2s !important;
+  transition: background .2s, box-shadow .25s, transform .18s, border-color .2s !important;
   position: relative;
 }
 .neo-hover:hover {
-  background: #1c1c1a !important;
+  background: #191e22 !important;
   box-shadow:
     var(--neo-shadow-out-sm),
-    0 0 0 1px rgba(200,169,110,.18),
-    0 0 18px rgba(200,169,110,.07) !important;
+    0 0 0 1px rgba(56,189,248,.22),
+    0 0 20px var(--neon-item-glow),
+    0 0 45px rgba(56,189,248,.07) !important;
   transform: translateY(-2px);
-  border-color: rgba(200,169,110,.25) !important;
+  border-color: rgba(56,189,248,.3) !important;
 }
 .neo-hover:active {
   transform: translateY(0);
-  box-shadow: var(--neo-shadow-in-sm) !important;
+  box-shadow: var(--neo-shadow-in-sm), 0 0 8px var(--neon-item-glow) !important;
 }
-/* Hierarquia 1 — texto principal */
+
+/* Textos no hover — tonalidade azul fria */
 .neo-hover:hover .neo-h1 {
-  color: #f0ede8 !important;
-  text-shadow: 0 0 12px rgba(200,169,110,.45) !important;
+  color: #f5f2ee !important;
+  text-shadow: 0 0 16px rgba(56,189,248,.28) !important;
 }
-/* Hierarquia 2 — texto secundário */
-.neo-hover:hover .neo-h2 { color: #9a9790 !important; }
-/* Hierarquia 3 — preço / ref destacado */
-.neo-hover:hover .neo-h3 { text-shadow: 0 0 8px rgba(200,169,110,.55) !important; }
-/* Linha dourada à esquerda no hover */
+.neo-hover:hover .neo-h2 { color: #a8c8da !important; }
+.neo-hover:hover .neo-h3 { text-shadow: 0 0 10px rgba(56,189,248,.45) !important; }
+
+/* Linha neon azul à esquerda no hover */
 .neo-hover::before {
   content: '';
   position: absolute;
-  left: 0; top: 20%; bottom: 20%;
+  left: 0; top: 12%; bottom: 12%;
   width: 2px;
-  background: linear-gradient(to bottom, transparent, rgba(200,169,110,.5), transparent);
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--neon-item-line) 35%,
+    var(--neon-item-line) 65%,
+    transparent
+  );
   border-radius: 2px;
   opacity: 0;
-  transition: opacity .2s;
+  transition: opacity .22s;
   pointer-events: none;
+  z-index: 1;
+  box-shadow: 0 0 6px var(--neon-item-glow);
 }
 .neo-hover:hover::before { opacity: 1; }
 
-/* ── Botões neo ─────────────────────────────────────────────────────────── */
-.neo-btn:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); }
-.neo-btn-gold:hover:not(:disabled) { box-shadow: 0 0 12px rgba(200,169,110,.35) !important; }
-.neo-btn-ghost:hover:not(:disabled) { color: var(--neo-text) !important; }
+/* ── Hover de botões — neon laranja âmbar ───────────────────────────────── */
 button:not([disabled]) { cursor: pointer; }
+.neo-btn:hover:not(:disabled) { transform: translateY(-1px); }
 
-/* ── Chips ──────────────────────────────────────────────────────────────── */
-.bib-cat-card:hover, .bib-sub-chip:hover, .neo-chip-sm:hover {
-  border-color: rgba(200,169,110,.3) !important;
-  color: var(--neo-text) !important;
+.neo-btn-gold:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow:
+    var(--neo-shadow-out-sm),
+    0 0 0 1px var(--neon-btn-border),
+    0 0 18px var(--neon-btn-glow),
+    0 0 36px rgba(251,146,60,.1) !important;
+}
+
+.neo-btn-ghost:hover:not(:disabled) {
+  color: #f0ede8 !important;
+  border-color: var(--neon-btn-border) !important;
+  box-shadow:
+    var(--neo-shadow-out-sm),
+    0 0 12px var(--neon-btn-glow) !important;
+  transform: translateY(-1px);
+}
+
+.neo-btn-danger:hover:not(:disabled) {
+  background: rgba(139,48,48,.15);
+  box-shadow:
+    var(--neo-shadow-out-sm),
+    0 0 0 1px rgba(239,68,68,.45),
+    0 0 16px rgba(239,68,68,.28) !important;
+  transform: translateY(-1px);
+}
+
+/* ── Chips hover — neon azul subtil ────────────────────────────────────── */
+.bib-cat-card:hover:not(.active),
+.bib-sub-chip:hover:not(.active),
+.neo-chip-sm:hover:not(.active) {
+  border-color: rgba(56,189,248,.35) !important;
+  color: #e4f4fc !important;
+  box-shadow: var(--neo-shadow-out-sm), 0 0 10px rgba(56,189,248,.15) !important;
 }
 
 /* ── Botões de acção (copiar, editar, eliminar) ─────────────────────────── */
-.bib-act-btn:hover, .bib-copy-btn:hover {
-  color: var(--neo-text) !important;
-  transform: scale(1.15);
+.bib-copy-btn:hover,
+.neo-copy:hover {
+  color: var(--neon-item) !important;
+  box-shadow: var(--neo-shadow-out-sm), 0 0 8px rgba(56,189,248,.22) !important;
 }
-.bib-act-btn.del:hover { color: #c07070 !important; }
+.bib-act-btn:hover {
+  color: #e4f4fc !important;
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 4px rgba(56,189,248,.45));
+}
+.bib-act-btn.del:hover {
+  color: #fca5a5 !important;
+  filter: drop-shadow(0 0 5px rgba(239,68,68,.5));
+}
 
-/* ── Rows KC ────────────────────────────────────────────────────────────── */
+/* ── Rows KC — neon azul mais intenso (já era azul, agora com glow) ─────── */
 .kc-row:hover {
-  border-left-color: #4a9ec0 !important;
-  background: rgba(74,158,192,.06) !important;
+  border-left-color: var(--neon-item) !important;
+  background: rgba(56,189,248,.05) !important;
+  box-shadow: 0 0 14px rgba(56,189,248,.12) !important;
 }
 
 /* ── Links externos ─────────────────────────────────────────────────────── */
@@ -343,33 +404,6 @@ a[target="_blank"]:hover { opacity: .75; text-decoration: underline; }
   box-shadow: var(--neo-shadow-out-sm);
   color: #0f0d08;
   font-weight: 700;
-}
-.neo-btn-gold:hover:not(:disabled) {
-  box-shadow: var(--neo-shadow-out-sm), 0 0 14px rgba(200,169,110,.4) !important;
-  filter: brightness(1.08);
-  transform: translateY(-1px);
-}
-.neo-btn-ghost {
-  background: var(--neo-bg2);
-  box-shadow: var(--neo-shadow-out-sm);
-  color: var(--neo-text2);
-  border: 1px solid rgba(255,255,255,0.06);
-}
-.neo-btn-ghost:hover:not(:disabled) {
-  color: var(--neo-text) !important;
-  border-color: rgba(255,255,255,0.12) !important;
-  transform: translateY(-1px);
-}
-.neo-btn-danger {
-  background: transparent;
-  color: var(--neo-danger);
-  border: 1px solid var(--neo-danger);
-  box-shadow: var(--neo-shadow-out-sm);
-}
-.neo-btn-danger:hover:not(:disabled) {
-  background: rgba(139,48,48,.15);
-  box-shadow: var(--neo-shadow-out-sm), 0 0 10px rgba(139,48,48,.25);
-  transform: translateY(-1px);
 }
 .neo-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -552,13 +586,6 @@ a[target="_blank"]:hover { opacity: .75; text-decoration: underline; }
   border: 1px solid rgba(255,255,255,.06);
 }
 
-/* Ghost button — mais legível */
-.neo-btn-ghost {
-  color: #9a9690 !important;
-}
-.neo-btn-ghost:hover:not(:disabled) {
-  color: #f0ede8 !important;
-}
 
 /* Badges e chips inativos — mais legíveis */
 .neo-chip-sm:not(.active) {
