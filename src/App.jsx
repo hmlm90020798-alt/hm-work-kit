@@ -242,6 +242,43 @@ function Shell() {
 
       {/* PÁGINA */}
       <main style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
+
+        {/* Banner "← Voltar ao Projecto" — visível em todas as páginas excepto no próprio Projecto */}
+        {page !== 'projecto' && (() => {
+          const estado = (() => { try { return JSON.parse(localStorage.getItem('hm_proj_estado')) } catch { return null } })()
+          const temProjecto = estado && estado.passo && estado.passo !== 'tipo'
+          if (!temProjecto) return null
+          const tipoLabel = estado.tipo
+            ? (['cozinha','banho','closet','suite','escritorio','outro'].includes(estado.tipo)
+                ? {cozinha:'🍳 Cozinha',banho:'🚿 Casa de Banho',closet:'👕 Closet',suite:'🛏 Suíte',escritorio:'💼 Escritório',outro:'✦ Outro'}[estado.tipo]
+                : estado.tipo)
+            : null
+          return (
+            <button onClick={() => goTo('projecto')} style={{
+              display:'flex', alignItems:'center', gap:10,
+              padding:'8px 16px', background:'rgba(200,169,110,0.07)',
+              border:'none', borderBottom:'1px solid rgba(200,169,110,0.15)',
+              cursor:'pointer', width:'100%', textAlign:'left',
+              flexShrink:0, transition:'background .15s',
+            }}
+            onMouseOver={e=>e.currentTarget.style.background='rgba(200,169,110,0.12)'}
+            onMouseOut={e=>e.currentTarget.style.background='rgba(200,169,110,0.07)'}>
+              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-gold)', letterSpacing:'0.1em' }}>←</span>
+              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:600, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-gold)' }}>
+                Voltar ao Projecto
+              </span>
+              {tipoLabel && (
+                <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'rgba(200,169,110,0.6)', marginLeft:4 }}>
+                  — {tipoLabel}
+                </span>
+              )}
+              <span style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', color:'rgba(200,169,110,0.5)', textTransform:'uppercase' }}>
+                em curso
+              </span>
+            </button>
+          )
+        })()}
+
         {page === 'projecto'   && <Projecto   showToast={showToast} onNavegar={navegarDeProjecto} />}
         {page === 'biblioteca' && <Biblioteca showToast={showToast} {...copyProps} catFiltroInicial={bibCatFiltro} onCatFiltroUsado={()=>setBibCatFiltro(null)} />}
         {page === 'modelos'    && <Modelos    showToast={showToast} {...copyProps} />}

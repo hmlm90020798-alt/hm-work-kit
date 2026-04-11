@@ -3,82 +3,146 @@ import { db } from '../firebase'
 import { collection, doc, onSnapshot } from 'firebase/firestore'
 import { addToOrcamento } from '../hooks/useOrcamento'
 
-// ── Tipos de projecto por defeito ─────────────────────────────────────────
+// ── Tipos de projecto ─────────────────────────────────────────────────────
 const TIPOS_DEFAULT = [
-  { id:'cozinha',    label:'Cozinha',       icon:'🍳', cor:'#c8943a', activo:true,  componentes:['kit','tampos','eletro','acessorios','iluminacao','ferragens','instalacao'] },
-  { id:'banho',      label:'Casa de Banho', icon:'🚿', cor:'#4a8fa8', activo:true,  componentes:['kit','acessorios','iluminacao','ferragens','instalacao'] },
-  { id:'closet',     label:'Closet',        icon:'👕', cor:'#8a9e6e', activo:true,  componentes:['kit','iluminacao','ferragens','instalacao'] },
-  { id:'suite',      label:'Suíte',         icon:'🛏', cor:'#b07acc', activo:false, componentes:['kit','iluminacao','ferragens','instalacao'] },
-  { id:'escritorio', label:'Escritório',    icon:'💼', cor:'#7a9e9a', activo:false, componentes:['kit','iluminacao','ferragens','instalacao'] },
-  { id:'outro',      label:'Outro',         icon:'✦',  cor:'#7a7a72', activo:true,  componentes:['kit','tampos','eletro','acessorios','iluminacao','ferragens','instalacao'] },
+  { id:'cozinha',  label:'Cozinha',       icon:'🍳', cor:'#c8943a', activo:true },
+  { id:'banho',    label:'Casa de Banho', icon:'🚿', cor:'#4a8fa8', activo:true },
+  { id:'closet',   label:'Closet',        icon:'👕', cor:'#8a9e6e', activo:true },
+  { id:'suite',    label:'Suíte',         icon:'🛏', cor:'#b07acc', activo:false },
+  { id:'escritorio',label:'Escritório',   icon:'💼', cor:'#7a9e9a', activo:false },
+  { id:'outro',    label:'Outro',         icon:'✦',  cor:'#7a7a72', activo:true },
 ]
 
-const COMPONENTES = {
-  kit:        { label:'Kit base',         icon:'📦', desc:'Artigos essenciais pré-seleccionados', cor:'#c8943a' },
-  tampos:     { label:'Tampos',           icon:'⬛', desc:'Calculadora ANIGRACO',                 cor:'#4a8fa8' },
-  eletro:     { label:'Eletrodomésticos', icon:'⚡', desc:'Seleccionar da Biblioteca',            cor:'#8a9e6e' },
-  acessorios: { label:'Acessórios',       icon:'🔩', desc:'Seleccionar da Biblioteca',            cor:'#b07acc' },
-  iluminacao: { label:'Iluminação',       icon:'💡', desc:'Seleccionar da Biblioteca',            cor:'#d4b87a' },
-  ferragens:  { label:'Ferragens',        icon:'🔧', desc:'Seleccionar da Biblioteca',            cor:'#7a9e9a' },
-  instalacao: { label:'Instalação',       icon:'🛠',  desc:'Serviços de mão de obra',             cor:'#9a7acc' },
-}
-
-const COMP_CAT = { eletro:'Eletrodomésticos', acessorios:'Acessórios', iluminacao:'Iluminação', ferragens:'Ferragens' }
-const COMP_DESTINO = { tampos:'tampos', instalacao:'maodeobra', eletro:'biblioteca', acessorios:'biblioteca', iluminacao:'biblioteca', ferragens:'biblioteca' }
+// ── Componentes — cada um tem palavras-chave para encontrar kits ──────────
+const COMPONENTES = [
+  {
+    id: 'base',
+    label: 'Kit base',
+    icon: '📦',
+    desc: 'Artigos essenciais do projecto',
+    cor: '#c8943a',
+    // Match: nome contém "base" OU contexto corresponde ao tipo
+    match: (kitName, kitContexto, tipoLabel) => {
+      const n = kitName.toLowerCase()
+      const c = (kitContexto||'').toLowerCase()
+      const t = (tipoLabel||'').toLowerCase()
+      return n.includes('base') || (c && c.includes(t))
+    },
+    destino: null, // não tem secção — só kits
+  },
+  {
+    id: 'eletro',
+    label: 'Eletrodomésticos',
+    icon: '⚡',
+    desc: 'Electrodomésticos encastráveis e de superfície',
+    cor: '#8a9e6e',
+    match: (n) => n.toLowerCase().includes('eletro') || n.toLowerCase().includes('electro'),
+    destino: 'biblioteca',
+    destCat: 'Eletrodomésticos',
+  },
+  {
+    id: 'acessorios',
+    label: 'Acessórios',
+    icon: '🔩',
+    desc: 'Puxadores, calhas, dobradiças e outros',
+    cor: '#b07acc',
+    match: (n) => n.toLowerCase().includes('acess'),
+    destino: 'biblioteca',
+    destCat: 'Acessórios',
+  },
+  {
+    id: 'ferragens',
+    label: 'Ferragens',
+    icon: '🔧',
+    desc: 'Ferragens de cozinha e montagem',
+    cor: '#7a9e9a',
+    match: (n) => n.toLowerCase().includes('ferragem') || n.toLowerCase().includes('ferrag'),
+    destino: 'biblioteca',
+    destCat: 'Ferragens',
+  },
+  {
+    id: 'iluminacao',
+    label: 'Iluminação',
+    icon: '💡',
+    desc: 'Iluminação embutida e decorativa',
+    cor: '#d4b87a',
+    match: (n) => n.toLowerCase().includes('ilumina') || n.toLowerCase().includes('luz'),
+    destino: 'biblioteca',
+    destCat: 'Iluminação',
+  },
+  {
+    id: 'instalacao',
+    label: 'Instalação',
+    icon: '🛠',
+    desc: 'Serviços de montagem e instalação',
+    cor: '#9a7acc',
+    match: (n) => n.toLowerCase().includes('instala') || n.toLowerCase().includes('montagem'),
+    destino: 'maodeobra',
+    destCat: null,
+  },
+  {
+    id: 'tampos',
+    label: 'Tampos',
+    icon: '⬛',
+    desc: 'Calculadora ANIGRACO',
+    cor: '#4a8fa8',
+    match: (n) => n.toLowerCase().includes('tampo'),
+    destino: 'tampos', // vai sempre para a calculadora
+    destCat: null,
+    sempreCalculadora: true,
+  },
+]
 
 const TIPOS_KEY  = 'hm_proj_tipos'
 const ESTADO_KEY = 'hm_proj_estado'
 
 function f2(n) { return parseFloat(n||0).toFixed(2) }
-
 function hexToRgb(hex) {
   if (!hex || hex.startsWith('var')) return '56,189,248'
   try { return `${parseInt(hex.slice(1,3),16)},${parseInt(hex.slice(3,5),16)},${parseInt(hex.slice(5,7),16)}` }
   catch { return '56,189,248' }
 }
-
-function loadLS(key, def) {
-  try { const v = JSON.parse(localStorage.getItem(key)); return v ?? def } catch { return def }
-}
+function loadLS(key, def) { try { const v=JSON.parse(localStorage.getItem(key)); return v??def } catch { return def } }
 function saveLS(key, val) { try { localStorage.setItem(key, JSON.stringify(val)) } catch {} }
 
-// ── Componente principal ──────────────────────────────────────────────────
+// ── Encontrar kits para um componente ────────────────────────────────────
+function kitsParaComp(comp, kits, tipoLabel) {
+  if (comp.sempreCalculadora) return [] // Tampos: nunca usa kits
+  return kits.filter(k => comp.match(k.name, k.contexto, tipoLabel))
+}
+
 export default function Projecto({ showToast, onNavegar }) {
-  // Tipos configuráveis
-  const [tipos,     setTipos]     = useState(() => {
-    const saved = loadLS(TIPOS_KEY, null)
-    if (Array.isArray(saved) && saved.length) return saved
-    return TIPOS_DEFAULT
-  })
+  // Tipos
+  const [tipos,     setTipos]     = useState(() => { const s=loadLS(TIPOS_KEY,null); return Array.isArray(s)&&s.length?s:TIPOS_DEFAULT })
   const [editTipos, setEditTipos] = useState(false)
 
-  // Estado do guia — carregado do localStorage para persistir entre navegações
-  const [passo,      setPasso]      = useState(() => loadLS(ESTADO_KEY, {})?.passo      || 'tipo')
-  const [tipo,       setTipo]       = useState(() => loadLS(ESTADO_KEY, {})?.tipo       || null)
-  const [compSel,    setCompSel]    = useState(() => loadLS(ESTADO_KEY, {})?.compSel    || [])
-  const [compFeitos, setCompFeitos] = useState(() => loadLS(ESTADO_KEY, {})?.compFeitos || [])
-  const [compActual, setCompActual] = useState(() => loadLS(ESTADO_KEY, {})?.compActual || null)
-  const [kitItems,   setKitItems]   = useState(() => loadLS(ESTADO_KEY, {})?.kitItems   || [])
-  const [kitSelId,   setKitSelId]   = useState(() => loadLS(ESTADO_KEY, {})?.kitSelId   || null)
+  // Estado do guia — persistido
+  const [passo,      setPasso]      = useState(() => loadLS(ESTADO_KEY,{})?.passo      || 'tipo')
+  const [tipo,       setTipo]       = useState(() => loadLS(ESTADO_KEY,{})?.tipo       || null)
+  const [compSel,    setCompSel]    = useState(() => loadLS(ESTADO_KEY,{})?.compSel    || [])
+  const [compFeitos, setCompFeitos] = useState(() => loadLS(ESTADO_KEY,{})?.compFeitos || [])
+  const [compActual, setCompActual] = useState(() => loadLS(ESTADO_KEY,{})?.compActual || null)
+  // Para o componente actual: kit(s) encontrado(s), qual foi escolhido, itens ajustados
+  const [kitsEncontrados, setKitsEncontrados] = useState([])
+  const [kitSelId,   setKitSelId]   = useState(() => loadLS(ESTADO_KEY,{})?.kitSelId   || null)
+  const [kitItems,   setKitItems]   = useState(() => loadLS(ESTADO_KEY,{})?.kitItems   || [])
 
   // Dados Firestore
-  const [kits,     setKits]     = useState([])
-  const [artigos,  setArtigos]  = useState([])
-  const [orcItems, setOrcItems] = useState([])
-  const [loading,  setLoading]  = useState(false)
+  const [kits,    setKits]    = useState([])
+  const [artigos, setArtigos] = useState([])
+  const [orcItems,setOrcItems]= useState([])
+  const [loading, setLoading] = useState(false)
 
   // Painel substituição
-  const [subst, setSubst] = useState(null) // { idx, cat }
+  const [subst, setSubst] = useState(null)
 
   // Persistir estado
   useEffect(() => {
-    saveLS(ESTADO_KEY, { passo, tipo, compSel, compFeitos, compActual, kitItems, kitSelId })
-  }, [passo, tipo, compSel, compFeitos, compActual, kitItems, kitSelId])
+    saveLS(ESTADO_KEY, { passo, tipo, compSel, compFeitos, compActual, kitSelId, kitItems })
+  }, [passo, tipo, compSel, compFeitos, compActual, kitSelId, kitItems])
 
-  // Guardar tipos
   const saveTipos = (t) => { setTipos(t); saveLS(TIPOS_KEY, t) }
 
-  // Firestore
   useEffect(() => {
     const u1 = onSnapshot(collection(db,'modelos'), s => setKits(s.docs.map(d=>({id:d.id,...d.data()}))))
     const u2 = onSnapshot(collection(db,'artigos'), s => setArtigos(s.docs.map(d=>({id:d.id,...d.data()}))))
@@ -86,16 +150,28 @@ export default function Projecto({ showToast, onNavegar }) {
     return () => { u1(); u2(); u3() }
   }, [])
 
+  // Quando muda o componente actual, calcular kits disponíveis
+  useEffect(() => {
+    if (!compActual || !kits.length) return
+    const comp = COMPONENTES.find(c => c.id === compActual)
+    if (!comp) return
+    const tipoLabel = tipos.find(t => t.id === tipo)?.label || ''
+    const encontrados = kitsParaComp(comp, kits, tipoLabel)
+    setKitsEncontrados(encontrados)
+    // Se só há 1 kit — pré-seleccionar automaticamente
+    if (encontrados.length === 1 && !kitSelId) {
+      setKitSelId(encontrados[0].id)
+      setKitItems((encontrados[0].items||[]).map(i=>({...i,incluido:true})))
+    }
+  }, [compActual, kits, tipo, tipos])
+
   const tipoActual   = tipos.find(t => t.id === tipo)
   const tiposActivos = tipos.filter(t => t.activo)
-  const totalOrc     = orcItems.reduce((s,i) => s + (['Tampos','Mão de Obra'].includes(i.origem) ? (i.price||0) : (i.price||0)*(i.qty||1)), 0)
-  const compPorFazer = compSel.filter(c => !compFeitos.includes(c))
-  const kitSel       = kits.find(k => k.id === kitSelId) || null
-  const kitsFiltrados = kits.filter(k => {
-    if (!tipo) return true
-    const ctx = (k.contexto||'').toLowerCase()
-    return !k.contexto || ctx.includes((tipoActual?.label||'').toLowerCase()) || ctx===''
-  })
+  const totalOrc     = orcItems.reduce((s,i) => s+(['Tampos','Mão de Obra'].includes(i.origem)?(i.price||0):(i.price||0)*(i.qty||1)), 0)
+  const compObjActual = COMPONENTES.find(c => c.id === compActual)
+  const kitSel        = kits.find(k => k.id === kitSelId) || null
+  const compPorFazer  = compSel.filter(c => !compFeitos.includes(c))
+  const artsCat       = subst ? artigos.filter(a=>a.cat===subst.cat).sort((a,b)=>(a.ref||'').localeCompare(b.ref||'')) : []
 
   // ── Acções ────────────────────────────────────────────────────────────
   const escolherTipo = (t) => {
@@ -104,12 +180,18 @@ export default function Projecto({ showToast, onNavegar }) {
     setPasso('componentes')
   }
 
-  const toggleComp = (id) => setCompSel(p => p.includes(id) ? p.filter(x=>x!==id) : [...p,id])
+  const toggleComp = (id) => setCompSel(p => p.includes(id)?p.filter(x=>x!==id):[...p,id])
 
   const avancarDeComponentes = () => {
     if (!compSel.length) { showToast('Selecciona pelo menos um componente'); return }
-    if (compSel.includes('kit')) setPasso('kits')
-    else { setCompActual(compSel[0]); setPasso('execucao') }
+    iniciarComp(compSel[0])
+  }
+
+  const iniciarComp = (compId) => {
+    setCompActual(compId)
+    setKitSelId(null)
+    setKitItems([])
+    setPasso('execucao')
   }
 
   const escolherKit = (kit) => {
@@ -122,19 +204,22 @@ export default function Projecto({ showToast, onNavegar }) {
     setLoading(true)
     const para = kitItems.filter(i=>i.incluido)
     for (const item of para) {
-      await addToOrcamento({ ref:item.ref, desc:item.desc, cat:item.cat||'', sub:item.sub||'', price:item.price||0, supplier:item.supplier||'', link:item.link||'', origem:'Kits' }, ()=>{})
+      await addToOrcamento({
+        ref:item.ref, desc:item.desc, cat:item.cat||'', sub:item.sub||'',
+        price:item.price||0, supplier:item.supplier||'', link:item.link||'', origem:'Kits',
+      }, ()=>{})
     }
     setLoading(false)
-    showToast(`Kit "${kitSel.name}" — ${para.length} artigos adicionados`)
-    marcarFeitoEAvancar('kit')
+    showToast(`"${kitSel.name}" — ${para.length} artigos adicionados`)
+    marcarFeitoEAvancar(compActual)
   }
 
   const marcarFeitoEAvancar = useCallback((comp) => {
     const novos = [...compFeitos, comp]
     setCompFeitos(novos)
     const rest = compSel.filter(c => !novos.includes(c))
-    if (!rest.length) setPasso('resumo')
-    else { setCompActual(rest[0]); setPasso('execucao') }
+    if (!rest.length) { setPasso('resumo') }
+    else { iniciarComp(rest[0]) }
   }, [compFeitos, compSel])
 
   const substituir = (artigo) => {
@@ -153,18 +238,13 @@ export default function Projecto({ showToast, onNavegar }) {
 
   const voltarPasso = () => {
     if (passo==='componentes') setPasso('tipo')
-    else if (passo==='kits') setPasso('componentes')
-    else if (passo==='execucao') {
-      if (compFeitos.length===0 && compSel.includes('kit')) setPasso('kits')
-      else setPasso('componentes')
-    }
+    else if (passo==='execucao') setPasso('componentes')
     else if (passo==='resumo') setPasso('execucao')
   }
 
-  const progressoPct = compSel.length > 0 ? Math.round((compFeitos.length/compSel.length)*100) : 0
-  const artsCat = subst ? artigos.filter(a=>a.cat===subst.cat).sort((a,b)=>(a.ref||'').localeCompare(b.ref||'')) : []
+  const progressoPct = compSel.length>0 ? Math.round((compFeitos.length/compSel.length)*100) : 0
 
-  // ── Render ────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%', overflow:'hidden', background:'var(--neo-bg)', color:'var(--neo-text)', fontFamily:"'Barlow',sans-serif" }}>
 
@@ -200,16 +280,16 @@ export default function Projecto({ showToast, onNavegar }) {
         </div>
       )}
 
-      {/* CONTEÚDO */}
       <div className="neo-scroll" style={{ flex:1, overflowY:'auto', padding:'20px 16px 40px' }}>
 
-        {/* ══ TIPO ══ */}
+        {/* ══ PASSO 1: TIPO ══ */}
         {passo==='tipo' && (
           <div>
             <PassoHeader numero={1} titulo="Que tipo de projecto?" sub="Selecciona para começar"/>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:10, marginTop:20 }}>
               {tiposActivos.map(t => (
-                <button key={t.id} onClick={()=>escolherTipo(t)} className="proj-tipo-card" style={{ background:'var(--neo-bg2)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'22px 16px', cursor:'pointer', textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+                <button key={t.id} onClick={()=>escolherTipo(t)} className="proj-tipo-card"
+                  style={{ background:'var(--neo-bg2)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'22px 16px', cursor:'pointer', textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
                   <span style={{ fontSize:32, lineHeight:1 }}>{t.icon}</span>
                   <span style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text)' }}>{t.label}</span>
                 </button>
@@ -218,18 +298,19 @@ export default function Projecto({ showToast, onNavegar }) {
 
             {/* Editar tipos */}
             <button onClick={()=>setEditTipos(o=>!o)} style={{ display:'flex', alignItems:'center', gap:6, marginTop:20, background:'transparent', border:'none', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:600, letterSpacing:'0.14em', textTransform:'uppercase', color:editTipos?'var(--neo-gold)':'var(--neo-text2)', padding:'4px 0' }}>
-              ⚙ {editTipos ? 'Fechar' : 'Personalizar tipos de projecto'}
+              ⚙ {editTipos?'Fechar':'Personalizar tipos de projecto'}
             </button>
 
             {editTipos && (
               <div style={{ marginTop:12, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', overflow:'hidden' }}>
-                {tipos.map((t,idx)=>(
+                {tipos.map((t,idx) => (
                   <div key={t.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
                     <input value={t.icon} onChange={e=>saveTipos(tipos.map((x,i)=>i===idx?{...x,icon:e.target.value}:x))}
                       style={{ width:40, background:'transparent', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'var(--neo-radius-sm)', textAlign:'center', fontFamily:'serif', fontSize:18, color:'var(--neo-text)', outline:'none', padding:'3px', flexShrink:0 }}/>
                     <input value={t.label} onChange={e=>saveTipos(tipos.map((x,i)=>i===idx?{...x,label:e.target.value}:x))}
                       style={{ flex:1, background:'transparent', border:'none', borderBottom:'1px solid rgba(255,255,255,0.1)', fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--neo-text)', outline:'none', padding:'2px 4px' }}/>
-                    <button onClick={()=>saveTipos(tipos.map((x,i)=>i===idx?{...x,activo:!x.activo}:x))} style={{ width:40, height:22, borderRadius:11, border:'none', cursor:'pointer', background:t.activo?'linear-gradient(145deg,#e8cc8a,#c8943a)':'var(--neo-bg)', boxShadow:t.activo?'var(--neo-shadow-in-sm)':'var(--neo-shadow-out-sm)', position:'relative', transition:'all .2s', flexShrink:0 }}>
+                    <button onClick={()=>saveTipos(tipos.map((x,i)=>i===idx?{...x,activo:!x.activo}:x))}
+                      style={{ width:40, height:22, borderRadius:11, border:'none', cursor:'pointer', background:t.activo?'linear-gradient(145deg,#e8cc8a,#c8943a)':'var(--neo-bg)', boxShadow:t.activo?'var(--neo-shadow-in-sm)':'var(--neo-shadow-out-sm)', position:'relative', transition:'all .2s', flexShrink:0 }}>
                       <div style={{ position:'absolute', top:3, left:t.activo?21:3, width:16, height:16, borderRadius:'50%', background:t.activo?'#0f0d08':'var(--neo-text2)', transition:'left .2s' }}/>
                     </button>
                   </div>
@@ -239,36 +320,67 @@ export default function Projecto({ showToast, onNavegar }) {
           </div>
         )}
 
-        {/* ══ COMPONENTES ══ */}
+        {/* ══ PASSO 2: COMPONENTES ══ */}
         {passo==='componentes' && tipoActual && (
           <div>
-            <PassoHeader numero={2} titulo="O que inclui este projecto?" sub="Selecciona TUDO o que o cliente pretende — depois tratas cada um por sua vez"/>
+            <PassoHeader numero={2} titulo="O que inclui este projecto?" sub="Selecciona tudo o que o cliente pretende — a app trata de encontrar os kits certos"/>
             <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:20 }}>
-              {tipoActual.componentes.map(id=>{
-                const comp=COMPONENTES[id]; const sel=compSel.includes(id); const corR=hexToRgb(comp.cor)
+              {COMPONENTES.map(comp => {
+                const sel = compSel.includes(comp.id)
+                const corR = hexToRgb(comp.cor)
+                // Pré-visualizar quantos kits existem
+                const nKits = kitsParaComp(comp, kits, tipoActual.label).length
+                const temKits = nKits > 0
+
                 return (
-                  <button key={id} onClick={()=>toggleComp(id)} className="proj-comp-card" style={{ display:'flex', alignItems:'center', gap:14, background:sel?`rgba(${corR},0.1)`:'var(--neo-bg2)', border:sel?`1px solid ${comp.cor}55`:'1px solid rgba(255,255,255,0.06)', borderLeft:sel?`3px solid ${comp.cor}`:'3px solid transparent', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'14px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
-                    <div style={{ width:20, height:20, borderRadius:5, flexShrink:0, border:sel?`2px solid ${comp.cor}`:'2px solid rgba(255,255,255,0.15)', background:sel?comp.cor:'transparent', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#0f0d08', fontWeight:700 }}>{sel&&'✓'}</div>
+                  <button key={comp.id} onClick={()=>toggleComp(comp.id)} className="proj-comp-card"
+                    style={{ display:'flex', alignItems:'center', gap:14, background:sel?`rgba(${corR},0.1)`:'var(--neo-bg2)', border:sel?`1px solid ${comp.cor}55`:'1px solid rgba(255,255,255,0.06)', borderLeft:sel?`3px solid ${comp.cor}`:'3px solid transparent', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'14px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
+                    {/* Checkbox */}
+                    <div style={{ width:20, height:20, borderRadius:5, flexShrink:0, border:sel?`2px solid ${comp.cor}`:'2px solid rgba(255,255,255,0.15)', background:sel?comp.cor:'transparent', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#0f0d08', fontWeight:700 }}>
+                      {sel&&'✓'}
+                    </div>
                     <span style={{ fontSize:20, flexShrink:0 }}>{comp.icon}</span>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:sel?comp.cor:'var(--neo-text)' }}>{comp.label}</div>
-                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'var(--neo-text2)', marginTop:2 }}>{comp.desc}</div>
+                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:sel?comp.cor:'var(--neo-text)' }}>
+                        {comp.label}
+                      </div>
+                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'var(--neo-text2)', marginTop:2 }}>
+                        {comp.sempreCalculadora
+                          ? 'Calculadora ANIGRACO'
+                          : temKits
+                            ? `${nKits} kit${nKits!==1?'s':''} disponível${nKits!==1?'s':''}`
+                            : comp.desc
+                        }
+                      </div>
                     </div>
+                    {/* Badge de kits disponíveis */}
+                    {temKits && !comp.sempreCalculadora && (
+                      <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:`rgba(${corR},0.15)`, color:comp.cor, border:`1px solid ${comp.cor}33`, flexShrink:0 }}>
+                        {nKits} kit{nKits!==1?'s':''}
+                      </span>
+                    )}
                   </button>
                 )
               })}
             </div>
+
             {compSel.length>0 && (
               <div style={{ marginTop:20 }}>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>Vais tratar por esta ordem:</div>
-                <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:16 }}>
-                  {compSel.map((c,i)=>(
-                    <span key={c} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', background:`rgba(${hexToRgb(COMPONENTES[c]?.cor||'#c8943a')},0.15)`, color:COMPONENTES[c]?.cor||'var(--neo-gold)', border:`1px solid ${COMPONENTES[c]?.cor||'#c8943a'}33` }}>
-                      {i+1}. {COMPONENTES[c]?.label}
-                    </span>
-                  ))}
+                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
+                  Vais tratar por esta ordem:
                 </div>
-                <button onClick={avancarDeComponentes} className="neo-btn neo-btn-gold" style={{ width:'100%', height:48, fontSize:11, letterSpacing:'0.12em', borderRadius:'var(--neo-radius)' }}>
+                <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:16 }}>
+                  {compSel.map((id,i) => {
+                    const c = COMPONENTES.find(x=>x.id===id)
+                    return (
+                      <span key={id} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', background:`rgba(${hexToRgb(c?.cor||'#c8943a')},0.15)`, color:c?.cor||'var(--neo-gold)', border:`1px solid ${c?.cor||'#c8943a'}33` }}>
+                        {i+1}. {c?.label}
+                      </span>
+                    )
+                  })}
+                </div>
+                <button onClick={avancarDeComponentes} className="neo-btn neo-btn-gold"
+                  style={{ width:'100%', height:48, fontSize:11, letterSpacing:'0.12em', borderRadius:'var(--neo-radius)' }}>
                   Começar →
                 </button>
               </div>
@@ -276,109 +388,157 @@ export default function Projecto({ showToast, onNavegar }) {
           </div>
         )}
 
-        {/* ══ KIT ══ */}
-        {passo==='kits' && (
-          <div>
-            <PassoHeader numero={3} titulo="Escolhe o kit base" sub="Artigos essenciais pré-seleccionados — remove ou substitui o que não se aplicar"/>
-            {kitsFiltrados.length===0 ? (
-              <div style={{ marginTop:24, padding:'40px 20px', textAlign:'center', background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)' }}>
-                <div style={{ fontSize:28, marginBottom:12, opacity:.4 }}>📦</div>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text2)' }}>Nenhum kit disponível</div>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)', marginTop:8, letterSpacing:'0.08em', lineHeight:1.8 }}>Cria kits em <strong style={{color:'var(--neo-gold)'}}>Kits</strong> no menu</div>
-              </div>
-            ) : (
-              <div style={{ marginTop:16, display:'flex', flexDirection:'column', gap:8 }}>
-                {kitsFiltrados.map(kit=>{
-                  const sel=kitSelId===kit.id; const nItems=(kit.items||[]).length
-                  const totalKit=(kit.items||[]).reduce((s,i)=>s+(i.price||0)*(i.qty||1),0)
+        {/* ══ PASSO 3: EXECUÇÃO DE COMPONENTE ══ */}
+        {passo==='execucao' && compActual && compObjActual && (() => {
+          const comp = compObjActual
+          const corR = hexToRgb(comp.cor)
+          const proximo = compSel.find(c=>c!==compActual&&!compFeitos.includes(c))
+          const temKits = kitsEncontrados.length > 0
+
+          return (
+            <div>
+              <PassoHeader numero={compFeitos.length+1} titulo={comp.label} sub={''} cor={comp.cor} icon={comp.icon}/>
+
+              {/* Pills progresso */}
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:12, marginBottom:24 }}>
+                {compSel.map(id => {
+                  const c=COMPONENTES.find(x=>x.id===id)
+                  const feito=compFeitos.includes(id); const actual=id===compActual
                   return (
-                    <button key={kit.id} onClick={()=>escolherKit(kit)} className="proj-kit-card" style={{ display:'flex', alignItems:'center', gap:14, background:sel?'rgba(200,169,110,0.08)':'var(--neo-bg2)', border:sel?'1px solid rgba(200,169,110,0.4)':'1px solid rgba(255,255,255,0.06)', borderLeft:sel?'3px solid var(--neo-gold)':'3px solid transparent', borderRadius:'var(--neo-radius)', boxShadow:sel?'var(--neo-shadow-out-sm),0 0 14px rgba(200,169,110,0.15)':'var(--neo-shadow-out-sm)', padding:'14px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
-                      <div style={{ width:18, height:18, borderRadius:'50%', flexShrink:0, border:sel?'2px solid var(--neo-gold)':'2px solid rgba(255,255,255,0.2)', background:sel?'var(--neo-gold)':'transparent', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        {sel&&<div style={{ width:6, height:6, borderRadius:'50%', background:'#0f0d08' }}/>}
-                      </div>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:sel?'var(--neo-gold)':'var(--neo-text)' }}>{kit.name}</div>
-                        {kit.notas&&<div style={{ fontSize:11, fontWeight:300, color:'var(--neo-text2)', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{kit.notas}</div>}
-                        <div style={{ display:'flex', gap:10, alignItems:'center', marginTop:4 }}>
-                          <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', letterSpacing:'0.1em' }}>{nItems} artigo{nItems!==1?'s':''}</span>
-                          {totalKit>0&&<span style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:600, color:'var(--neo-gold)' }}>{f2(totalKit)} €</span>}
-                          {kit.contexto&&<span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--neo-text2)', background:'var(--neo-bg)', padding:'2px 7px', borderRadius:'var(--neo-radius-pill)' }}>{kit.contexto}</span>}
-                        </div>
-                      </div>
-                    </button>
+                    <span key={id} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', fontWeight:actual?700:400, background:feito?'rgba(200,169,110,0.12)':actual?`rgba(${hexToRgb(c?.cor||'#c8943a')},0.18)`:'var(--neo-bg2)', color:feito?'var(--neo-gold)':actual?(c?.cor||'var(--neo-gold)'):'var(--neo-text2)', border:actual?`1px solid ${c?.cor||'var(--neo-gold)'}44`:'1px solid rgba(255,255,255,0.06)' }}>
+                      {feito?'✓ ':actual?'▶ ':''}{c?.label||id}
+                    </span>
                   )
                 })}
               </div>
-            )}
 
-            {kitSel && kitItems.length>0 && (
-              <div style={{ marginTop:24 }}>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:700, letterSpacing:'0.18em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
-                  Ajusta os artigos — ✕ remove, ↗ substitui por outro da mesma categoria
-                </div>
-                <div style={{ background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', overflow:'hidden' }}>
-                  {kitItems.map((item,idx)=>(
-                    <KitItemRow key={item.artId||idx} item={item}
-                      onChange={inc=>setKitItems(p=>p.map((x,i)=>i===idx?{...x,incluido:inc}:x))}
-                      onSubstituir={()=>setSubst({idx,cat:item.cat})}/>
-                  ))}
-                </div>
-                <div style={{ display:'flex', gap:8, marginTop:14 }}>
-                  <button onClick={()=>marcarFeitoEAvancar('kit')} className="neo-btn neo-btn-ghost" style={{ flex:1, height:44, fontSize:10 }}>Saltar kit</button>
-                  <button onClick={confirmarKit} disabled={loading} className="neo-btn neo-btn-gold" style={{ flex:2, height:44, fontSize:10, letterSpacing:'0.1em' }}>
-                    {loading?'A adicionar…':`Adicionar kit (${kitItems.filter(i=>i.incluido).length} artigos) →`}
+              {/* ── Tampos: vai sempre para a calculadora ── */}
+              {comp.sempreCalculadora && (
+                <CompCard comp={comp} corR={corR}>
+                  <p>Abre a calculadora ANIGRACO, faz o cálculo e guarda — depois volta aqui para continuar.</p>
+                  <button onClick={()=>onNavegar?.('tampos',null)} className="neo-btn neo-btn-gold" style={{ height:48, padding:'0 32px', fontSize:11, letterSpacing:'0.12em' }}>
+                    Abrir calculadora →
                   </button>
-                </div>
-              </div>
-            )}
-            {!kitSel&&kitsFiltrados.length>0&&(
-              <button onClick={()=>marcarFeitoEAvancar('kit')} className="neo-btn neo-btn-ghost" style={{ width:'100%', height:44, marginTop:20, fontSize:10 }}>
-                Continuar sem kit →
-              </button>
-            )}
-          </div>
-        )}
+                </CompCard>
+              )}
 
-        {/* ══ EXECUÇÃO ══ */}
-        {passo==='execucao'&&compActual&&(()=>{
-          const comp=COMPONENTES[compActual]; const corR=hexToRgb(comp?.cor)
-          const proximo=compSel.find(c=>c!==compActual&&!compFeitos.includes(c))
-          return (
-            <div>
-              <PassoHeader numero={compFeitos.length+1} titulo={comp?.label||compActual} sub={comp?.desc||''} cor={comp?.cor} icon={comp?.icon}/>
-              {/* Pills progresso */}
-              <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:16, marginBottom:24 }}>
-                {compSel.map(c=>(
-                  <span key={c} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', fontWeight:c===compActual?700:400, background:compFeitos.includes(c)?'rgba(200,169,110,0.12)':c===compActual?`rgba(${hexToRgb(COMPONENTES[c]?.cor||'#c8943a')},0.18)`:'var(--neo-bg2)', color:compFeitos.includes(c)?'var(--neo-gold)':c===compActual?(COMPONENTES[c]?.cor||'var(--neo-gold)'):'var(--neo-text2)', border:c===compActual?`1px solid ${COMPONENTES[c]?.cor||'var(--neo-gold)'}44`:'1px solid rgba(255,255,255,0.06)' }}>
-                    {compFeitos.includes(c)?'✓ ':c===compActual?'▶ ':''}{COMPONENTES[c]?.label||c}
-                  </span>
-                ))}
-              </div>
-              {/* Card acção */}
-              <div style={{ background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', border:`1px solid rgba(${corR},0.2)`, padding:'28px 20px', textAlign:'center', marginBottom:14 }}>
-                <div style={{ fontSize:44, marginBottom:14 }}>{comp?.icon}</div>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:comp?.cor||'var(--neo-gold)', marginBottom:10 }}>{comp?.label}</div>
-                <div style={{ fontSize:13, fontWeight:300, color:'var(--neo-text2)', lineHeight:1.7, marginBottom:24, maxWidth:300, margin:'0 auto 24px' }}>
-                  {compActual==='tampos'&&'Abre a calculadora ANIGRACO, faz o cálculo, guarda — e volta aqui para continuar.'}
-                  {compActual==='instalacao'&&'Selecciona os serviços de instalação na Mão de Obra e volta aqui.'}
-                  {['eletro','acessorios','iluminacao','ferragens'].includes(compActual)&&`Selecciona os artigos de "${COMP_CAT[compActual]}" na Biblioteca e volta aqui.`}
+              {/* ── Componente com kits disponíveis ── */}
+              {!comp.sempreCalculadora && temKits && (
+                <div>
+                  {/* Selecção de kit — se vários */}
+                  {kitsEncontrados.length>1 && !kitSel && (
+                    <div style={{ marginBottom:16 }}>
+                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:700, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
+                        Vários kits disponíveis — escolhe qual usar:
+                      </div>
+                      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                        {kitsEncontrados.map(kit => {
+                          const nIt=(kit.items||[]).length
+                          const tot=(kit.items||[]).reduce((s,i)=>s+(i.price||0)*(i.qty||1),0)
+                          return (
+                            <button key={kit.id} onClick={()=>escolherKit(kit)} className="proj-kit-card"
+                              style={{ display:'flex', alignItems:'center', gap:14, background:'var(--neo-bg2)', border:'1px solid rgba(255,255,255,0.06)', borderLeft:'3px solid transparent', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'14px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
+                              <div style={{ flex:1, minWidth:0 }}>
+                                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--neo-text)' }}>{kit.name}</div>
+                                {kit.notas&&<div style={{ fontSize:11, fontWeight:300, color:'var(--neo-text2)', marginTop:2 }}>{kit.notas}</div>}
+                                <div style={{ display:'flex', gap:10, marginTop:4 }}>
+                                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)' }}>{nIt} artigo{nIt!==1?'s':''}</span>
+                                  {tot>0&&<span style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:600, color:'var(--neo-gold)' }}>{f2(tot)} €</span>}
+                                </div>
+                              </div>
+                              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:comp.cor, letterSpacing:'0.1em' }}>Usar →</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ajuste de itens do kit seleccionado */}
+                  {kitSel && (
+                    <div>
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:comp.cor }}>
+                          {kitSel.name}
+                        </div>
+                        {kitsEncontrados.length>1 && (
+                          <button onClick={()=>{setKitSelId(null);setKitItems([])}} style={{ background:'transparent', border:'none', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)' }}>
+                            ← trocar kit
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
+                        ✕ remove · ↗ substitui por outro da mesma categoria
+                      </div>
+                      <div style={{ background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', overflow:'hidden' }}>
+                        {kitItems.map((item,idx) => (
+                          <KitItemRow key={item.artId||idx} item={item}
+                            onChange={inc=>setKitItems(p=>p.map((x,i)=>i===idx?{...x,incluido:inc}:x))}
+                            onSubstituir={()=>setSubst({idx,cat:item.cat})}/>
+                        ))}
+                      </div>
+                      <div style={{ display:'flex', gap:8, marginTop:14 }}>
+                        <button onClick={()=>marcarFeitoEAvancar(compActual)} className="neo-btn neo-btn-ghost" style={{ flex:1, height:44, fontSize:10 }}>Saltar</button>
+                        <button onClick={confirmarKit} disabled={loading} className="neo-btn neo-btn-gold" style={{ flex:2, height:44, fontSize:10 }}>
+                          {loading?'A adicionar…':`Adicionar (${kitItems.filter(i=>i.incluido).length} artigos) →`}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Se ainda não escolheu kit (só 1 mas ainda a carregar) */}
+                  {!kitSel && kitsEncontrados.length===1 && (
+                    <div style={{ padding:'20px', textAlign:'center', color:'var(--neo-text2)', fontFamily:"'Barlow Condensed'", fontSize:10 }}>A carregar kit…</div>
+                  )}
                 </div>
-                <button onClick={()=>onNavegar?.(COMP_DESTINO[compActual]||'biblioteca',COMP_CAT[compActual]||null)} className="neo-btn neo-btn-gold" style={{ height:48, padding:'0 32px', fontSize:11, letterSpacing:'0.12em' }}>
-                  Abrir {comp?.label} →
+              )}
+
+              {/* ── Sem kits — ir para secção ── */}
+              {!comp.sempreCalculadora && !temKits && (
+                <CompCard comp={comp} corR={corR}>
+                  <p>
+                    {comp.destCat
+                      ? `Selecciona os artigos de "${comp.destCat}" na Biblioteca e volta aqui.`
+                      : 'Selecciona os serviços na Mão de Obra e volta aqui.'
+                    }
+                  </p>
+                  <div style={{ background:'rgba(200,169,110,0.06)', border:'1px solid rgba(200,169,110,0.15)', borderRadius:'var(--neo-radius-sm)', padding:'10px 14px', marginBottom:20, fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.12em', color:'var(--neo-text2)' }}>
+                    💡 Podes criar um kit de <strong style={{color:'var(--neo-gold)'}}>{comp.label}</strong> na secção <strong style={{color:'var(--neo-gold)'}}>Kits</strong> para não teres de seleccionar manualmente da próxima vez.
+                  </div>
+                  <button onClick={()=>onNavegar?.(comp.destino||'biblioteca', comp.destCat||null)} className="neo-btn neo-btn-gold" style={{ height:48, padding:'0 32px', fontSize:11, letterSpacing:'0.12em' }}>
+                    Abrir {comp.label} →
+                  </button>
+                </CompCard>
+              )}
+
+              {/* Botão "feito" — sempre visível */}
+              {!comp.sempreCalculadora && (
+                <button onClick={()=>marcarFeitoEAvancar(compActual)} className="neo-btn neo-btn-ghost"
+                  style={{ width:'100%', height:44, fontSize:10, marginTop: temKits&&kitSel ? 0 : 12 }}>
+                  {compPorFazer.length===1
+                    ? '✓ Concluído — ver resumo'
+                    : `✓ Feito — próximo: ${COMPONENTES.find(c=>c.id===proximo)?.label||''}`
+                  }
                 </button>
-              </div>
-              <button onClick={()=>marcarFeitoEAvancar(compActual)} className="neo-btn neo-btn-ghost" style={{ width:'100%', height:44, fontSize:10 }}>
-                {compPorFazer.length===1?'✓ Concluído — ver resumo':`✓ Feito — próximo: ${COMPONENTES[proximo]?.label||''}`}
-              </button>
+              )}
+              {comp.sempreCalculadora && (
+                <button onClick={()=>marcarFeitoEAvancar(compActual)} className="neo-btn neo-btn-ghost"
+                  style={{ width:'100%', height:44, fontSize:10, marginTop:12 }}>
+                  {compPorFazer.length===1
+                    ? '✓ Tampos calculados — ver resumo'
+                    : `✓ Tampos calculados — próximo: ${COMPONENTES.find(c=>c.id===proximo)?.label||''}`
+                  }
+                </button>
+              )}
             </div>
           )
         })()}
 
-        {/* ══ RESUMO ══ */}
-        {passo==='resumo'&&(
+        {/* ══ PASSO 4: RESUMO ══ */}
+        {passo==='resumo' && (
           <div>
             <PassoHeader numero="✓" titulo="Projecto concluído" sub={tipoActual?`${tipoActual.icon} ${tipoActual.label}`:''} cor="var(--neo-gold)"/>
-            {totalOrc>0&&(
+            {totalOrc>0 && (
               <div style={{ background:'rgba(200,169,110,0.08)', border:'1px solid rgba(200,169,110,0.25)', borderRadius:'var(--neo-radius)', padding:'20px 24px', textAlign:'center', marginTop:20, marginBottom:20 }}>
                 <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:8 }}>Total PVP indicativo</div>
                 <div style={{ fontFamily:"'Barlow Condensed'", fontSize:36, fontWeight:700, color:'var(--neo-gold)', textShadow:'0 0 20px rgba(200,169,110,0.3)' }}>{f2(totalOrc)} €</div>
@@ -386,28 +546,38 @@ export default function Projecto({ showToast, onNavegar }) {
               </div>
             )}
             <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:24 }}>
-              {compFeitos.map(c=>(
-                <div key={c} style={{ display:'flex', alignItems:'center', gap:12, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius-sm)', border:'1px solid rgba(255,255,255,0.06)', borderLeft:`3px solid ${COMPONENTES[c]?.cor||'var(--neo-gold)'}`, padding:'10px 14px' }}>
-                  <span style={{ fontSize:16 }}>{COMPONENTES[c]?.icon}</span>
-                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:COMPONENTES[c]?.cor||'var(--neo-gold)', flex:1 }}>{COMPONENTES[c]?.label}</span>
-                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-gold)' }}>✓</span>
-                </div>
-              ))}
+              {compFeitos.map(id => {
+                const c=COMPONENTES.find(x=>x.id===id)
+                return (
+                  <div key={id} style={{ display:'flex', alignItems:'center', gap:12, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius-sm)', border:'1px solid rgba(255,255,255,0.06)', borderLeft:`3px solid ${c?.cor||'var(--neo-gold)'}`, padding:'10px 14px' }}>
+                    <span style={{ fontSize:16 }}>{c?.icon}</span>
+                    <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:c?.cor||'var(--neo-gold)', flex:1 }}>{c?.label}</span>
+                    <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-gold)' }}>✓</span>
+                  </div>
+                )
+              })}
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-              <button onClick={()=>{setCompSel([]);setCompFeitos([]);setCompActual(null);setPasso('componentes')}} style={{ width:'100%', height:44, background:'transparent', border:'1px solid rgba(200,169,110,0.3)', borderRadius:'var(--neo-radius)', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:600, letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--neo-gold)' }}>
+              <button onClick={()=>{setCompSel([]);setCompFeitos([]);setCompActual(null);setPasso('componentes')}}
+                style={{ width:'100%', height:44, background:'transparent', border:'1px solid rgba(200,169,110,0.3)', borderRadius:'var(--neo-radius)', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:600, letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--neo-gold)' }}>
                 + Adicionar mais componentes
               </button>
-              <button onClick={()=>onNavegar?.('orcamentos')} className="neo-btn neo-btn-gold" style={{ width:'100%', height:50, fontSize:11, letterSpacing:'0.12em' }}>Ver orçamento completo →</button>
-              <button onClick={()=>onNavegar?.('proposta')} className="neo-btn neo-btn-ghost" style={{ width:'100%', height:44, fontSize:10 }}>Criar proposta para o cliente →</button>
-              <button onClick={recomecar} className="neo-btn neo-btn-ghost" style={{ width:'100%', height:40, fontSize:9, opacity:.6 }}>Novo projecto</button>
+              <button onClick={()=>onNavegar?.('orcamentos')} className="neo-btn neo-btn-gold" style={{ width:'100%', height:50, fontSize:11, letterSpacing:'0.12em' }}>
+                Ver orçamento completo →
+              </button>
+              <button onClick={()=>onNavegar?.('proposta')} className="neo-btn neo-btn-ghost" style={{ width:'100%', height:44, fontSize:10 }}>
+                Criar proposta para o cliente →
+              </button>
+              <button onClick={recomecar} className="neo-btn neo-btn-ghost" style={{ width:'100%', height:40, fontSize:9, opacity:.6 }}>
+                Novo projecto
+              </button>
             </div>
           </div>
         )}
       </div>
 
       {/* ══ PAINEL SUBSTITUIÇÃO ══ */}
-      {subst&&(
+      {subst && (
         <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setSubst(null)}}>
           <div className="neo-modal" style={{ maxWidth:480 }}>
             <div className="neo-modal-head">
@@ -417,34 +587,50 @@ export default function Projecto({ showToast, onNavegar }) {
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
               {subst.cat} — escolhe o artigo substituto
             </div>
-            {kitItems[subst.idx]&&(
+            {kitItems[subst.idx] && (
               <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background:'rgba(200,169,110,0.06)', border:'1px solid rgba(200,169,110,0.2)', borderRadius:'var(--neo-radius-sm)', marginBottom:14 }}>
-                <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', letterSpacing:'0.1em', flexShrink:0 }}>ACTUAL</span>
+                <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', flexShrink:0 }}>ACTUAL</span>
                 <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'var(--neo-gold)', letterSpacing:'0.06em', flexShrink:0 }}>{kitItems[subst.idx].ref}</span>
                 <span style={{ fontSize:12, fontWeight:300, color:'var(--neo-text2)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{kitItems[subst.idx].desc}</span>
               </div>
             )}
             <div className="neo-scroll" style={{ maxHeight:'50vh', overflowY:'auto' }}>
-              {artsCat.length===0?(
-                <div style={{ padding:'30px 20px', textAlign:'center', fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Sem artigos em {subst.cat}</div>
-              ):artsCat.map(art=>(
-                <div key={art.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderBottom:'1px solid rgba(255,255,255,0.05)', transition:'background .15s' }}
-                  className="tampo-ref-row">
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:2 }}>
-                      <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'var(--neo-gold)', letterSpacing:'0.06em', flexShrink:0 }}>{art.ref}</span>
-                      {art.price>0&&<span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, color:'var(--neo-text2)', flexShrink:0 }}>{f2(art.price)} €</span>}
+              {artsCat.length===0
+                ? <div style={{ padding:'30px 20px', textAlign:'center', fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Sem artigos em {subst.cat}</div>
+                : artsCat.map(art => (
+                  <div key={art.id} className="tampo-ref-row" style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:2 }}>
+                        <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'var(--neo-gold)', letterSpacing:'0.06em', flexShrink:0 }}>{art.ref}</span>
+                        {art.price>0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, color:'var(--neo-text2)', flexShrink:0 }}>{f2(art.price)} €</span>}
+                      </div>
+                      <div style={{ fontSize:12, fontWeight:300, color:'var(--neo-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{art.desc}</div>
+                      {art.supplier && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', marginTop:1 }}>{art.supplier}</div>}
                     </div>
-                    <div style={{ fontSize:12, fontWeight:300, color:'var(--neo-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{art.desc}</div>
-                    {art.supplier&&<div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', marginTop:1 }}>{art.supplier}</div>}
+                    <button onClick={()=>substituir(art)} className="neo-btn neo-btn-gold" style={{ height:30, padding:'0 14px', fontSize:9, flexShrink:0 }}>
+                      Usar este
+                    </button>
                   </div>
-                  <button onClick={()=>substituir(art)} className="neo-btn neo-btn-gold" style={{ height:30, padding:'0 14px', fontSize:9, flexShrink:0 }}>Usar este</button>
-                </div>
-              ))}
+                ))
+              }
             </div>
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Sub-componentes ───────────────────────────────────────────────────────
+
+function CompCard({ comp, corR, children }) {
+  return (
+    <div style={{ background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', border:`1px solid rgba(${corR},0.2)`, padding:'28px 20px', textAlign:'center', marginBottom:14 }}>
+      <div style={{ fontSize:44, marginBottom:14 }}>{comp.icon}</div>
+      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:comp.cor, marginBottom:10 }}>{comp.label}</div>
+      <div style={{ fontSize:13, fontWeight:300, color:'var(--neo-text2)', lineHeight:1.7, marginBottom:20, maxWidth:300, margin:'0 auto 20px' }}>
+        {children}
+      </div>
     </div>
   )
 }
@@ -458,7 +644,7 @@ function PassoHeader({ numero, titulo, sub, cor, icon }) {
         </div>
         <div style={{ fontFamily:"'Barlow Condensed'", fontSize:18, fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase', color:'var(--neo-text)' }}>{titulo}</div>
       </div>
-      {sub&&<div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', color:'var(--neo-text2)', paddingLeft:38, lineHeight:1.6 }}>{sub}</div>}
+      {sub && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', color:'var(--neo-text2)', paddingLeft:38, lineHeight:1.6 }}>{sub}</div>}
     </div>
   )
 }
@@ -472,11 +658,14 @@ function KitItemRow({ item, onChange, onSubstituir }) {
       <span style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:700, letterSpacing:'0.06em', color:'var(--neo-gold)', flexShrink:0, minWidth:65 }}>{item.ref}</span>
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ fontSize:12, fontWeight:300, color:'var(--neo-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.desc}</div>
-        {item.cat&&<div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', marginTop:1 }}>{item.cat}{item.sub?' · '+item.sub:''}</div>}
+        {item.cat && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', marginTop:1 }}>{item.cat}{item.sub?' · '+item.sub:''}</div>}
       </div>
-      {item.price>0&&<span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, color:'var(--neo-text2)', flexShrink:0 }}>{f2(item.price)} €</span>}
-      {item.cat&&(
-        <button onClick={onSubstituir} title={`Substituir — ver outros em ${item.cat}`} style={{ background:'var(--neo-bg)', border:'none', borderRadius:'var(--neo-radius-pill)', width:26, height:26, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'var(--neo-shadow-out-sm)', color:'var(--neo-text2)', fontSize:11, flexShrink:0 }}>↗</button>
+      {item.price>0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, color:'var(--neo-text2)', flexShrink:0 }}>{f2(item.price)} €</span>}
+      {item.cat && (
+        <button onClick={onSubstituir} title={`Substituir — ver outros em ${item.cat}`}
+          style={{ background:'var(--neo-bg)', border:'none', borderRadius:'var(--neo-radius-pill)', width:26, height:26, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'var(--neo-shadow-out-sm)', color:'var(--neo-text2)', fontSize:11, flexShrink:0 }}>
+          ↗
+        </button>
       )}
     </div>
   )
