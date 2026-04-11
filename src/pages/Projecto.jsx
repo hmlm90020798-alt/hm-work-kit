@@ -206,7 +206,8 @@ export default function Projecto({ showToast, onNavegar }) {
     for (const item of para) {
       await addToOrcamento({
         ref:item.ref, desc:item.desc, cat:item.cat||'', sub:item.sub||'',
-        price:item.price||0, supplier:item.supplier||'', link:item.link||'', origem:'Kits',
+        price:item.price||0, supplier:item.supplier||'', link:item.link||'',
+        origem: kitSel.name,
       }, ()=>{})
     }
     setLoading(false)
