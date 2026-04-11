@@ -161,9 +161,7 @@ function Shell() {
           <div style={{ height:1, background:'linear-gradient(90deg, transparent 0%, rgba(200,169,110,0.3) 50%, transparent 100%)', flexShrink:0 }}/>
 
           <nav style={{ flex:1, overflowY:'auto', padding:'16px 20px' }}>
-            {/* Layout fixo em cartões — ignora menuOrder em modo normal, usa-o só no editMenu */}
             {editMenu ? (
-              /* MODO EDIÇÃO — lista linear para reordenar */
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                 {orderedPages.map((p, i) => (
                   <div key={p.id} style={{ display:'flex', alignItems:'center', gap:10,
@@ -183,7 +181,6 @@ function Shell() {
                 ))}
               </div>
             ) : (
-              /* MODO NORMAL — grid de cartões */
               <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
 
                 {/* Hero — Novo Projecto */}
@@ -192,12 +189,12 @@ function Shell() {
                   const isActive = page === 'projecto'
                   return (
                     <button key="projecto" onClick={() => goTo('projecto')}
-                      className="proj-kit-card"
+                      className="menu-card-hero"
                       style={{
-                        width:'100%', background:'#0f0f0e', border:`1px solid ${isActive ? '#c8a96e' : 'rgba(255,255,255,0.07)'}`,
+                        width:'100%', background:'#0f0f0e',
+                        border:`1px solid ${isActive ? '#c8a96e' : 'rgba(255,255,255,0.07)'}`,
                         borderRadius:6, padding:'16px 20px', cursor:'pointer', textAlign:'left',
                         display:'flex', alignItems:'center', justifyContent:'space-between',
-                        transition:'all .15s',
                       }}>
                       <div>
                         <div style={{ fontFamily:"'Barlow Condensed'", fontSize:24, fontWeight:700,
@@ -207,6 +204,7 @@ function Shell() {
                             display:'inline-block', width:7, height:7, borderRadius:'50%',
                             background:'#e8cc8a', boxShadow:'0 0 8px rgba(232,204,138,0.6)',
                             marginRight:9, verticalAlign:'middle', position:'relative', top:-1,
+                            animation:'pulse-gold 2s ease-in-out infinite',
                           }}/>
                           {p.label}
                         </div>
@@ -214,7 +212,7 @@ function Shell() {
                           textTransform:'uppercase', color: isActive ? '#b8943a' : '#4a4a42' }}>{p.sub}</div>
                       </div>
                       <span style={{ fontFamily:"'Barlow Condensed'", fontSize:14,
-                        color: isActive ? '#b8943a' : '#2a2a27', transition:'color .2s' }}>→</span>
+                        color: isActive ? '#b8943a' : '#2a2a27' }}>→</span>
                     </button>
                   )
                 })()}
@@ -226,11 +224,11 @@ function Shell() {
                     const isActive = page === id
                     return (
                       <button key={id} onClick={() => goTo(id)}
-                        className="proj-kit-card"
+                        className="menu-card"
                         style={{
-                          background:'#0f0f0e', border:`1px solid ${isActive ? '#38bdf8' : 'rgba(255,255,255,0.07)'}`,
+                          background:'#0f0f0e',
+                          border:`1px solid ${isActive ? '#38bdf8' : 'rgba(255,255,255,0.07)'}`,
                           borderRadius:6, padding:'12px 14px', cursor:'pointer', textAlign:'left',
-                          transition:'all .15s',
                         }}>
                         <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
                           letterSpacing:'0.06em', textTransform:'uppercase',
@@ -249,11 +247,11 @@ function Shell() {
                     const isActive = page === id
                     return (
                       <button key={id} onClick={() => goTo(id)}
-                        className="proj-kit-card"
+                        className="menu-card"
                         style={{
-                          background:'#0f0f0e', border:`1px solid ${isActive ? '#38bdf8' : 'rgba(255,255,255,0.07)'}`,
+                          background:'#0f0f0e',
+                          border:`1px solid ${isActive ? '#38bdf8' : 'rgba(255,255,255,0.07)'}`,
                           borderRadius:6, padding:'12px 14px', cursor:'pointer', textAlign:'left',
-                          transition:'all .15s',
                         }}>
                         <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
                           letterSpacing:'0.06em', textTransform:'uppercase',
@@ -272,11 +270,11 @@ function Shell() {
                     const isActive = page === id
                     return (
                       <button key={id} onClick={() => goTo(id)}
-                        className="proj-kit-card"
+                        className="menu-card-gold"
                         style={{
-                          background:'#0f0f0e', border:`1px solid ${isActive ? '#c8a96e' : 'rgba(255,255,255,0.07)'}`,
+                          background:'#0f0f0e',
+                          border:`1px solid ${isActive ? '#c8a96e' : 'rgba(255,255,255,0.07)'}`,
                           borderRadius:6, padding:'12px 14px', cursor:'pointer', textAlign:'left',
-                          transition:'all .15s',
                         }}>
                         <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
                           letterSpacing:'0.06em', textTransform:'uppercase',
