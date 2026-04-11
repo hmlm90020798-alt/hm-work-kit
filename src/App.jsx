@@ -160,67 +160,136 @@ function Shell() {
         <div style={{ position:'fixed', inset:0, top:52, background:'#0a0a09', zIndex:9, display:'flex', flexDirection:'column', overflow:'hidden' }}>
           <div style={{ height:1, background:'linear-gradient(90deg, transparent 0%, rgba(200,169,110,0.3) 50%, transparent 100%)', flexShrink:0 }}/>
 
-          <nav style={{ flex:1, overflowY:'auto', padding:'0 28px' }}>
-            {orderedPages.map((p, i) => {
-              const isActive  = page === p.id
-              const isGuia    = p.id === 'projecto'
-              return (
-                <div key={p.id} style={{ display:'flex', alignItems:'center', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
-                  {editMenu && (
-                    <div style={{ display:'flex', flexDirection:'column', gap:3, marginRight:12, flexShrink:0 }}>
+          <nav style={{ flex:1, overflowY:'auto', padding:'16px 20px' }}>
+            {/* Layout fixo em cartões — ignora menuOrder em modo normal, usa-o só no editMenu */}
+            {editMenu ? (
+              /* MODO EDIÇÃO — lista linear para reordenar */
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                {orderedPages.map((p, i) => (
+                  <div key={p.id} style={{ display:'flex', alignItems:'center', gap:10,
+                    background:'#0f0f0e', border:'1px solid rgba(255,255,255,0.07)',
+                    borderRadius:6, padding:'10px 14px' }}>
+                    <div style={{ display:'flex', flexDirection:'column', gap:2, flexShrink:0 }}>
                       <button onClick={() => moveMenuItem(i,-1)} disabled={i===0}
-                        style={{ background:'transparent', border:'none', cursor:i===0?'default':'pointer', color:i===0?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.35)', fontSize:10, lineHeight:1, padding:'2px 4px' }}>▲</button>
+                        style={{ background:'transparent', border:'none', cursor:i===0?'default':'pointer',
+                          color:i===0?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.35)', fontSize:10, lineHeight:1, padding:'2px 4px' }}>▲</button>
                       <button onClick={() => moveMenuItem(i,1)} disabled={i===orderedPages.length-1}
-                        style={{ background:'transparent', border:'none', cursor:i===orderedPages.length-1?'default':'pointer', color:i===orderedPages.length-1?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.35)', fontSize:10, lineHeight:1, padding:'2px 4px' }}>▼</button>
+                        style={{ background:'transparent', border:'none', cursor:i===orderedPages.length-1?'default':'pointer',
+                          color:i===orderedPages.length-1?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.35)', fontSize:10, lineHeight:1, padding:'2px 4px' }}>▼</button>
                     </div>
-                  )}
-                  <button onClick={() => !editMenu && goTo(p.id)}
-                    className="menu-item"
-                    style={{
-                      flex:1, background:'transparent', border:'none',
-                      padding: isGuia ? 'clamp(12px,2.2vh,22px) 0' : 'clamp(10px,2vh,20px) 0',
-                      cursor: editMenu ? 'default' : 'pointer',
-                      textAlign:'left', display:'flex', alignItems:'center', justifyContent:'space-between',
-                      gap:16, transition:'all .15s', opacity: editMenu ? 0.7 : 1,
-                    }}>
-                    <div>
-                      <div className="menu-label" style={{
-                        fontFamily:"'Barlow Condensed'",
-                        fontSize: isGuia ? 'clamp(20px,3.6vh,36px)' : 'clamp(22px,4vh,40px)',
-                        fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase',
-                        color: isActive && !editMenu
-                          ? (isGuia ? '#e8cc8a' : '#c8a96e')
-                          : corPagina(p.id),
-                        lineHeight:1, transition:'all .25s',
+                    <span style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
+                      letterSpacing:'0.06em', textTransform:'uppercase', color:'#f0ede8' }}>{p.label}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* MODO NORMAL — grid de cartões */
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+
+                {/* Hero — Novo Projecto */}
+                {(() => {
+                  const p = PAGES.find(x => x.id === 'projecto')
+                  const isActive = page === 'projecto'
+                  return (
+                    <button key="projecto" onClick={() => goTo('projecto')}
+                      className="proj-kit-card"
+                      style={{
+                        width:'100%', background:'#0f0f0e', border:`1px solid ${isActive ? '#c8a96e' : 'rgba(255,255,255,0.07)'}`,
+                        borderRadius:6, padding:'16px 20px', cursor:'pointer', textAlign:'left',
+                        display:'flex', alignItems:'center', justifyContent:'space-between',
+                        transition:'all .15s',
                       }}>
-                        {/* Indicador especial para Novo Projecto */}
-                        {isGuia && !isActive && (
+                      <div>
+                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:24, fontWeight:700,
+                          letterSpacing:'0.07em', textTransform:'uppercase',
+                          color: isActive ? '#e8cc8a' : '#c8a96e', lineHeight:1, marginBottom:4 }}>
                           <span style={{
-                            display:'inline-block', width:7, height:7,
-                            borderRadius:'50%', background:'#e8cc8a',
-                            boxShadow:'0 0 8px rgba(232,204,138,0.6)',
-                            marginRight:10, verticalAlign:'middle',
-                            position:'relative', top:-1,
+                            display:'inline-block', width:7, height:7, borderRadius:'50%',
+                            background:'#e8cc8a', boxShadow:'0 0 8px rgba(232,204,138,0.6)',
+                            marginRight:9, verticalAlign:'middle', position:'relative', top:-1,
                           }}/>
-                        )}
-                        {p.label}
+                          {p.label}
+                        </div>
+                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.16em',
+                          textTransform:'uppercase', color: isActive ? '#b8943a' : '#4a4a42' }}>{p.sub}</div>
                       </div>
-                      <div style={{
-                        fontFamily:"'Barlow Condensed'",
-                        fontSize:'clamp(8px,1.2vh,10px)', letterSpacing:'0.14em', textTransform:'uppercase',
-                        color: isActive && !editMenu
-                          ? (isGuia ? '#b8943a' : '#8a6e3a')
-                          : '#5a5a55',
-                        marginTop:3, transition:'color .2s',
-                      }}>
-                        {p.sub}
-                      </div>
-                    </div>
-                    {!editMenu && <span className="menu-arrow" style={{ fontFamily:"'Barlow Condensed'", fontSize:14, color: isActive ? (isGuia ? '#b8943a' : '#8a6e3a') : '#2a2a27', transition:'color .2s, transform .2s' }}>→</span>}
-                  </button>
+                      <span style={{ fontFamily:"'Barlow Condensed'", fontSize:14,
+                        color: isActive ? '#b8943a' : '#2a2a27', transition:'color .2s' }}>→</span>
+                    </button>
+                  )
+                })()}
+
+                {/* Linha 1 — Biblioteca, Kits, Tampos */}
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+                  {['biblioteca','modelos','tampos'].map(id => {
+                    const p = PAGES.find(x => x.id === id)
+                    const isActive = page === id
+                    return (
+                      <button key={id} onClick={() => goTo(id)}
+                        className="proj-kit-card"
+                        style={{
+                          background:'#0f0f0e', border:`1px solid ${isActive ? '#38bdf8' : 'rgba(255,255,255,0.07)'}`,
+                          borderRadius:6, padding:'12px 14px', cursor:'pointer', textAlign:'left',
+                          transition:'all .15s',
+                        }}>
+                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
+                          letterSpacing:'0.06em', textTransform:'uppercase',
+                          color: isActive ? '#38bdf8' : '#f0ede8', lineHeight:1, marginBottom:3 }}>{p.label}</div>
+                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em',
+                          textTransform:'uppercase', color: isActive ? '#1a8ab8' : '#3a3a35' }}>{p.sub}</div>
+                      </button>
+                    )
+                  })}
                 </div>
-              )
-            })}
+
+                {/* Linha 2 — Mão de Obra, IA, KC */}
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+                  {['maodeobra','ia','kc'].map(id => {
+                    const p = PAGES.find(x => x.id === id)
+                    const isActive = page === id
+                    return (
+                      <button key={id} onClick={() => goTo(id)}
+                        className="proj-kit-card"
+                        style={{
+                          background:'#0f0f0e', border:`1px solid ${isActive ? '#38bdf8' : 'rgba(255,255,255,0.07)'}`,
+                          borderRadius:6, padding:'12px 14px', cursor:'pointer', textAlign:'left',
+                          transition:'all .15s',
+                        }}>
+                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
+                          letterSpacing:'0.06em', textTransform:'uppercase',
+                          color: isActive ? '#38bdf8' : '#f0ede8', lineHeight:1, marginBottom:3 }}>{p.label}</div>
+                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em',
+                          textTransform:'uppercase', color: isActive ? '#1a8ab8' : '#3a3a35' }}>{p.sub}</div>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Linha 3 — Orçamentos + Proposta */}
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                  {['orcamentos','proposta'].map(id => {
+                    const p = PAGES.find(x => x.id === id)
+                    const isActive = page === id
+                    return (
+                      <button key={id} onClick={() => goTo(id)}
+                        className="proj-kit-card"
+                        style={{
+                          background:'#0f0f0e', border:`1px solid ${isActive ? '#c8a96e' : 'rgba(255,255,255,0.07)'}`,
+                          borderRadius:6, padding:'12px 14px', cursor:'pointer', textAlign:'left',
+                          transition:'all .15s',
+                        }}>
+                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
+                          letterSpacing:'0.06em', textTransform:'uppercase',
+                          color: isActive ? '#c8a96e' : '#f0ede8', lineHeight:1, marginBottom:3 }}>{p.label}</div>
+                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em',
+                          textTransform:'uppercase', color: isActive ? '#8a6e3a' : '#3a3a35' }}>{p.sub}</div>
+                      </button>
+                    )
+                  })}
+                </div>
+
+              </div>
+            )}
           </nav>
 
           <div style={{ padding:'12px 28px', borderTop:'1px solid rgba(255,255,255,0.04)', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
