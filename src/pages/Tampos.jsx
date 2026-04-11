@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { db } from '../firebase'
-import { collection, doc, onSnapshot, setDoc, deleteDoc, addDoc } from 'firebase/firestore'
+import { collection, doc, onSnapshot, setDoc, deleteDoc, addDoc, getDoc } from 'firebase/firestore'
 import '../styles/tampos.css'
 import ImportModal from '../components/ImportModal'
 import { addToOrcamento } from '../hooks/useOrcamento'
@@ -48,13 +48,40 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone, cop
       return matSort==='pvp_desc'?pvpB-pvpA:pvpA-pvpB
     })
 
+  // Actualizar item do tampo no orçamento se já existir
+  const sincronizarComOrcamento=async(tampoId,pvp,pecas,nome)=>{
+    try{
+      const orcRef=doc(db,'orcamento_ativo','ativo')
+      const snap=await getDoc(orcRef)
+      if(!snap.exists())return
+      const orc=snap.data()
+      const items=orc.items||[]
+      const idx=items.findIndex(i=>i.tampoId===tampoId)
+      if(idx===-1)return
+      const item=items[idx]
+      const newItems=items.map((i,n)=>n===idx?{
+        ...i,
+        price: pvp,
+        desc: (pecas||[]).map(p=>p.desc||p.label).filter(Boolean).join(' + '),
+        ref: nome||item.ref,
+      }:i)
+      await setDoc(orcRef,{...orc,items:newItems})
+    }catch{}
+  }
+
   if(current) return <Calculadora current={current} setCurrent={setCurrent}
-    orcamentos={orcamentos} showToast={showToast} markCopied={markCopied} copiedRefs={copiedRefs} onBack={async()=>{
-      // Auto-guardar se tiver nome ou peças preenchidas
-      if(current.nome?.trim()||(current.pecas||[]).some(p=>p.desc)){
+    orcamentos={orcamentos} showToast={showToast} markCopied={markCopied} copiedRefs={copiedRefs}
+    sincronizarComOrcamento={sincronizarComOrcamento}
+    onBack={async(dadosActuais)=>{
+      // dadosActuais vem da Calculadora com o estado mais recente
+      const c = dadosActuais || current
+      if(c.nome?.trim()||(c.pecas||[]).some(p=>p.desc)){
         try {
-          const data={...current};delete data.id
-          if(current.id){await setDoc(doc(db,'tampos',current.id),data)}
+          const data={...c};delete data.id
+          if(c.id){
+            await setDoc(doc(db,'tampos',c.id),data)
+            await sincronizarComOrcamento(c.id, dadosActuais?.pvp||0, c.pecas, c.nome)
+          }
           else{const r=await addDoc(collection(db,'tampos'),data);setCurrent(c=>({...c,id:r.id}))}
         } catch { showToast('Erro ao guardar cálculo') }
       }
@@ -194,7 +221,7 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone, cop
 }
 
 // ── Calculadora ────────────────────────────────────────────────────────────
-function Calculadora({current,setCurrent,showToast,onBack,markCopied,copiedRefs}){
+function Calculadora({current,setCurrent,showToast,onBack,sincronizarComOrcamento,markCopied,copiedRefs}){
   const [tab,setTab]=useState('pecas')
   const [matModal,setMatModal]=useState(null) // 'A' | 'B'
   const [formulaOpen,setFormulaOpen]=useState(false)
@@ -231,7 +258,10 @@ function Calculadora({current,setCurrent,showToast,onBack,markCopied,copiedRefs}
   const save=async()=>{
     if(!current.nome.trim()){showToast('Nome obrigatório');return}
     const data={...current};delete data.id
-    if(current.id){await setDoc(doc(db,'tampos',current.id),data)}
+    if(current.id){
+      await setDoc(doc(db,'tampos',current.id),data)
+      await sincronizarComOrcamento?.(current.id, TA.pvp, current.pecas, current.nome)
+    }
     else{const r=await addDoc(collection(db,'tampos'),data);setCurrent(c=>({...c,id:r.id}))}
     showToast('Guardado')
   }
@@ -418,7 +448,7 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
     <div className="neo-screen">
       {/* Topbar */}
       <div className="neo-topbar">
-        <button className="neo-btn neo-btn-ghost" style={{padding:'0 10px',fontSize:10}} onClick={onBack}>← Tampos</button>
+        <button className="neo-btn neo-btn-ghost" style={{padding:'0 10px',fontSize:10}} onClick={()=>onBack({...current, pvp:TA.pvp})}>← Tampos</button>
         <div style={{display:'flex',gap:6}}>
           <button className="neo-btn neo-btn-ghost" style={{height:28,padding:'0 10px',fontSize:9}} onClick={limparDados}>Limpar</button>
           <button className="neo-btn neo-btn-ghost" style={{height:28,padding:'0 10px',fontSize:9}} onClick={gerarPDF}>PDF</button>
