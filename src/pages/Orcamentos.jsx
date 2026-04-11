@@ -59,31 +59,31 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
     SEM_QTY.has(i.origem) ? s+(i.price||0) : s+(i.price||0)*(i.qty||1), 0)
   const isEmpty = items.length === 0
 
-  const setQty = async (ref, qty) => {
+  const setQty = async (idx, qty) => {
     const val = parseFloat(qty)
     if (isNaN(val) || val <= 0) return
-    const newItems = items.map(i => i.ref===ref ? {...i, qty:val} : i)
+    const newItems = items.map((i, n) => n===idx ? {...i, qty:val} : i)
     try { await setDoc(ORC_REF(), {...orc, items:newItems}) }
     catch { showToast('Erro ao actualizar quantidade') }
   }
 
-  const setPrice = async (ref, price) => {
+  const setPrice = async (idx, price) => {
     const val = parseFloat(price)
     if (isNaN(val) || val < 0) return
-    const newItems = items.map(i => i.ref===ref ? {...i, price:val} : i)
+    const newItems = items.map((i, n) => n===idx ? {...i, price:val} : i)
     try { await setDoc(ORC_REF(), {...orc, items:newItems}) }
     catch { showToast('Erro ao actualizar preço') }
   }
 
-  const remove = async (ref) => {
-    const newItems = items.filter(i => i.ref!==ref)
+  const remove = async (idx) => {
+    const newItems = items.filter((_, n) => n!==idx)
     try { await setDoc(ORC_REF(), {...orc, items:newItems}); showToast('Removido') }
     catch { showToast('Erro ao remover item') }
   }
 
   // Substituir artigo no orçamento
-  const substituir = async (itemAntigo, artNovo) => {
-    const newItems = items.map(i => i.ref===itemAntigo.ref
+  const substituir = async (itemIdx, artNovo) => {
+    const newItems = items.map((i, n) => n===itemIdx
       ? { ...i,
           ref:      artNovo.ref,
           desc:     artNovo.desc,
@@ -107,10 +107,11 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
     catch { showToast('Erro ao limpar orçamento') }
   }
 
-  const copyVal = (val, label) => {
+  const copyVal = (val, label, chipKey) => {
     navigator.clipboard.writeText(val).catch(() => {})
-    setCopied(p => ({...p, [val]:true}))
-    setTimeout(() => setCopied(p => ({...p, [val]:false})), 1600)
+    const key = chipKey || val
+    setCopied(p => ({...p, [key]:true}))
+    setTimeout(() => setCopied(p => ({...p, [key]:false})), 1600)
     if (label==='Referência'||label==='C1'||label==='Anigraco') markCopied?.(val)
     showToast(`${label} copiado — ${val}`)
   }
@@ -241,21 +242,24 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
                   </button>
 
                   {/* Itens */}
-                  {!isCol && gItems.map(item => (
-                    <OrcItem
-                      key={item.ref}
-                      item={item}
-                      copied={copied}
-                      onCopy={copyVal}
-                      onRemove={() => remove(item.ref)}
-                      onOpen={() => handleItemClick(item)}
-                      onQty={(ref,qty) => setQty(ref,qty)}
-                      onPrice={(ref,price) => setPrice(ref,price)}
-                      onSubstituir={() => setSubst({ item })}
-                      cor={cor}
-                      wasCopied={copiedRefs?.has(item.ref)}
-                    />
-                  ))}
+                  {!isCol && gItems.map(item => {
+                    const itemIdx = items.indexOf(item)
+                    return (
+                      <OrcItem
+                        key={itemIdx}
+                        item={item}
+                        copied={copied}
+                        onCopy={copyVal}
+                        onRemove={() => remove(itemIdx)}
+                        onOpen={() => handleItemClick(item)}
+                        onQty={(qty) => setQty(itemIdx, qty)}
+                        onPrice={(price) => setPrice(itemIdx, price)}
+                        onSubstituir={() => setSubst({ item, idx: itemIdx })}
+                        cor={cor}
+                        wasCopied={copiedRefs?.has(item.ref)}
+                      />
+                    )
+                  })}
                 </div>
               )
             })}
@@ -345,7 +349,7 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
                             <div style={{ fontSize:12, fontWeight:300, color:'var(--neo-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{art.desc}</div>
                             {art.supplier && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', marginTop:1 }}>{art.supplier}</div>}
                           </div>
-                          <button onClick={()=>substituir(subst.item, art)} className="neo-btn neo-btn-gold"
+                          <button onClick={()=>substituir(subst.idx, art)} className="neo-btn neo-btn-gold"
                             style={{ height:30, padding:'0 14px', fontSize:9, flexShrink:0 }}>
                             Usar este
                           </button>
@@ -398,7 +402,7 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, onPrice, onSub
 
         {/* Linha 1: ref + acções */}
         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-          <CopyChip val={item.ref} copied={!!copied[item.ref]||wasCopied} onCopy={()=>onCopy(item.ref,'Referência')} mainRef cor={cor}/>
+          <CopyChip val={item.ref} copied={!!copied[item.ref+'_ref']||wasCopied} onCopy={()=>onCopy(item.ref,'Referência',item.ref+'_ref')} mainRef cor={cor}/>
           {isTampo && (
             <button onClick={onOpen} style={{ padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', border:'1px solid rgba(74,143,168,0.4)', background:'transparent', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:'#4a8fa8' }}>
               → Calculadora
@@ -423,8 +427,8 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, onPrice, onSub
 
         {/* Linha 3: refs copiáveis + qty + preço */}
         <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
-          {item.c1Ref && <CopyChip label="C1" val={item.c1Ref} copied={!!copied[item.c1Ref]} onCopy={()=>onCopy(item.c1Ref,'C1')}/>}
-          {item.refAnigraco && <CopyChip label="Anigraco" val={item.refAnigraco} copied={!!copied[item.refAnigraco]} onCopy={()=>onCopy(item.refAnigraco,'Ref Anigraco')} gold/>}
+          {item.c1Ref && <CopyChip label="C1" val={item.c1Ref} copied={!!copied[item.ref+'_c1']} onCopy={()=>onCopy(item.c1Ref,'C1',item.ref+'_c1')}/>}
+          {item.refAnigraco && <CopyChip label="Anigraco" val={item.refAnigraco} copied={!!copied[item.ref+'_an']} onCopy={()=>onCopy(item.refAnigraco,'Ref Anigraco',item.ref+'_an')} gold/>}
           {item.cat && !isTampo && (
             <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'#8a8a82', letterSpacing:'0.08em', textTransform:'uppercase' }}>
               {item.cat}{item.sub?' · '+item.sub:''}
@@ -434,16 +438,16 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, onPrice, onSub
           {/* Qty — input editável com decimais */}
           {!semQty && (
             <div style={{ display:'flex', alignItems:'center', gap:4, marginLeft:'auto' }}>
-              <button onClick={()=>onQty(item.ref,(parseFloat(item.qty)||1)-1)} style={{ width:22,height:22,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1 }}>−</button>
+              <button onClick={()=>onQty((parseFloat(item.qty)||1)-1)} style={{ width:22,height:22,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1 }}>−</button>
               <input
                 type="number" min="0.01" step="0.01"
                 defaultValue={item.qty||1}
                 key={item.qty}
-                onBlur={e=>onQty(item.ref, e.target.value)}
+                onBlur={e=>onQty(e.target.value)}
                 onKeyDown={e=>{ if(e.key==='Enter') { e.target.blur() } }}
                 style={{ fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,color:'var(--neo-text)',background:'transparent',border:'none',borderBottom:'1px solid rgba(255,255,255,0.12)',outline:'none',width:44,textAlign:'center',padding:'1px 2px',fontSize:16 }}
               />
-              <button onClick={()=>onQty(item.ref,(parseFloat(item.qty)||1)+1)} style={{ width:22,height:22,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1 }}>+</button>
+              <button onClick={()=>onQty((parseFloat(item.qty)||1)+1)} style={{ width:22,height:22,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1 }}>+</button>
               {item.price>0&&<span style={{ fontFamily:"'Barlow Condensed'",fontSize:12,color:'var(--neo-text2)',marginLeft:4 }}>{subtotal.toFixed(2)} €</span>}
             </div>
           )}
@@ -455,7 +459,7 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, onPrice, onSub
                 type="number" min="0" step="0.01"
                 defaultValue={f2(item.price||0)}
                 key={item.price}
-                onBlur={e=>onPrice(item.ref, e.target.value)}
+                onBlur={e=>onPrice(e.target.value)}
                 onKeyDown={e=>{ if(e.key==='Enter') { e.target.blur() } }}
                 style={{ fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,color:cor||'var(--neo-text2)',background:'transparent',border:'none',borderBottom:'1px solid rgba(255,255,255,0.12)',outline:'none',width:72,textAlign:'right',padding:'1px 2px',fontSize:16 }}
               />
