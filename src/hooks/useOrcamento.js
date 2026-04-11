@@ -17,7 +17,12 @@ export async function addToOrcamento(item, showToast) {
     const data = snap.exists() ? snap.data() : { items: [] }
     const items = data.items || []
 
-    const idx = items.findIndex(i => i.ref === item.ref)
+    // Tampos identificam-se por tampoId — nunca incrementar qty
+    // Artigos normais: deduplicar por ref (excepto se origens diferentes)
+    let idx = -1
+    if (!item.tampoId) {
+      idx = items.findIndex(i => i.ref === item.ref && i.origem === item.origem)
+    }
     if (idx >= 0) {
       items[idx] = { ...items[idx], qty: (items[idx].qty || 1) + 1 }
       showToast(`+1 — ${item.ref}`)

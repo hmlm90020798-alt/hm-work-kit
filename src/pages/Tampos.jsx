@@ -882,21 +882,24 @@ function MaterialModal({tipoProjeto,onSelect,onClose}){
 
 // ── CopyVal ────────────────────────────────────────────────────────────────
 function CopyVal({val,label,showToast,gold,large,markCopied,wasCopied}){
-  const [copied,setCopied]=useState(false)
-  const isActive = copied || wasCopied
+  const [justCopied,setJustCopied]=useState(false)
+  // justCopied — este chip específico foi copiado agora (1.6s)
+  // wasCopied  — o valor já foi copiado nesta sessão (highlight global de row)
+  const showCheck = justCopied  // só mostra ✓ se foi ESTE chip
+  const isActive  = justCopied || wasCopied
   return<button className={`neo-copy ${isActive?'copied':''}`} onClick={()=>{
     navigator.clipboard.writeText(val).catch(()=>{})
-    setCopied(true);setTimeout(()=>setCopied(false),1600)
+    setJustCopied(true);setTimeout(()=>setJustCopied(false),1600)
     if(markCopied && label!=='PVP') markCopied(val)
     showToast(`${label} copiado — ${val}`)
   }} style={{
     ...(gold && !isActive ? {color:'var(--neo-gold)'} : {}),
-    ...(wasCopied && !copied ? {
+    ...(wasCopied && !justCopied ? {
       color:'var(--neo-gold)',
       boxShadow:'var(--neo-shadow-in-sm), var(--neo-glow-gold)',
     } : {}),
   }}>
     <span style={{fontSize:large?16:12,fontWeight:large?700:400}}>{val}</span>
-    <span className="neo-copy-icon">{isActive?'✓':'⎘'}</span>
+    <span className="neo-copy-icon">{showCheck?'✓':'⎘'}</span>
   </button>
 }
