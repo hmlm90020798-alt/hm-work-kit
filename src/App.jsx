@@ -181,7 +181,7 @@ function Shell() {
                 ))}
               </div>
             ) : (
-              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
 
                 {/* Hero — Novo Projecto */}
                 {(() => {
@@ -192,33 +192,36 @@ function Shell() {
                       className="menu-card-hero"
                       style={{
                         width:'100%', background:'#0f0f0e',
-                        border:`1px solid ${isActive ? '#c8a96e' : 'rgba(255,255,255,0.07)'}`,
-                        borderRadius:6, padding:'16px 20px', cursor:'pointer', textAlign:'left',
-                        display:'flex', alignItems:'center', justifyContent:'space-between',
+                        border:`1px solid ${isActive ? 'rgba(200,169,110,.4)' : 'rgba(255,255,255,0.07)'}`,
+                        borderRadius:6, cursor:'pointer', textAlign:'left', overflow:'hidden',
+                        padding:0,
                       }}>
-                      <div>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:24, fontWeight:700,
-                          letterSpacing:'0.07em', textTransform:'uppercase',
-                          color: isActive ? '#e8cc8a' : '#c8a96e', lineHeight:1, marginBottom:4 }}>
-                          <span style={{
-                            display:'inline-block', width:7, height:7, borderRadius:'50%',
-                            background:'#e8cc8a', boxShadow:'0 0 8px rgba(232,204,138,0.6)',
-                            marginRight:9, verticalAlign:'middle', position:'relative', top:-1,
-                            animation:'pulse-gold 2s ease-in-out infinite',
-                          }}/>
-                          {p.label}
+                      {/* barra dourada no topo */}
+                      <div style={{ height:3, background:'linear-gradient(90deg,#c8a96e,#8a6e3a)' }}/>
+                      <div style={{ padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                        <div>
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:24, fontWeight:700,
+                            letterSpacing:'0.07em', textTransform:'uppercase',
+                            color:'#c8a96e', lineHeight:1 }}>
+                            <span style={{
+                              display:'inline-block', width:7, height:7, borderRadius:'50%',
+                              background:'#e8cc8a', boxShadow:'0 0 8px rgba(232,204,138,0.6)',
+                              marginRight:9, verticalAlign:'middle', position:'relative', top:-1,
+                              animation:'pulse-gold 2s ease-in-out infinite',
+                            }}/>
+                            {p.label}
+                          </div>
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.18em',
+                            textTransform:'uppercase', color:'#7a7a72', marginTop:4 }}>{p.sub}</div>
                         </div>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.16em',
-                          textTransform:'uppercase', color: isActive ? '#b8943a' : '#4a4a42' }}>{p.sub}</div>
+                        <span style={{ fontFamily:"'Barlow Condensed'", fontSize:14, color:'#6a5a2a' }}>→</span>
                       </div>
-                      <span style={{ fontFamily:"'Barlow Condensed'", fontSize:14,
-                        color: isActive ? '#b8943a' : '#2a2a27' }}>→</span>
                     </button>
                   )
                 })()}
 
                 {/* Linha 1 — Biblioteca, Kits, Tampos */}
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
                   {['biblioteca','modelos','tampos'].map(id => {
                     const p = PAGES.find(x => x.id === id)
                     const isActive = page === id
@@ -227,21 +230,24 @@ function Shell() {
                         className="menu-card"
                         style={{
                           background:'#0f0f0e',
-                          border:`1px solid ${isActive ? '#38bdf8' : 'rgba(255,255,255,0.07)'}`,
-                          borderRadius:6, padding:'12px 14px', cursor:'pointer', textAlign:'left',
+                          border:`1px solid ${isActive ? 'rgba(56,189,248,.35)' : 'rgba(255,255,255,0.07)'}`,
+                          borderRadius:6, cursor:'pointer', textAlign:'left', overflow:'hidden', padding:0,
                         }}>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
-                          letterSpacing:'0.06em', textTransform:'uppercase',
-                          color: isActive ? '#38bdf8' : '#f0ede8', lineHeight:1, marginBottom:3 }}>{p.label}</div>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em',
-                          textTransform:'uppercase', color: isActive ? '#1a8ab8' : '#3a3a35' }}>{p.sub}</div>
+                        <div style={{ height:2, background: isActive ? '#38bdf8' : '#1e5a72' }}/>
+                        <div style={{ padding:'10px 12px' }}>
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
+                            letterSpacing:'0.06em', textTransform:'uppercase',
+                            color: isActive ? '#38bdf8' : '#e8e4dc', lineHeight:1, marginBottom:4 }}>{p.label}</div>
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em',
+                            textTransform:'uppercase', color:'#6a6760' }}>{p.sub}</div>
+                        </div>
                       </button>
                     )
                   })}
                 </div>
 
                 {/* Linha 2 — Mão de Obra, IA, KC */}
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
                   {['maodeobra','ia','kc'].map(id => {
                     const p = PAGES.find(x => x.id === id)
                     const isActive = page === id
@@ -250,21 +256,24 @@ function Shell() {
                         className="menu-card"
                         style={{
                           background:'#0f0f0e',
-                          border:`1px solid ${isActive ? '#38bdf8' : 'rgba(255,255,255,0.07)'}`,
-                          borderRadius:6, padding:'12px 14px', cursor:'pointer', textAlign:'left',
+                          border:`1px solid ${isActive ? 'rgba(56,189,248,.35)' : 'rgba(255,255,255,0.07)'}`,
+                          borderRadius:6, cursor:'pointer', textAlign:'left', overflow:'hidden', padding:0,
                         }}>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
-                          letterSpacing:'0.06em', textTransform:'uppercase',
-                          color: isActive ? '#38bdf8' : '#f0ede8', lineHeight:1, marginBottom:3 }}>{p.label}</div>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em',
-                          textTransform:'uppercase', color: isActive ? '#1a8ab8' : '#3a3a35' }}>{p.sub}</div>
+                        <div style={{ height:2, background: isActive ? '#38bdf8' : '#1e5a72' }}/>
+                        <div style={{ padding:'10px 12px' }}>
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
+                            letterSpacing:'0.06em', textTransform:'uppercase',
+                            color: isActive ? '#38bdf8' : '#e8e4dc', lineHeight:1, marginBottom:4 }}>{p.label}</div>
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em',
+                            textTransform:'uppercase', color:'#6a6760' }}>{p.sub}</div>
+                        </div>
                       </button>
                     )
                   })}
                 </div>
 
                 {/* Linha 3 — Orçamentos + Proposta */}
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
                   {['orcamentos','proposta'].map(id => {
                     const p = PAGES.find(x => x.id === id)
                     const isActive = page === id
@@ -273,14 +282,17 @@ function Shell() {
                         className="menu-card-gold"
                         style={{
                           background:'#0f0f0e',
-                          border:`1px solid ${isActive ? '#c8a96e' : 'rgba(255,255,255,0.07)'}`,
-                          borderRadius:6, padding:'12px 14px', cursor:'pointer', textAlign:'left',
+                          border:`1px solid ${isActive ? 'rgba(200,169,110,.35)' : 'rgba(200,169,110,.1)'}`,
+                          borderRadius:6, cursor:'pointer', textAlign:'left', overflow:'hidden', padding:0,
                         }}>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
-                          letterSpacing:'0.06em', textTransform:'uppercase',
-                          color: isActive ? '#c8a96e' : '#f0ede8', lineHeight:1, marginBottom:3 }}>{p.label}</div>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em',
-                          textTransform:'uppercase', color: isActive ? '#8a6e3a' : '#3a3a35' }}>{p.sub}</div>
+                        <div style={{ height:2, background: isActive ? '#c8a96e' : '#5a3e14' }}/>
+                        <div style={{ padding:'10px 12px' }}>
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
+                            letterSpacing:'0.06em', textTransform:'uppercase',
+                            color:'#c8a96e', lineHeight:1, marginBottom:4 }}>{p.label}</div>
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em',
+                            textTransform:'uppercase', color:'#6a6760' }}>{p.sub}</div>
+                        </div>
                       </button>
                     )
                   })}
