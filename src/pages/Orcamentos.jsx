@@ -150,10 +150,16 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
     SEM_QTY.has(i.origem) ? s+(i.price||0) : s+(i.price||0)*(i.qty||1), 0)
 
   // Artigos para substituição — mesma categoria que o item seleccionado
-  const artsCat = subst
-    ? artigos.filter(a => a.cat===subst.item.cat && a.ref!==subst.item.ref)
+  // Painel substituição — estratificado: mesma sub-cat primeiro, depois restantes da cat
+  const artsSub = subst
+    ? artigos.filter(a => a.cat===subst.item.cat && subst.item.sub && a.sub===subst.item.sub && a.ref!==subst.item.ref)
         .sort((a,b) => (a.ref||'').localeCompare(b.ref||''))
     : []
+  const artsResto = subst
+    ? artigos.filter(a => a.cat===subst.item.cat && !(subst.item.sub && a.sub===subst.item.sub) && a.ref!==subst.item.ref)
+        .sort((a,b) => (a.ref||'').localeCompare(b.ref||''))
+    : []
+  const artsCat = subst ? [...artsSub, ...artsResto] : []
 
   return (
     <div className="neo-screen">
@@ -295,35 +301,60 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
               <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', flexShrink:0, letterSpacing:'0.1em' }}>ACTUAL</span>
               <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'var(--neo-gold)', letterSpacing:'0.06em', flexShrink:0 }}>{subst.item.ref}</span>
               <span style={{ fontSize:12, fontWeight:300, color:'var(--neo-text2)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{subst.item.desc}</span>
+              {subst.item.price>0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, color:'var(--neo-text2)', flexShrink:0 }}>{f2(subst.item.price)} €</span>}
             </div>
 
             {subst.item.cat ? (
               <>
                 <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
-                  {subst.item.cat} — escolhe o artigo substituto
+                  {subst.item.sub || subst.item.cat} — escolhe o artigo substituto
                 </div>
                 <div className="neo-scroll" style={{ maxHeight:'50vh', overflowY:'auto' }}>
                   {artsCat.length===0 ? (
                     <div style={{ padding:'30px 20px', textAlign:'center', fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)', letterSpacing:'0.14em', textTransform:'uppercase' }}>
-                      Sem outros artigos em {subst.item.cat}
+                      Sem outros artigos em {subst.item.sub || subst.item.cat}
                     </div>
-                  ) : artsCat.map(art => (
-                    <div key={art.id} className="tampo-ref-row"
-                      style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:2 }}>
-                          <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'var(--neo-gold)', letterSpacing:'0.06em', flexShrink:0 }}>{art.ref}</span>
-                          {art.price>0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, color:'var(--neo-text2)', flexShrink:0 }}>{f2(art.price)} €</span>}
+                  ) : (() => {
+                    const precoActual = subst.item.price || 0
+                    const renderArt = (art) => {
+                      const diff = precoActual > 0 ? art.price - precoActual : null
+                      return (
+                        <div key={art.id} className="tampo-ref-row"
+                          style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:2 }}>
+                              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'var(--neo-gold)', letterSpacing:'0.06em', flexShrink:0 }}>{art.ref}</span>
+                              {art.price>0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, color:'var(--neo-text2)', flexShrink:0 }}>{f2(art.price)} €</span>}
+                              {diff!==null && diff!==0 && (
+                                <span style={{ fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:700, color:diff>0?'#f87171':'#4ade80', flexShrink:0 }}>
+                                  {diff>0?'+':''}{f2(diff)} €
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize:12, fontWeight:300, color:'var(--neo-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{art.desc}</div>
+                            {art.supplier && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', marginTop:1 }}>{art.supplier}</div>}
+                          </div>
+                          <button onClick={()=>substituir(subst.item, art)} className="neo-btn neo-btn-gold"
+                            style={{ height:30, padding:'0 14px', fontSize:9, flexShrink:0 }}>
+                            Usar este
+                          </button>
                         </div>
-                        <div style={{ fontSize:12, fontWeight:300, color:'var(--neo-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{art.desc}</div>
-                        {art.supplier && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', marginTop:1 }}>{art.supplier}</div>}
-                      </div>
-                      <button onClick={()=>substituir(subst.item, art)} className="neo-btn neo-btn-gold"
-                        style={{ height:30, padding:'0 14px', fontSize:9, flexShrink:0 }}>
-                        Usar este
-                      </button>
-                    </div>
-                  ))}
+                      )
+                    }
+                    return (
+                      <>
+                        {artsSub.length>0 && artsSub.map(renderArt)}
+                        {artsSub.length>0 && artsResto.length>0 && (
+                          <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', margin:'4px 0' }}>
+                            <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.06)' }}/>
+                            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text3,#4a4a42)', flexShrink:0 }}>Outros em {subst.item.cat}</span>
+                            <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.06)' }}/>
+                          </div>
+                        )}
+                        {artsResto.map(renderArt)}
+                      </>
+                    )
+                  })()}
                 </div>
               </>
             ) : (
