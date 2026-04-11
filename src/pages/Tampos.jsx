@@ -798,8 +798,11 @@ function FormulaPanel({margem,setMargem,c1Auto,showToast}){
 // ── RefRow — linha de referência com C1, PVP, ref Anigraco e cálculo ─────────
 function RefRow({label,c1,pvp,unidade,refAnigraco,calc,showToast,markCopied,copiedRefs}){
   const c1Key       = c1fmt(c1)
-  const wasCopiedC1 = copiedRefs?.has(c1Key)
-  const wasCopiedAn = refAnigraco ? copiedRefs?.has(refAnigraco) : false
+  // Chave composta: label::valor — evita highlight cruzado entre linhas com o mesmo C1
+  const c1CopiedKey = label + '::' + c1Key
+  const anCopiedKey = label + '::' + (refAnigraco||'')
+  const wasCopiedC1 = copiedRefs?.has(c1CopiedKey)
+  const wasCopiedAn = refAnigraco ? copiedRefs?.has(anCopiedKey) : false
   const anyWasCopied = wasCopiedC1 || wasCopiedAn
 
   return<div className="tampo-ref-row" style={{
@@ -816,7 +819,7 @@ function RefRow({label,c1,pvp,unidade,refAnigraco,calc,showToast,markCopied,copi
         {refAnigraco&&(
           <div style={{display:'flex',alignItems:'center',gap:6,marginTop:3}}>
             <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.12em',textTransform:'uppercase',color:'#8a8a82'}}>Anigraco</span>
-            <CopyVal val={refAnigraco} label="Ref Anigraco" showToast={showToast} markCopied={markCopied} wasCopied={wasCopiedAn}/>
+            <CopyVal val={refAnigraco} label="Ref Anigraco" showToast={showToast} markCopied={markCopied} copiedKey={anCopiedKey} wasCopied={wasCopiedAn}/>
           </div>
         )}
         {calc&&<div style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-gold)',letterSpacing:'0.06em',marginTop:3}}>{calc}</div>}
@@ -824,7 +827,7 @@ function RefRow({label,c1,pvp,unidade,refAnigraco,calc,showToast,markCopied,copi
       <div style={{display:'flex',gap:8,alignItems:'center',flexShrink:0}}>
         <div style={{textAlign:'right'}}>
           <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'#8a8a82',letterSpacing:'0.1em',marginBottom:2}}>C1</div>
-          <CopyVal val={c1Key} label="C1" showToast={showToast} markCopied={markCopied} wasCopied={wasCopiedC1}/>
+          <CopyVal val={c1Key} label="C1" showToast={showToast} markCopied={markCopied} copiedKey={c1CopiedKey} wasCopied={wasCopiedC1}/>
         </div>
         <div style={{textAlign:'right'}}>
           <div style={{fontFamily:"'Barlow Condensed'",fontSize:8,color:'#8a8a82',letterSpacing:'0.1em',marginBottom:2}}>PVP</div>
@@ -881,7 +884,7 @@ function MaterialModal({tipoProjeto,onSelect,onClose}){
 }
 
 // ── CopyVal ────────────────────────────────────────────────────────────────
-function CopyVal({val,label,showToast,gold,large,markCopied,wasCopied}){
+function CopyVal({val,label,showToast,gold,large,markCopied,copiedKey,wasCopied}){
   const [justCopied,setJustCopied]=useState(false)
   // justCopied — este chip específico foi copiado agora (1.6s)
   // wasCopied  — o valor já foi copiado nesta sessão (highlight global de row)
@@ -890,7 +893,7 @@ function CopyVal({val,label,showToast,gold,large,markCopied,wasCopied}){
   return<button className={`neo-copy ${isActive?'copied':''}`} onClick={()=>{
     navigator.clipboard.writeText(val).catch(()=>{})
     setJustCopied(true);setTimeout(()=>setJustCopied(false),1600)
-    if(markCopied && label!=='PVP') markCopied(val)
+    if(markCopied && label!=='PVP') markCopied(copiedKey || val)
     showToast(`${label} copiado — ${val}`)
   }} style={{
     ...(gold && !isActive ? {color:'var(--neo-gold)'} : {}),

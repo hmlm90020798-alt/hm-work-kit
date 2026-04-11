@@ -315,7 +315,7 @@ export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCop
             showToast={showToast}
             wasCopied={copiedRefs.has(a.ref)}
             onCopied={markCopied}
-            onAddOrc={() => addToOrcamento({ ref:a.ref, desc:a.desc, cat:a.cat, sub:a.sub||'', price:a.price||0, supplier:a.supplier||'', link:a.link||'', origem: a.cat || 'Biblioteca' }, showToast)}/>
+            onAddOrc={() => addToOrcamento({ ref:a.ref, desc:a.desc, cat:a.cat, sub:a.sub||'', price:a.price||0, supplier:a.supplier||'', link:a.link||'', origem: (a.cat && a.cat !== 'Tampos' && a.cat !== 'Mão de Obra') ? a.cat : ('Bib — ' + (a.cat || 'Biblioteca')) }, showToast)}/>
         ))}
       </div>
     </div>
