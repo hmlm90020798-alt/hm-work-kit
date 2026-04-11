@@ -171,7 +171,17 @@ export default function Projecto({ showToast, onNavegar }) {
   const compObjActual = COMPONENTES.find(c => c.id === compActual)
   const kitSel        = kits.find(k => k.id === kitSelId) || null
   const compPorFazer  = compSel.filter(c => !compFeitos.includes(c))
-  const artsCat       = subst ? artigos.filter(a=>a.cat===subst.cat).sort((a,b)=>(a.ref||'').localeCompare(b.ref||'')) : []
+  // Painel substituição — estratificado: mesma sub-cat primeiro, depois restantes da cat
+  const artsSub = subst
+    ? artigos.filter(a => a.cat===subst.cat && subst.sub && a.sub===subst.sub)
+        .sort((a,b)=>(a.ref||'').localeCompare(b.ref||''))
+    : []
+  const artsResto = subst
+    ? artigos.filter(a => a.cat===subst.cat && !(subst.sub && a.sub===subst.sub))
+        .sort((a,b)=>(a.ref||'').localeCompare(b.ref||''))
+    : []
+  // fallback: se não há sub-cat, usar lista plana
+  const artsCat = subst ? [...artsSub, ...artsResto] : []
 
   // ── Acções ────────────────────────────────────────────────────────────
   const escolherTipo = (t) => {
@@ -475,7 +485,7 @@ export default function Projecto({ showToast, onNavegar }) {
                         {kitItems.map((item,idx) => (
                           <KitItemRow key={item.artId||idx} item={item}
                             onChange={inc=>setKitItems(p=>p.map((x,i)=>i===idx?{...x,incluido:inc}:x))}
-                            onSubstituir={()=>setSubst({idx,cat:item.cat})}/>
+                            onSubstituir={()=>setSubst({idx,cat:item.cat,sub:item.sub||''})}/>  
                         ))}
                       </div>
                       <div style={{ display:'flex', gap:8, marginTop:14 }}>
@@ -586,33 +596,58 @@ export default function Projecto({ showToast, onNavegar }) {
               <button className="neo-modal-close" onClick={()=>setSubst(null)}>✕</button>
             </div>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
-              {subst.cat} — escolhe o artigo substituto
+              {subst.sub || subst.cat} — escolhe o artigo substituto
             </div>
             {kitItems[subst.idx] && (
               <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background:'rgba(200,169,110,0.06)', border:'1px solid rgba(200,169,110,0.2)', borderRadius:'var(--neo-radius-sm)', marginBottom:14 }}>
                 <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', flexShrink:0 }}>ACTUAL</span>
                 <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'var(--neo-gold)', letterSpacing:'0.06em', flexShrink:0 }}>{kitItems[subst.idx].ref}</span>
                 <span style={{ fontSize:12, fontWeight:300, color:'var(--neo-text2)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{kitItems[subst.idx].desc}</span>
+                {kitItems[subst.idx].price>0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, color:'var(--neo-text2)', flexShrink:0 }}>{f2(kitItems[subst.idx].price)} €</span>}
               </div>
             )}
             <div className="neo-scroll" style={{ maxHeight:'50vh', overflowY:'auto' }}>
               {artsCat.length===0
-                ? <div style={{ padding:'30px 20px', textAlign:'center', fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Sem artigos em {subst.cat}</div>
-                : artsCat.map(art => (
-                  <div key={art.id} className="tampo-ref-row" style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:2 }}>
-                        <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'var(--neo-gold)', letterSpacing:'0.06em', flexShrink:0 }}>{art.ref}</span>
-                        {art.price>0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, color:'var(--neo-text2)', flexShrink:0 }}>{f2(art.price)} €</span>}
-                      </div>
-                      <div style={{ fontSize:12, fontWeight:300, color:'var(--neo-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{art.desc}</div>
-                      {art.supplier && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', marginTop:1 }}>{art.supplier}</div>}
-                    </div>
-                    <button onClick={()=>substituir(art)} className="neo-btn neo-btn-gold" style={{ height:30, padding:'0 14px', fontSize:9, flexShrink:0 }}>
-                      Usar este
-                    </button>
-                  </div>
-                ))
+                ? <div style={{ padding:'30px 20px', textAlign:'center', fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Sem artigos em {subst.sub||subst.cat}</div>
+                : (() => {
+                    const precoActual = kitItems[subst.idx]?.price || 0
+                    const renderArt = (art) => {
+                      const diff = precoActual>0 ? art.price - precoActual : null
+                      return (
+                        <div key={art.id} className="tampo-ref-row" style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:2 }}>
+                              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'var(--neo-gold)', letterSpacing:'0.06em', flexShrink:0 }}>{art.ref}</span>
+                              {art.price>0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, color:'var(--neo-text2)', flexShrink:0 }}>{f2(art.price)} €</span>}
+                              {diff!==null && diff!==0 && (
+                                <span style={{ fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:700, color: diff>0?'#f87171':'#4ade80', flexShrink:0 }}>
+                                  {diff>0?'+':''}{f2(diff)} €
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize:12, fontWeight:300, color:'var(--neo-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{art.desc}</div>
+                            {art.supplier && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', marginTop:1 }}>{art.supplier}</div>}
+                          </div>
+                          <button onClick={()=>substituir(art)} className="neo-btn neo-btn-gold" style={{ height:30, padding:'0 14px', fontSize:9, flexShrink:0 }}>
+                            Usar este
+                          </button>
+                        </div>
+                      )
+                    }
+                    return (
+                      <>
+                        {artsSub.length>0 && artsSub.map(renderArt)}
+                        {artsSub.length>0 && artsResto.length>0 && (
+                          <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', margin:'4px 0' }}>
+                            <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.06)' }}/>
+                            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text3,#4a4a42)', flexShrink:0 }}>Outros em {subst.cat}</span>
+                            <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.06)' }}/>
+                          </div>
+                        )}
+                        {artsResto.map(renderArt)}
+                      </>
+                    )
+                  })()
               }
             </div>
           </div>
