@@ -31,7 +31,7 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
   const [orc,          setOrc]          = useState(null)
   const [copied,       setCopied]       = useState({})
   const [confirmClear, setConfirmClear] = useState(false)
-  const [collapsed,    setCollapsed]    = useState({})
+  const [collapsed,    setCollapsed]    = useState({}) // chave ausente = recolhido; true = expandido
   // Painel de substituição
   const [subst,        setSubst]        = useState(null) // { item, cat }
   const [artigos,      setArtigos]      = useState([])
@@ -219,7 +219,7 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
             {ordemGrupos.map((origem, idx) => {
               const gItems = grupos[origem]
               const cor    = corParaOrigem(origem, idx)
-              const isCol  = !!collapsed[origem]
+              const isCol  = collapsed[origem] !== true
               const gtotal = totalGrupo(gItems)
               return (
                 <div key={origem} style={{ marginBottom:10 }}>
@@ -448,8 +448,8 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, onPrice, onSub
             </div>
           )}
 
-          {/* Preço editável (Tampos/MO) */}
-          {semQty && (
+          {/* Preço editável — só Mão de Obra; Tampos é sempre via calculadora */}
+          {semQty && !isTampo && (
             <div style={{ display:'flex', alignItems:'center', gap:4, marginLeft:'auto' }}>
               <input
                 type="number" min="0" step="0.01"
@@ -461,6 +461,12 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, onPrice, onSub
               />
               <span style={{ fontFamily:"'Barlow Condensed'",fontSize:12,color:'var(--neo-text2)' }}>€</span>
             </div>
+          )}
+          {/* Preço fixo Tampos — só via calculadora */}
+          {isTampo && item.price>0 && (
+            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:600, color:cor||'var(--neo-text2)', marginLeft:'auto' }}>
+              {f2(item.price)} €
+            </span>
           )}
         </div>
       </div>
