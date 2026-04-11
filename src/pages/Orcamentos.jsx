@@ -60,9 +60,19 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
   const isEmpty = items.length === 0
 
   const setQty = async (ref, qty) => {
-    const newItems = items.map(i => i.ref===ref ? {...i, qty:Math.max(1,qty)} : i)
+    const val = parseFloat(qty)
+    if (isNaN(val) || val <= 0) return
+    const newItems = items.map(i => i.ref===ref ? {...i, qty:val} : i)
     try { await setDoc(ORC_REF(), {...orc, items:newItems}) }
     catch { showToast('Erro ao actualizar quantidade') }
+  }
+
+  const setPrice = async (ref, price) => {
+    const val = parseFloat(price)
+    if (isNaN(val) || val < 0) return
+    const newItems = items.map(i => i.ref===ref ? {...i, price:val} : i)
+    try { await setDoc(ORC_REF(), {...orc, items:newItems}) }
+    catch { showToast('Erro ao actualizar preço') }
   }
 
   const remove = async (ref) => {
@@ -240,6 +250,7 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
                       onRemove={() => remove(item.ref)}
                       onOpen={() => handleItemClick(item)}
                       onQty={(ref,qty) => setQty(ref,qty)}
+                      onPrice={(ref,price) => setPrice(ref,price)}
                       onSubstituir={() => setSubst({ item })}
                       cor={cor}
                       wasCopied={copiedRefs?.has(item.ref)}
@@ -370,7 +381,7 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
 }
 
 // ── OrcItem ───────────────────────────────────────────────────────────────
-function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, onSubstituir, cor, wasCopied }) {
+function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, onPrice, onSubstituir, cor, wasCopied }) {
   const isTampo = item.origem==='Tampos'
   const isMO    = item.origem==='Mão de Obra'
   const semQty  = SEM_QTY.has(item.origem)
@@ -420,21 +431,36 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, onSubstituir, 
             </span>
           )}
 
-          {/* Qty */}
+          {/* Qty — input editável com decimais */}
           {!semQty && (
             <div style={{ display:'flex', alignItems:'center', gap:4, marginLeft:'auto' }}>
-              <button onClick={()=>onQty(item.ref,(item.qty||1)-1)} style={{ width:22,height:22,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1 }}>−</button>
-              <span style={{ fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,color:'var(--neo-text)',minWidth:18,textAlign:'center' }}>{item.qty||1}</span>
-              <button onClick={()=>onQty(item.ref,(item.qty||1)+1)} style={{ width:22,height:22,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1 }}>+</button>
+              <button onClick={()=>onQty(item.ref,(parseFloat(item.qty)||1)-1)} style={{ width:22,height:22,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1 }}>−</button>
+              <input
+                type="number" min="0.01" step="0.01"
+                defaultValue={item.qty||1}
+                key={item.qty}
+                onBlur={e=>onQty(item.ref, e.target.value)}
+                onKeyDown={e=>{ if(e.key==='Enter') { e.target.blur() } }}
+                style={{ fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,color:'var(--neo-text)',background:'transparent',border:'none',borderBottom:'1px solid rgba(255,255,255,0.12)',outline:'none',width:44,textAlign:'center',padding:'1px 2px',fontSize:16 }}
+              />
+              <button onClick={()=>onQty(item.ref,(parseFloat(item.qty)||1)+1)} style={{ width:22,height:22,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1 }}>+</button>
               {item.price>0&&<span style={{ fontFamily:"'Barlow Condensed'",fontSize:12,color:'var(--neo-text2)',marginLeft:4 }}>{subtotal.toFixed(2)} €</span>}
             </div>
           )}
 
-          {/* Preço fixo (Tampos/MO) */}
-          {semQty && item.price>0 && (
-            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:600, color:cor||'var(--neo-text2)', marginLeft:'auto' }}>
-              {f2(item.price)} €
-            </span>
+          {/* Preço editável (Tampos/MO) */}
+          {semQty && (
+            <div style={{ display:'flex', alignItems:'center', gap:4, marginLeft:'auto' }}>
+              <input
+                type="number" min="0" step="0.01"
+                defaultValue={f2(item.price||0)}
+                key={item.price}
+                onBlur={e=>onPrice(item.ref, e.target.value)}
+                onKeyDown={e=>{ if(e.key==='Enter') { e.target.blur() } }}
+                style={{ fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,color:cor||'var(--neo-text2)',background:'transparent',border:'none',borderBottom:'1px solid rgba(255,255,255,0.12)',outline:'none',width:72,textAlign:'right',padding:'1px 2px',fontSize:16 }}
+              />
+              <span style={{ fontFamily:"'Barlow Condensed'",fontSize:12,color:'var(--neo-text2)' }}>€</span>
+            </div>
           )}
         </div>
       </div>
