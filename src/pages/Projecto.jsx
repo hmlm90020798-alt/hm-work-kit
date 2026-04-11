@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { db } from '../firebase'
-import { collection, doc, onSnapshot } from 'firebase/firestore'
+import { collection, doc, onSnapshot, deleteDoc } from 'firebase/firestore'
 import { addToOrcamento } from '../hooks/useOrcamento'
 
 // ── Tipos de projecto ─────────────────────────────────────────────────────
@@ -136,6 +136,9 @@ export default function Projecto({ showToast, onNavegar }) {
   // Painel substituição
   const [subst, setSubst] = useState(null)
 
+  // Confirmação de recomeço com orçamento activo
+  const [confirmRecomecar, setConfirmRecomecar] = useState(false)
+
   // Persistir estado
   useEffect(() => {
     saveLS(ESTADO_KEY, { passo, tipo, compSel, compFeitos, compActual, kitSelId, kitItems })
@@ -242,8 +245,17 @@ export default function Projecto({ showToast, onNavegar }) {
   }
 
   const recomecar = () => {
+    if (orcItems.length > 0) { setConfirmRecomecar(true); return }
+    recomecarConfirmado()
+  }
+
+  const recomecarConfirmado = async (limparOrc = false) => {
+    if (limparOrc) {
+      try { await deleteDoc(doc(db, 'orcamento_ativo', 'ativo')) } catch {}
+    }
     setTipo(null); setCompSel([]); setCompFeitos([])
     setCompActual(null); setKitSelId(null); setKitItems([])
+    setConfirmRecomecar(false)
     setPasso('tipo')
   }
 
@@ -586,6 +598,33 @@ export default function Projecto({ showToast, onNavegar }) {
           </div>
         )}
       </div>
+
+      {/* ══ MODAL CONFIRMAR RECOMEÇO ══ */}
+      {confirmRecomecar && (
+        <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setConfirmRecomecar(false)}}>
+          <div className="neo-modal" style={{ maxWidth:340 }}>
+            <div className="neo-modal-head">
+              Novo projecto
+              <button className="neo-modal-close" onClick={()=>setConfirmRecomecar(false)}>✕</button>
+            </div>
+            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, color:'var(--neo-text2)', letterSpacing:'0.06em', lineHeight:1.9, marginBottom:24 }}>
+              O orçamento tem {orcItems.length} item{orcItems.length!==1?'s':''}.<br/>
+              <span style={{ fontSize:10 }}>O que queres fazer com ele?</span>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <button className="neo-btn neo-btn-danger" onClick={()=>recomecarConfirmado(true)} style={{ width:'100%', height:44, fontSize:10 }}>
+                Apagar orçamento e recomeçar
+              </button>
+              <button className="neo-btn neo-btn-ghost" onClick={()=>recomecarConfirmado(false)} style={{ width:'100%', height:44, fontSize:10 }}>
+                Manter orçamento e recomeçar
+              </button>
+              <button className="neo-btn neo-btn-ghost" onClick={()=>setConfirmRecomecar(false)} style={{ width:'100%', height:40, fontSize:9, opacity:.6 }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ PAINEL SUBSTITUIÇÃO ══ */}
       {subst && (
