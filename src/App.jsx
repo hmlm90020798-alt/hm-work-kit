@@ -16,7 +16,7 @@ import Toast from './components/Toast'
 import { useToast } from './hooks/useToast'
 
 const PAGES = [
-  { id:'projecto',   label:'Novo Projecto', sub:'Guia passo a passo'        },
+  { id:'projecto',   label:'Projectos',     sub:'Guia passo a passo'        },
   { id:'biblioteca', label:'Biblioteca',    sub:'Artigos e referências'      },
   { id:'modelos',    label:'Kits',          sub:'Templates de projecto'      },
   { id:'orcamentos', label:'Orçamentos',    sub:'Cálculo de material'        },
@@ -29,8 +29,7 @@ const PAGES = [
 
 const DEFAULT_ORDER     = PAGES.map(p => p.id)
 const prefsRef          = (uid) => doc(db, 'preferencias', uid)
-const estadoProjectoRef = (uid) => doc(db, 'projecto_ativo', uid)
-const orcamentoRef      = ()    => doc(db, 'orcamento_ativo', 'ativo')
+const activoRef         = (uid) => doc(db, 'projecto_ativo', uid)
 
 const TIPO_LABELS = {
   cozinha:'🍳 Cozinha', banho:'🚿 Casa de Banho', closet:'👕 Closet',
@@ -47,9 +46,9 @@ function Shell() {
   const [tampoParaAbrir, setTampoParaAbrir] = useState(null)
   const [bibCatFiltro, setBibCatFiltro]     = useState(null)
 
-  // Banner — projecto em curso e orçamento em tempo real
-  const [estadoProjecto, setEstadoProjecto] = useState(null)
-  const [orcTemItens,    setOrcTemItens]     = useState(false)
+  // Banner — projecto activo em tempo real
+  const [projectoActivo, setProjectoActivo] = useState(null) // dados completos do projecto
+  const [activoProjId,   setActivoProjId]   = useState(null) // projId actualmente aberto
 
   const { msg, visible, showToast } = useToast()
 
@@ -86,22 +85,24 @@ function Shell() {
     })
   }, [user])
 
-  // Estado do projecto em tempo real (banner)
+  // Ouvir qual o projId activo
   useEffect(() => {
     if (!user) return
-    const unsub = onSnapshot(estadoProjectoRef(user.uid), snap => {
-      setEstadoProjecto(snap.exists() ? snap.data() : null)
+    const unsub = onSnapshot(activoRef(user.uid), snap => {
+      const id = snap.exists() ? snap.data().projId : null
+      setActivoProjId(id || null)
     })
     return () => unsub()
   }, [user])
 
-  // Orçamento em tempo real — só para saber se tem itens (banner)
+  // Ouvir os dados do projecto activo (para o banner)
   useEffect(() => {
-    const unsub = onSnapshot(orcamentoRef(), snap => {
-      setOrcTemItens(snap.exists() && (snap.data().items || []).length > 0)
+    if (!activoProjId) { setProjectoActivo(null); return }
+    const unsub = onSnapshot(doc(db, 'projectos', activoProjId), snap => {
+      setProjectoActivo(snap.exists() ? snap.data() : null)
     })
     return () => unsub()
-  }, [])
+  }, [activoProjId])
 
   const orderedPages = menuOrder.map(id => PAGES.find(p => p.id === id)).filter(Boolean)
 
@@ -136,14 +137,14 @@ function Shell() {
 
   const copyProps = { copiedRefs, markCopied, clearCopied }
 
-  // Banner: projecto activo (passo !== 'tipo') E orçamento com artigos
+  // Banner: há projecto activo com passo além de "tipo" e com total > 0
   const mostrarBanner = page !== 'projecto'
-    && estadoProjecto?.passo
-    && estadoProjecto.passo !== 'tipo'
-    && orcTemItens
+    && projectoActivo
+    && projectoActivo.passo
+    && projectoActivo.passo !== 'tipo'
 
-  const tipoLabel = estadoProjecto?.tipo
-    ? (TIPO_LABELS[estadoProjecto.tipo] || estadoProjecto.tipo)
+  const tipoLabel = projectoActivo?.tipo
+    ? (TIPO_LABELS[projectoActivo.tipo] || projectoActivo.tipo)
     : null
 
   return (
@@ -213,7 +214,7 @@ function Shell() {
             ) : (
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
 
-                {/* Hero — Novo Projecto */}
+                {/* Hero — Projectos */}
                 {(() => {
                   const p = PAGES.find(x => x.id === 'projecto')
                   const isActive = page === 'projecto'
@@ -235,7 +236,7 @@ function Shell() {
                             {p.label}
                           </div>
                           <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.18em',
-                            textTransform:'uppercase', color:'#7a7a72', marginTop:4 }}>{p.sub}</div>
+                            textTransform:'uppercase', color:'#7a7a72', marginTop:5 }}>{p.sub}</div>
                         </div>
                         <span style={{ fontFamily:"'Barlow Condensed'", fontSize:14, color:'#6a5a2a' }}>→</span>
                       </div>
@@ -336,7 +337,7 @@ function Shell() {
       {/* PÁGINA */}
       <main style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
 
-        {/* Banner "← Voltar ao Projecto" — só quando há projecto activo E orçamento com artigos */}
+        {/* Banner "← Voltar ao Projecto" */}
         {mostrarBanner && (
           <button onClick={() => goTo('projecto')} style={{
             display:'flex', alignItems:'center', gap:10,
@@ -356,26 +357,28 @@ function Shell() {
                 — {tipoLabel}
               </span>
             )}
-            {estadoProjecto?.nome && (
+            {projectoActivo?.nome && (
               <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.08em', color:'rgba(200,169,110,0.5)', marginLeft:2 }}>
-                · {estadoProjecto.nome}
+                · {projectoActivo.nome}
               </span>
             )}
-            <span style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', color:'rgba(200,169,110,0.5)', textTransform:'uppercase' }}>
-              em curso
-            </span>
+            {projectoActivo?.total > 0 && (
+              <span style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:700, color:'rgba(200,169,110,0.8)', letterSpacing:'0.08em' }}>
+                {parseFloat(projectoActivo.total).toFixed(2)} €
+              </span>
+            )}
           </button>
         )}
 
         {page === 'projecto'   && <Projecto   showToast={showToast} onNavegar={navegarDeProjecto} />}
         {page === 'biblioteca' && <Biblioteca showToast={showToast} {...copyProps} catFiltroInicial={bibCatFiltro} onCatFiltroUsado={()=>setBibCatFiltro(null)} />}
         {page === 'modelos'    && <Modelos    showToast={showToast} {...copyProps} userId={user.uid} />}
-        {page === 'orcamentos' && <Orcamentos showToast={showToast} {...copyProps} onOpenTampo={(c)=>{ setTampoParaAbrir(c); setPage('tampos') }} onAbrirProposta={() => <Proposta showToast={showToast} />} />}
-        {page === 'tampos'     && <Tampos     showToast={showToast} {...copyProps} abrirCalculo={tampoParaAbrir} onAbrirCalculoDone={()=>setTampoParaAbrir(null)} />}
-        {page === 'maodeobra'  && <MaoDeObra  showToast={showToast} {...copyProps} userId={user.uid} />}
-        {page === 'ia'         && <IA         showToast={showToast} {...copyProps} />}
+        {page === 'orcamentos' && <Orcamentos showToast={showToast} {...copyProps} onOpenTampo={(c)=>{ setTampoParaAbrir(c); setPage('tampos') }} onAbrirProposta={() => <Proposta showToast={showToast} />} activoProjId={activoProjId} />}
+        {page === 'tampos'     && <Tampos     showToast={showToast} {...copyProps} abrirCalculo={tampoParaAbrir} onAbrirCalculoDone={()=>setTampoParaAbrir(null)} activoProjId={activoProjId} />}
+        {page === 'maodeobra'  && <MaoDeObra  showToast={showToast} {...copyProps} userId={user.uid} activoProjId={activoProjId} />}
+        {page === 'ia'         && <IA         showToast={showToast} {...copyProps} activoProjId={activoProjId} />}
         {page === 'kc'         && <KC         showToast={showToast} {...copyProps} />}
-        {page === 'proposta'   && <Proposta   showToast={showToast} />}
+        {page === 'proposta'   && <Proposta   showToast={showToast} activoProjId={activoProjId} />}
       </main>
 
       <Toast msg={msg} visible={visible} />
