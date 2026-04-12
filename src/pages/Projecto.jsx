@@ -490,7 +490,7 @@ export default function Projecto({ showToast, onNavegar }) {
                             <div style={{ display:'flex', gap:12, flexWrap:'wrap', paddingLeft:30, marginTop:6 }}>
                               {camposArr.map(([k,v]) => (
                                 <span key={k} style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'var(--neo-text2)' }}>
-                                  <span style={{ opacity:.6 }}>{k}:</span> {v}
+                                  <span style={{ opacity:0.6 }}>{k}:</span> {v}
                                 </span>
                               ))}
                             </div>
@@ -509,7 +509,7 @@ export default function Projecto({ showToast, onNavegar }) {
                             </button>
                           )}
                           <button onClick={() => setConfirmApagar(proj.projId)}
-                            style={{ background:'transparent', border:'none', cursor:'pointer', padding:'11px 16px', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', opacity:.6 }}>
+                            style={{ background:'transparent', border:'none', cursor:'pointer', padding:'11px 16px', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', opacity:0.6 }}>
                             x
                           </button>
                         </div>
@@ -539,7 +539,7 @@ export default function Projecto({ showToast, onNavegar }) {
             {/* Editar tipos */}
             <div style={{ marginTop:20 }}>
               <button onClick={()=>setEditTipos(o=>!o)}
-                style={{ background:'transparent', border:'none', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text2)', padding:'4px 0', opacity:.6 }}>
+                style={{ background:'transparent', border:'none', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text2)', padding:'4px 0', opacity:0.6 }}>
                 {editTipos ? 'v Fechar' : '* Gerir tipos'}
               </button>
               {editTipos && (
@@ -811,7 +811,7 @@ export default function Projecto({ showToast, onNavegar }) {
               <button className="neo-btn neo-btn-danger" onClick={()=>apagarProjecto(confirmApagar)} style={{ width:'100%', height:44, fontSize:10 }}>
                 Apagar definitivamente
               </button>
-              <button className="neo-btn neo-btn-ghost" onClick={()=>setConfirmApagar(null)} style={{ width:'100%', height:40, fontSize:9, opacity:.6 }}>
+              <button className="neo-btn neo-btn-ghost" onClick={()=>setConfirmApagar(null)} style={{ width:'100%', height:40, fontSize:9, opacity:0.6 }}>
                 Cancelar
               </button>
             </div>
@@ -870,7 +870,7 @@ export default function Projecto({ showToast, onNavegar }) {
                 </button>
               </div>
               {modalCampos.length === 0 && (
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)', letterSpacing:'0.08em', opacity:.6 }}>
+                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)', letterSpacing:'0.08em', opacity:0.6 }}>
                   ex: Processo, No de obra, Nota...
                 </div>
               )}
