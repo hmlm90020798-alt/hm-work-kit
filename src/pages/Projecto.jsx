@@ -505,7 +505,7 @@ export default function Projecto({ showToast, onNavegar }) {
                           {guiaEmCurso && (
                             <button onClick={() => _retomarGuia(proj.projId)}
                               style={{ background:'transparent', border:'none', borderRight:'1px solid rgba(255,255,255,0.06)', cursor:'pointer', padding:'11px 16px', fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', textAlign:'left' }}>
-                              ▶ Continuar guia
+                              + Continuar guia
                             </button>
                           )}
                           <button onClick={() => setConfirmApagar(proj.projId)}

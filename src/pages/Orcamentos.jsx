@@ -540,7 +540,7 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, onPrice, onSub
                 key={item.price}
                 onBlur={e=>onPrice(e.target.value)}
                 onKeyDown={e=>{ if(e.key==='Enter') { e.target.blur() } }}
-                style={{ fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,color:cor||'var(--neo-text2)',background:'transparent',border:'none',borderBottom:'1px solid rgba(255,255,255,0.12)',outline:'none',width:72,textAlign:'right',padding:'1px 2px',fontSize:16 }}
+                style={{ fontFamily:"'Barlow Condensed'",fontWeight:600,color:cor||'var(--neo-text2)',background:'transparent',border:'none',borderBottom:'1px solid rgba(255,255,255,0.12)',outline:'none',width:72,textAlign:'right',padding:'1px 2px',fontSize:16 }}
               />
               <span style={{ fontFamily:"'Barlow Condensed'",fontSize:12,color:'var(--neo-text2)' }}>€</span>
             </div>
