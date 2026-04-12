@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { db } from './firebase'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore'
 import Biblioteca from './pages/Biblioteca'
 import Modelos from './pages/Modelos'
 import Orcamentos from './pages/Orcamentos'
@@ -27,27 +27,37 @@ const PAGES = [
   { id:'proposta',   label:'Proposta',      sub:'Decomposição do orçamento'  },
 ]
 
-const DEFAULT_ORDER = PAGES.map(p => p.id)
-const prefsRef = (uid) => doc(db, 'preferencias', uid)
+const DEFAULT_ORDER     = PAGES.map(p => p.id)
+const prefsRef          = (uid) => doc(db, 'preferencias', uid)
+const estadoProjectoRef = (uid) => doc(db, 'projecto_ativo', uid)
+const orcamentoRef      = ()    => doc(db, 'orcamento_ativo', 'ativo')
+
+const TIPO_LABELS = {
+  cozinha:'🍳 Cozinha', banho:'🚿 Casa de Banho', closet:'👕 Closet',
+  suite:'🛏 Suíte', escritorio:'💼 Escritório', outro:'✦ Outro',
+}
 
 function Shell() {
   const { user, loading, logout } = useAuth()
-  const [page, setPage]             = useState('projecto')   // abre no guia
-  const [menuOpen, setMenuOpen]     = useState(true)
-  const [editMenu, setEditMenu]     = useState(false)
-  const [menuOrder, setMenuOrder]   = useState(DEFAULT_ORDER)
+  const [page, setPage]               = useState('projecto')
+  const [menuOpen, setMenuOpen]       = useState(true)
+  const [editMenu, setEditMenu]       = useState(false)
+  const [menuOrder, setMenuOrder]     = useState(DEFAULT_ORDER)
   const [prefsLoaded, setPrefsLoaded] = useState(false)
   const [tampoParaAbrir, setTampoParaAbrir] = useState(null)
-  // filtro de categoria para quando o Projecto navega para a Biblioteca
-  const [bibCatFiltro, setBibCatFiltro] = useState(null)
+  const [bibCatFiltro, setBibCatFiltro]     = useState(null)
+
+  // Banner — projecto em curso e orçamento em tempo real
+  const [estadoProjecto, setEstadoProjecto] = useState(null)
+  const [orcTemItens,    setOrcTemItens]     = useState(false)
+
   const { msg, visible, showToast } = useToast()
 
-  // Estado global de referências copiadas
   const [copiedRefs, setCopiedRefs] = useState(new Set())
   const markCopied  = (ref) => setCopiedRefs(prev => new Set([...prev, ref]))
   const clearCopied = () => setCopiedRefs(new Set())
 
-  // Carregar preferências do Firestore
+  // Preferências (menuOrder) do Firestore
   useEffect(() => {
     if (!user) return
     getDoc(prefsRef(user.uid)).then(snap => {
@@ -76,6 +86,23 @@ function Shell() {
     })
   }, [user])
 
+  // Estado do projecto em tempo real (banner)
+  useEffect(() => {
+    if (!user) return
+    const unsub = onSnapshot(estadoProjectoRef(user.uid), snap => {
+      setEstadoProjecto(snap.exists() ? snap.data() : null)
+    })
+    return () => unsub()
+  }, [user])
+
+  // Orçamento em tempo real — só para saber se tem itens (banner)
+  useEffect(() => {
+    const unsub = onSnapshot(orcamentoRef(), snap => {
+      setOrcTemItens(snap.exists() && (snap.data().items || []).length > 0)
+    })
+    return () => unsub()
+  }, [])
+
   const orderedPages = menuOrder.map(id => PAGES.find(p => p.id === id)).filter(Boolean)
 
   const moveMenuItem = (idx, dir) => {
@@ -101,7 +128,6 @@ function Shell() {
 
   const goTo = (id) => { setPage(id); setMenuOpen(false) }
 
-  // Navegação a partir do Projecto — permite passar filtro de categoria
   const navegarDeProjecto = (destino, catFiltro = null) => {
     setBibCatFiltro(catFiltro)
     setPage(destino)
@@ -110,11 +136,15 @@ function Shell() {
 
   const copyProps = { copiedRefs, markCopied, clearCopied }
 
-  // Cor de destaque por página — "Novo Projecto" tem cor especial
-  const corPagina = (id) => {
-    if (id === 'projecto') return '#e8cc8a'
-    return '#f0ede8'
-  }
+  // Banner: projecto activo (passo !== 'tipo') E orçamento com artigos
+  const mostrarBanner = page !== 'projecto'
+    && estadoProjecto?.passo
+    && estadoProjecto.passo !== 'tipo'
+    && orcTemItens
+
+  const tipoLabel = estadoProjecto?.tipo
+    ? (TIPO_LABELS[estadoProjecto.tipo] || estadoProjecto.tipo)
+    : null
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden', background:'#0a0a09' }}>
@@ -122,9 +152,9 @@ function Shell() {
       {/* HEADER */}
       <header style={{
         display:'flex', alignItems:'center', justifyContent:'space-between',
-        padding:'0 20px', height:52,
-        background:'#0a0a09', flexShrink:0, position:'relative', zIndex:10,
-        boxShadow: menuOpen ? 'none' : '0 1px 0 rgba(255,255,255,0.04)'
+        padding:'0 20px', height:52, background:'#0a0a09', flexShrink:0,
+        position:'relative', zIndex:10,
+        boxShadow: menuOpen ? 'none' : '0 1px 0 rgba(255,255,255,0.04)',
       }}>
         <button onClick={() => setMenuOpen(o=>!o)} style={{ background:'transparent', border:'none', cursor:'pointer', padding:'6px', display:'flex', flexDirection:'column', gap:5 }}>
           <span style={{ display:'block', width:22, height:1, background:'rgba(255,255,255,0.4)', transition:'all .25s', transform: menuOpen ? 'rotate(45deg) translateY(3px)' : 'none' }}/>
@@ -190,25 +220,18 @@ function Shell() {
                   return (
                     <button key="projecto" onClick={() => goTo('projecto')}
                       className="menu-card-hero"
-                      style={{
-                        width:'100%', background:'#0f0f0e',
+                      style={{ width:'100%', background:'#0f0f0e',
                         border:`1px solid ${isActive ? 'rgba(200,169,110,.4)' : 'rgba(255,255,255,0.07)'}`,
-                        borderRadius:6, cursor:'pointer', textAlign:'left', overflow:'hidden',
-                        padding:0,
-                      }}>
-                      {/* barra dourada no topo */}
+                        borderRadius:6, cursor:'pointer', textAlign:'left', overflow:'hidden', padding:0 }}>
                       <div style={{ height:3, background:'linear-gradient(90deg,#c8a96e,#8a6e3a)' }}/>
                       <div style={{ padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                         <div>
                           <div style={{ fontFamily:"'Barlow Condensed'", fontSize:24, fontWeight:700,
-                            letterSpacing:'0.07em', textTransform:'uppercase',
-                            color:'#c8a96e', lineHeight:1 }}>
-                            <span style={{
-                              display:'inline-block', width:7, height:7, borderRadius:'50%',
+                            letterSpacing:'0.07em', textTransform:'uppercase', color:'#c8a96e', lineHeight:1 }}>
+                            <span style={{ display:'inline-block', width:7, height:7, borderRadius:'50%',
                               background:'#e8cc8a', boxShadow:'0 0 8px rgba(232,204,138,0.6)',
                               marginRight:9, verticalAlign:'middle', position:'relative', top:-1,
-                              animation:'pulse-gold 2s ease-in-out infinite',
-                            }}/>
+                              animation:'pulse-gold 2s ease-in-out infinite' }}/>
                             {p.label}
                           </div>
                           <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.18em',
@@ -226,13 +249,10 @@ function Shell() {
                     const p = PAGES.find(x => x.id === id)
                     const isActive = page === id
                     return (
-                      <button key={id} onClick={() => goTo(id)}
-                        className="menu-card"
-                        style={{
-                          background:'#0f0f0e',
+                      <button key={id} onClick={() => goTo(id)} className="menu-card"
+                        style={{ background:'#0f0f0e',
                           border:`1px solid ${isActive ? 'rgba(56,189,248,.35)' : 'rgba(255,255,255,0.07)'}`,
-                          borderRadius:6, cursor:'pointer', textAlign:'left', overflow:'hidden', padding:0,
-                        }}>
+                          borderRadius:6, cursor:'pointer', textAlign:'left', overflow:'hidden', padding:0 }}>
                         <div style={{ height:2, background: isActive ? '#38bdf8' : '#1e5a72' }}/>
                         <div style={{ padding:'10px 12px' }}>
                           <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
@@ -252,13 +272,10 @@ function Shell() {
                     const p = PAGES.find(x => x.id === id)
                     const isActive = page === id
                     return (
-                      <button key={id} onClick={() => goTo(id)}
-                        className="menu-card"
-                        style={{
-                          background:'#0f0f0e',
+                      <button key={id} onClick={() => goTo(id)} className="menu-card"
+                        style={{ background:'#0f0f0e',
                           border:`1px solid ${isActive ? 'rgba(56,189,248,.35)' : 'rgba(255,255,255,0.07)'}`,
-                          borderRadius:6, cursor:'pointer', textAlign:'left', overflow:'hidden', padding:0,
-                        }}>
+                          borderRadius:6, cursor:'pointer', textAlign:'left', overflow:'hidden', padding:0 }}>
                         <div style={{ height:2, background: isActive ? '#38bdf8' : '#1e5a72' }}/>
                         <div style={{ padding:'10px 12px' }}>
                           <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
@@ -278,13 +295,10 @@ function Shell() {
                     const p = PAGES.find(x => x.id === id)
                     const isActive = page === id
                     return (
-                      <button key={id} onClick={() => goTo(id)}
-                        className="menu-card-gold"
-                        style={{
-                          background:'#0f0f0e',
+                      <button key={id} onClick={() => goTo(id)} className="menu-card-gold"
+                        style={{ background:'#0f0f0e',
                           border:`1px solid ${isActive ? 'rgba(200,169,110,.35)' : 'rgba(200,169,110,.1)'}`,
-                          borderRadius:6, cursor:'pointer', textAlign:'left', overflow:'hidden', padding:0,
-                        }}>
+                          borderRadius:6, cursor:'pointer', textAlign:'left', overflow:'hidden', padding:0 }}>
                         <div style={{ height:2, background: isActive ? '#c8a96e' : '#5a3e14' }}/>
                         <div style={{ padding:'10px 12px' }}>
                           <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
@@ -322,41 +336,31 @@ function Shell() {
       {/* PÁGINA */}
       <main style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
 
-        {/* Banner "← Voltar ao Projecto" — visível em todas as páginas excepto no próprio Projecto */}
-        {page !== 'projecto' && (() => {
-          const estado = (() => { try { return JSON.parse(localStorage.getItem('hm_proj_estado')) } catch { return null } })()
-          const temProjecto = estado && estado.passo && estado.passo !== 'tipo'
-          if (!temProjecto) return null
-          const tipoLabel = estado.tipo
-            ? (['cozinha','banho','closet','suite','escritorio','outro'].includes(estado.tipo)
-                ? {cozinha:'🍳 Cozinha',banho:'🚿 Casa de Banho',closet:'👕 Closet',suite:'🛏 Suíte',escritorio:'💼 Escritório',outro:'✦ Outro'}[estado.tipo]
-                : estado.tipo)
-            : null
-          return (
-            <button onClick={() => goTo('projecto')} style={{
-              display:'flex', alignItems:'center', gap:10,
-              padding:'8px 16px', background:'rgba(200,169,110,0.07)',
-              border:'none', borderBottom:'1px solid rgba(200,169,110,0.15)',
-              cursor:'pointer', width:'100%', textAlign:'left',
-              flexShrink:0, transition:'background .15s',
-            }}
-            onMouseOver={e=>e.currentTarget.style.background='rgba(200,169,110,0.12)'}
-            onMouseOut={e=>e.currentTarget.style.background='rgba(200,169,110,0.07)'}>
-              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-gold)', letterSpacing:'0.1em' }}>←</span>
-              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:600, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-gold)' }}>
-                Voltar ao Projecto
+        {/* Banner "← Voltar ao Projecto" — só quando há projecto activo E orçamento com artigos */}
+        {mostrarBanner && (
+          <button onClick={() => goTo('projecto')} style={{
+            display:'flex', alignItems:'center', gap:10,
+            padding:'8px 16px', background:'rgba(200,169,110,0.07)',
+            border:'none', borderBottom:'1px solid rgba(200,169,110,0.15)',
+            cursor:'pointer', width:'100%', textAlign:'left',
+            flexShrink:0, transition:'background .15s',
+          }}
+          onMouseOver={e=>e.currentTarget.style.background='rgba(200,169,110,0.12)'}
+          onMouseOut={e=>e.currentTarget.style.background='rgba(200,169,110,0.07)'}>
+            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-gold)', letterSpacing:'0.1em' }}>←</span>
+            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:600, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-gold)' }}>
+              Voltar ao Projecto
+            </span>
+            {tipoLabel && (
+              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'rgba(200,169,110,0.6)', marginLeft:4 }}>
+                — {tipoLabel}
               </span>
-              {tipoLabel && (
-                <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'rgba(200,169,110,0.6)', marginLeft:4 }}>
-                  — {tipoLabel}
-                </span>
-              )}
-              <span style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', color:'rgba(200,169,110,0.5)', textTransform:'uppercase' }}>
-                em curso
-              </span>
-            </button>
-          )
-        })()}
+            )}
+            <span style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', color:'rgba(200,169,110,0.5)', textTransform:'uppercase' }}>
+              em curso
+            </span>
+          </button>
+        )}
 
         {page === 'projecto'   && <Projecto   showToast={showToast} onNavegar={navegarDeProjecto} />}
         {page === 'biblioteca' && <Biblioteca showToast={showToast} {...copyProps} catFiltroInicial={bibCatFiltro} onCatFiltroUsado={()=>setBibCatFiltro(null)} />}

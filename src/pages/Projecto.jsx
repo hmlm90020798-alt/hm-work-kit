@@ -146,6 +146,8 @@ export default function Projecto({ showToast, onNavegar }) {
 
   // Confirmação de recomeço com orçamento activo
   const [confirmRecomecar, setConfirmRecomecar] = useState(false)
+  // Confirmação de saltar sem adicionar nada
+  const [confirmSaltar, setConfirmSaltar] = useState(false)
 
   // ── Carregar estado e tipos do Firestore ────────────────────────────────
   useEffect(() => {
@@ -214,6 +216,19 @@ export default function Projecto({ showToast, onNavegar }) {
     if (user) setDoc(prefsRef(user.uid), { projTipos: t }, { merge: true }).catch(() => {})
   }
 
+  // ── Detectar quando o orçamento fica vazio com projecto em curso ──────────
+  const orcItemsAnterior = useRef(null)
+  useEffect(() => {
+    // Só actua depois do estado estar carregado e quando há projecto em curso
+    if (!estadoCarregado) return
+    if (passo === 'tipo') { orcItemsAnterior.current = orcItems.length; return }
+    // Se o orc passou de ter itens para 0 — mostrar modal
+    if (orcItemsAnterior.current > 0 && orcItems.length === 0) {
+      setConfirmRecomecar(true)
+    }
+    orcItemsAnterior.current = orcItems.length
+  }, [orcItems.length, estadoCarregado, passo])
+
   useEffect(() => {
     const u1 = onSnapshot(collection(db,'modelos'), s => setKits(s.docs.map(d=>({id:d.id,...d.data()}))))
     const u2 = onSnapshot(collection(db,'artigos'), s => setArtigos(s.docs.map(d=>({id:d.id,...d.data()}))))
@@ -280,6 +295,25 @@ export default function Projecto({ showToast, onNavegar }) {
     setKitItems((kit.items||[]).map(i=>({...i,incluido:true})))
   }
 
+  // ── Verifica se há artigos no orçamento para uma dada origem ─────────────
+  const temItensNoOrc = useCallback((compId) => {
+    const comp = COMPONENTES.find(c => c.id === compId)
+    if (!comp) return false
+    if (comp.sempreCalculadora) {
+      // Tampos: verifica origem === 'Tampos'
+      return orcItems.some(i => i.origem === 'Tampos')
+    }
+    if (kitSelId) {
+      // Kit seleccionado: verifica pelo nome do kit
+      const kit = kits.find(k => k.id === kitSelId)
+      if (kit) return orcItems.some(i => i.origem === kit.name)
+    }
+    // Componente sem kit (biblioteca/mão de obra): verifica pela categoria destino
+    if (comp.destCat) return orcItems.some(i => i.cat === comp.destCat || i.origem === comp.destCat)
+    if (comp.destino === 'maodeobra') return orcItems.some(i => i.origem === 'Mão de Obra')
+    return false
+  }, [orcItems, kits, kitSelId])
+
   const confirmarKit = async () => {
     if (!kitSel) { showToast('Escolhe um kit primeiro'); return }
     setLoading(true)
@@ -333,8 +367,24 @@ export default function Projecto({ showToast, onNavegar }) {
 
   const voltarPasso = () => {
     if (passo==='componentes') setPasso('tipo')
-    else if (passo==='execucao') setPasso('componentes')
+    else if (passo==='execucao') {
+      // Se estamos em execução com kit seleccionado mas sem artigos no orc → perguntar
+      if (kitSelId && !temItensNoOrc(compActual)) {
+        setConfirmSaltar(true)
+        return
+      }
+      setPasso('componentes')
+    }
     else if (passo==='resumo') setPasso('execucao')
+  }
+
+  // Tentar avançar sem adicionar artigos — pede confirmação se não há itens no orc desta origem
+  const tentarSaltar = () => {
+    if (!temItensNoOrc(compActual)) {
+      setConfirmSaltar(true)
+    } else {
+      marcarFeitoEAvancar(compActual)
+    }
   }
 
   const progressoPct = compSel.length>0 ? Math.round((compFeitos.length/compSel.length)*100) : 0
@@ -573,7 +623,7 @@ export default function Projecto({ showToast, onNavegar }) {
                         ))}
                       </div>
                       <div style={{ display:'flex', gap:8, marginTop:14 }}>
-                        <button onClick={()=>marcarFeitoEAvancar(compActual)} className="neo-btn neo-btn-ghost" style={{ flex:1, height:44, fontSize:10 }}>Saltar</button>
+                        <button onClick={tentarSaltar} className="neo-btn neo-btn-ghost" style={{ flex:1, height:44, fontSize:10 }}>Saltar</button>
                         <button onClick={confirmarKit} disabled={loading} className="neo-btn neo-btn-gold" style={{ flex:2, height:44, fontSize:10 }}>
                           {loading?'A adicionar…':`Adicionar (${kitItems.filter(i=>i.incluido).length} artigos) →`}
                         </button>
@@ -608,7 +658,7 @@ export default function Projecto({ showToast, onNavegar }) {
 
               {/* Botão "feito" — sempre visível */}
               {!comp.sempreCalculadora && (
-                <button onClick={()=>marcarFeitoEAvancar(compActual)} className="neo-btn neo-btn-ghost"
+                <button onClick={tentarSaltar} className="neo-btn neo-btn-ghost"
                   style={{ width:'100%', height:44, fontSize:10, marginTop: temKits&&kitSel ? 0 : 12 }}>
                   {compPorFazer.length===1
                     ? '✓ Concluído — ver resumo'
@@ -617,7 +667,7 @@ export default function Projecto({ showToast, onNavegar }) {
                 </button>
               )}
               {comp.sempreCalculadora && (
-                <button onClick={()=>marcarFeitoEAvancar(compActual)} className="neo-btn neo-btn-ghost"
+                <button onClick={tentarSaltar} className="neo-btn neo-btn-ghost"
                   style={{ width:'100%', height:44, fontSize:10, marginTop:12 }}>
                   {compPorFazer.length===1
                     ? '✓ Tampos calculados — ver resumo'
@@ -676,22 +726,50 @@ export default function Projecto({ showToast, onNavegar }) {
         <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setConfirmRecomecar(false)}}>
           <div className="neo-modal" style={{ maxWidth:340 }}>
             <div className="neo-modal-head">
-              Novo projecto
+              {orcItems.length === 0 ? 'Orçamento limpo' : 'Novo projecto'}
               <button className="neo-modal-close" onClick={()=>setConfirmRecomecar(false)}>✕</button>
             </div>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, color:'var(--neo-text2)', letterSpacing:'0.06em', lineHeight:1.9, marginBottom:24 }}>
-              O orçamento tem {orcItems.length} item{orcItems.length!==1?'s':''}.<br/>
-              <span style={{ fontSize:10 }}>O que queres fazer com ele?</span>
+              {orcItems.length === 0
+                ? <>O orçamento foi esvaziado.<br/><span style={{ fontSize:10 }}>O que queres fazer com o projecto em curso?</span></>
+                : <>O orçamento tem {orcItems.length} item{orcItems.length!==1?'s':''}.<br/><span style={{ fontSize:10 }}>O que queres fazer com ele?</span></>
+              }
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              <button className="neo-btn neo-btn-danger" onClick={()=>recomecarConfirmado(true)} style={{ width:'100%', height:44, fontSize:10 }}>
-                Apagar orçamento e recomeçar
-              </button>
+              {orcItems.length > 0 && (
+                <button className="neo-btn neo-btn-danger" onClick={()=>recomecarConfirmado(true)} style={{ width:'100%', height:44, fontSize:10 }}>
+                  Apagar orçamento e recomeçar
+                </button>
+              )}
               <button className="neo-btn neo-btn-ghost" onClick={()=>recomecarConfirmado(false)} style={{ width:'100%', height:44, fontSize:10 }}>
-                Manter orçamento e recomeçar
+                {orcItems.length === 0 ? 'Recomeçar o projecto' : 'Manter orçamento e recomeçar'}
               </button>
               <button className="neo-btn neo-btn-ghost" onClick={()=>setConfirmRecomecar(false)} style={{ width:'100%', height:40, fontSize:9, opacity:.6 }}>
                 Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MODAL CONFIRMAR SALTAR SEM ARTIGOS ══ */}
+      {confirmSaltar && (
+        <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setConfirmSaltar(false)}}>
+          <div className="neo-modal" style={{ maxWidth:340 }}>
+            <div className="neo-modal-head">
+              Sem artigos adicionados
+              <button className="neo-modal-close" onClick={()=>setConfirmSaltar(false)}>✕</button>
+            </div>
+            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, color:'var(--neo-text2)', letterSpacing:'0.06em', lineHeight:1.9, marginBottom:24 }}>
+              Não adicionaste nenhum artigo ao orçamento para este componente.<br/>
+              <span style={{ fontSize:10 }}>Tens a certeza que queres avançar sem adicionar nada?</span>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <button className="neo-btn neo-btn-ghost" onClick={()=>{ setConfirmSaltar(false); marcarFeitoEAvancar(compActual) }} style={{ width:'100%', height:44, fontSize:10 }}>
+                Sim, avançar sem adicionar
+              </button>
+              <button className="neo-btn neo-btn-gold" onClick={()=>setConfirmSaltar(false)} style={{ width:'100%', height:44, fontSize:10 }}>
+                ← Voltar e adicionar
               </button>
             </div>
           </div>
