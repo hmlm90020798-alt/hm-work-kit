@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { db } from './firebase'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore'
 import Biblioteca from './pages/Biblioteca'
 import Modelos from './pages/Modelos'
 import Orcamentos from './pages/Orcamentos'
@@ -29,6 +29,7 @@ const PAGES = [
 
 const DEFAULT_ORDER = PAGES.map(p => p.id)
 const prefsRef = (uid) => doc(db, 'preferencias', uid)
+const estadoProjectoRef = (uid) => doc(db, 'projecto_ativo', uid)
 
 function Shell() {
   const { user, loading, logout } = useAuth()
@@ -40,6 +41,8 @@ function Shell() {
   const [tampoParaAbrir, setTampoParaAbrir] = useState(null)
   // filtro de categoria para quando o Projecto navega para a Biblioteca
   const [bibCatFiltro, setBibCatFiltro] = useState(null)
+  // Estado do projecto em curso — para o banner
+  const [estadoProjecto, setEstadoProjecto] = useState(null)
   const { msg, visible, showToast } = useToast()
 
   // Estado global de referências copiadas
@@ -74,6 +77,15 @@ function Shell() {
       } catch {}
       setPrefsLoaded(true)
     })
+  }, [user])
+
+  // Ouvir estado do projecto em tempo real (para o banner)
+  useEffect(() => {
+    if (!user) return
+    const unsub = onSnapshot(estadoProjectoRef(user.uid), snap => {
+      setEstadoProjecto(snap.exists() ? snap.data() : null)
+    })
+    return () => unsub()
   }, [user])
 
   const orderedPages = menuOrder.map(id => PAGES.find(p => p.id === id)).filter(Boolean)
@@ -324,13 +336,12 @@ function Shell() {
 
         {/* Banner "← Voltar ao Projecto" — visível em todas as páginas excepto no próprio Projecto */}
         {page !== 'projecto' && (() => {
-          const estado = (() => { try { return JSON.parse(localStorage.getItem('hm_proj_estado')) } catch { return null } })()
-          const temProjecto = estado && estado.passo && estado.passo !== 'tipo'
+          const temProjecto = estadoProjecto && estadoProjecto.passo && estadoProjecto.passo !== 'tipo'
           if (!temProjecto) return null
-          const tipoLabel = estado.tipo
-            ? (['cozinha','banho','closet','suite','escritorio','outro'].includes(estado.tipo)
-                ? {cozinha:'🍳 Cozinha',banho:'🚿 Casa de Banho',closet:'👕 Closet',suite:'🛏 Suíte',escritorio:'💼 Escritório',outro:'✦ Outro'}[estado.tipo]
-                : estado.tipo)
+          const tipoLabel = estadoProjecto.tipo
+            ? (['cozinha','banho','closet','suite','escritorio','outro'].includes(estadoProjecto.tipo)
+                ? {cozinha:'🍳 Cozinha',banho:'🚿 Casa de Banho',closet:'👕 Closet',suite:'🛏 Suíte',escritorio:'💼 Escritório',outro:'✦ Outro'}[estadoProjecto.tipo]
+                : estadoProjecto.tipo)
             : null
           return (
             <button onClick={() => goTo('projecto')} style={{

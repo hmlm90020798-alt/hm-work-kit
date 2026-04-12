@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { db } from '../firebase'
-import { collection, doc, onSnapshot, deleteDoc } from 'firebase/firestore'
+import { collection, doc, onSnapshot, deleteDoc, getDoc, setDoc } from 'firebase/firestore'
+import { useAuth } from '../context/AuthContext'
 import { addToOrcamento } from '../hooks/useOrcamento'
 
 // ── Tipos de projecto ─────────────────────────────────────────────────────
@@ -93,17 +94,16 @@ const COMPONENTES = [
   },
 ]
 
-const TIPOS_KEY  = 'hm_proj_tipos'
-const ESTADO_KEY = 'hm_proj_estado'
-
 function f2(n) { return parseFloat(n||0).toFixed(2) }
 function hexToRgb(hex) {
   if (!hex || hex.startsWith('var')) return '56,189,248'
   try { return `${parseInt(hex.slice(1,3),16)},${parseInt(hex.slice(3,5),16)},${parseInt(hex.slice(5,7),16)}` }
   catch { return '56,189,248' }
 }
-function loadLS(key, def) { try { const v=JSON.parse(localStorage.getItem(key)); return v??def } catch { return def } }
-function saveLS(key, val) { try { localStorage.setItem(key, JSON.stringify(val)) } catch {} }
+
+const ESTADO_VAZIO = { passo:'tipo', tipo:null, compSel:[], compFeitos:[], compActual:null, kitSelId:null, kitItems:[] }
+const estadoRef = (uid) => doc(db, 'projecto_ativo', uid)
+const prefsRef  = (uid) => doc(db, 'preferencias', uid)
 
 // ── Encontrar kits para um componente ────────────────────────────────────
 function kitsParaComp(comp, kits, tipoLabel) {
@@ -112,20 +112,28 @@ function kitsParaComp(comp, kits, tipoLabel) {
 }
 
 export default function Projecto({ showToast, onNavegar }) {
+  const { user } = useAuth()
+
   // Tipos
-  const [tipos,     setTipos]     = useState(() => { const s=loadLS(TIPOS_KEY,null); return Array.isArray(s)&&s.length?s:TIPOS_DEFAULT })
+  const [tipos,     setTipos]     = useState(TIPOS_DEFAULT)
   const [editTipos, setEditTipos] = useState(false)
 
-  // Estado do guia — persistido
-  const [passo,      setPasso]      = useState(() => loadLS(ESTADO_KEY,{})?.passo      || 'tipo')
-  const [tipo,       setTipo]       = useState(() => loadLS(ESTADO_KEY,{})?.tipo       || null)
-  const [compSel,    setCompSel]    = useState(() => loadLS(ESTADO_KEY,{})?.compSel    || [])
-  const [compFeitos, setCompFeitos] = useState(() => loadLS(ESTADO_KEY,{})?.compFeitos || [])
-  const [compActual, setCompActual] = useState(() => loadLS(ESTADO_KEY,{})?.compActual || null)
-  // Para o componente actual: kit(s) encontrado(s), qual foi escolhido, itens ajustados
+  // Estado do guia — carregado do Firestore
+  const [passo,      setPasso]      = useState('tipo')
+  const [tipo,       setTipo]       = useState(null)
+  const [compSel,    setCompSel]    = useState([])
+  const [compFeitos, setCompFeitos] = useState([])
+  const [compActual, setCompActual] = useState(null)
+  const [kitSelId,   setKitSelId]   = useState(null)
+  const [kitItems,   setKitItems]   = useState([])
+
+  // Controlo de carregamento inicial — evita gravar antes de ler
+  const [estadoCarregado, setEstadoCarregado] = useState(false)
+  // Ref para debounce do save
+  const saveTimer = useRef(null)
+
+  // kitsEncontrados (calculado, não persistido)
   const [kitsEncontrados, setKitsEncontrados] = useState([])
-  const [kitSelId,   setKitSelId]   = useState(() => loadLS(ESTADO_KEY,{})?.kitSelId   || null)
-  const [kitItems,   setKitItems]   = useState(() => loadLS(ESTADO_KEY,{})?.kitItems   || [])
 
   // Dados Firestore
   const [kits,    setKits]    = useState([])
@@ -139,12 +147,72 @@ export default function Projecto({ showToast, onNavegar }) {
   // Confirmação de recomeço com orçamento activo
   const [confirmRecomecar, setConfirmRecomecar] = useState(false)
 
-  // Persistir estado
+  // ── Carregar estado e tipos do Firestore ────────────────────────────────
   useEffect(() => {
-    saveLS(ESTADO_KEY, { passo, tipo, compSel, compFeitos, compActual, kitSelId, kitItems })
-  }, [passo, tipo, compSel, compFeitos, compActual, kitSelId, kitItems])
+    if (!user) return
+    // Estado do projecto
+    getDoc(estadoRef(user.uid)).then(snap => {
+      if (snap.exists()) {
+        const d = snap.data()
+        if (d.passo)      setPasso(d.passo)
+        if (d.tipo)       setTipo(d.tipo)
+        if (d.compSel)    setCompSel(d.compSel)
+        if (d.compFeitos) setCompFeitos(d.compFeitos)
+        if (d.compActual) setCompActual(d.compActual)
+        if (d.kitSelId)   setKitSelId(d.kitSelId)
+        if (d.kitItems)   setKitItems(d.kitItems)
+      } else {
+        // Migrar localStorage legado (primeira vez)
+        try {
+          const leg = JSON.parse(localStorage.getItem('hm_proj_estado'))
+          if (leg && leg.passo && leg.passo !== 'tipo') {
+            if (leg.passo)      setPasso(leg.passo)
+            if (leg.tipo)       setTipo(leg.tipo)
+            if (leg.compSel)    setCompSel(leg.compSel)
+            if (leg.compFeitos) setCompFeitos(leg.compFeitos)
+            if (leg.compActual) setCompActual(leg.compActual)
+            if (leg.kitSelId)   setKitSelId(leg.kitSelId)
+            if (leg.kitItems)   setKitItems(leg.kitItems)
+            localStorage.removeItem('hm_proj_estado')
+          }
+        } catch {}
+      }
+      setEstadoCarregado(true)
+    }).catch(() => setEstadoCarregado(true))
 
-  const saveTipos = (t) => { setTipos(t); saveLS(TIPOS_KEY, t) }
+    // Tipos de projecto (em preferencias/{uid})
+    getDoc(prefsRef(user.uid)).then(snap => {
+      if (snap.exists() && Array.isArray(snap.data().projTipos)) {
+        setTipos(snap.data().projTipos)
+      } else {
+        // Migrar localStorage legado
+        try {
+          const leg = JSON.parse(localStorage.getItem('hm_proj_tipos'))
+          if (Array.isArray(leg) && leg.length) {
+            setTipos(leg)
+            setDoc(prefsRef(user.uid), { projTipos: leg }, { merge: true }).catch(() => {})
+            localStorage.removeItem('hm_proj_tipos')
+          }
+        } catch {}
+      }
+    }).catch(() => {})
+  }, [user])
+
+  // ── Gravar estado no Firestore (debounce 600ms) ─────────────────────────
+  useEffect(() => {
+    if (!user || !estadoCarregado) return
+    clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => {
+      setDoc(estadoRef(user.uid), { passo, tipo, compSel, compFeitos, compActual, kitSelId, kitItems }).catch(() => {})
+    }, 600)
+    return () => clearTimeout(saveTimer.current)
+  }, [passo, tipo, compSel, compFeitos, compActual, kitSelId, kitItems, user, estadoCarregado])
+
+  // ── Gravar tipos no Firestore ───────────────────────────────────────────
+  const saveTipos = (t) => {
+    setTipos(t)
+    if (user) setDoc(prefsRef(user.uid), { projTipos: t }, { merge: true }).catch(() => {})
+  }
 
   useEffect(() => {
     const u1 = onSnapshot(collection(db,'modelos'), s => setKits(s.docs.map(d=>({id:d.id,...d.data()}))))
@@ -257,6 +325,10 @@ export default function Projecto({ showToast, onNavegar }) {
     setCompActual(null); setKitSelId(null); setKitItems([])
     setConfirmRecomecar(false)
     setPasso('tipo')
+    // Limpar estado no Firestore imediatamente
+    if (user) {
+      setDoc(estadoRef(user.uid), ESTADO_VAZIO).catch(() => {})
+    }
   }
 
   const voltarPasso = () => {
