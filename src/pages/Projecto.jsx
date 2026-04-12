@@ -311,6 +311,11 @@ export default function Projecto({ showToast, onNavegar }) {
 
   // ── Acções ────────────────────────────────────────────────────────────
   const escolherTipo = (t) => {
+    // Arquivar projecto activo no histórico sem perguntar
+    if (projId && tipo) {
+      guardarNoHistorico({ projId, nome, tipo, campos, passo: 'componentes' }, totalOrc)
+      setHistorico(lerHistorico())
+    }
     const id = gerarProjId()
     setProjId(id); setNome(''); setCampos({})
     setTipo(t.id); setCompSel([]); setCompFeitos([])
@@ -453,14 +458,6 @@ export default function Projecto({ showToast, onNavegar }) {
     setNome(novoNome)
     setCampos(novosCampos)
     setModalId(false)
-    // Gravar imediatamente — não depender do debounce que pode ser cancelado
-    if (user) {
-      clearTimeout(saveTimer.current)
-      setDoc(estadoRef(user.uid), {
-        passo, tipo, compSel, compFeitos, compActual, kitSelId, kitItems,
-        projId, nome: novoNome, campos: novosCampos
-      }).catch(() => {})
-    }
     showToast(novoNome ? `Projecto: ${novoNome}` : 'Identidade guardada')
   }
 
@@ -540,8 +537,78 @@ export default function Projecto({ showToast, onNavegar }) {
         {/* ══ PASSO 1: TIPO ══ */}
         {passo==='tipo' && (
           <div>
-            <PassoHeader numero={1} titulo="Que tipo de projecto?" sub="Selecciona para começar"/>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:10, marginTop:20 }}>
+
+            {/* ── Projecto activo em pausa ── */}
+            {projId && tipo && (() => {
+              const tObj = tipos.find(t => t.id === tipo)
+              const camposArr = Object.entries(campos || {})
+              return (
+                <div style={{ marginBottom:28 }}>
+                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.22em', textTransform:'uppercase', color:'var(--neo-gold)', marginBottom:10 }}>
+                    EM CURSO
+                  </div>
+                  {/* Card do projecto activo */}
+                  <div style={{ background:'var(--neo-bg2)', border:'1px solid rgba(200,169,110,0.25)', borderLeft:'3px solid var(--neo-gold)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', overflow:'hidden' }}>
+                    <div style={{ padding:'16px 16px 12px' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:camposArr.length>0?8:0 }}>
+                        <span style={{ fontSize:22, flexShrink:0 }}>{tObj?.icon || '✦'}</span>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:16, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--neo-text)' }}>
+                            {nome || tObj?.label || 'Projecto'}
+                          </div>
+                          {nome && tObj && (
+                            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.08em', color:'var(--neo-text2)', marginTop:1 }}>
+                              {tObj.icon} {tObj.label}
+                            </div>
+                          )}
+                        </div>
+                        {totalOrc > 0 && (
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:700, color:'var(--neo-gold)', flexShrink:0 }}>
+                            {f2(totalOrc)} €
+                          </div>
+                        )}
+                      </div>
+                      {/* Campos livres */}
+                      {camposArr.length > 0 && (
+                        <div style={{ display:'flex', gap:12, flexWrap:'wrap', paddingLeft:32 }}>
+                          {camposArr.map(([k,v]) => (
+                            <span key={k} style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'var(--neo-text2)' }}>
+                              <span style={{ color:'var(--neo-text2)', opacity:.6 }}>{k}:</span> {v}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {/* Acções */}
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+                      <button onClick={()=>setPasso('componentes')}
+                        style={{ background:'transparent', border:'none', borderRight:'1px solid rgba(255,255,255,0.06)', cursor:'pointer', padding:'11px 8px', fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-gold)' }}>
+                        Continuar →
+                      </button>
+                      <button onClick={abrirModalId}
+                        style={{ background:'transparent', border:'none', borderRight:'1px solid rgba(255,255,255,0.06)', cursor:'pointer', padding:'11px 8px', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)' }}>
+                        ✎ Identificar
+                      </button>
+                      <button onClick={()=>{
+                          guardarNoHistorico({ projId, nome, tipo, campos, passo:'componentes' }, totalOrc)
+                          setHistorico(lerHistorico())
+                          setTipo(null); setCompSel([]); setCompFeitos([])
+                          setCompActual(null); setKitSelId(null); setKitItems([])
+                          setProjId(null); setNome(''); setCampos({})
+                          if (user) setDoc(estadoRef(user.uid), ESTADO_VAZIO).catch(()=>{})
+                        }}
+                        style={{ background:'transparent', border:'none', cursor:'pointer', padding:'11px 8px', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)' }}>
+                        Arquivar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* ── Novo projecto ── */}
+            <PassoHeader numero={projId && tipo ? null : 1} titulo={projId && tipo ? 'Novo projecto' : 'Que tipo de projecto?'} sub={projId && tipo ? 'Selecciona o tipo para começar' : 'Selecciona para começar'}/>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:10, marginTop:16 }}>
               {tiposActivos.map(t => (
                 <button key={t.id} onClick={()=>escolherTipo(t)} className="proj-tipo-card"
                   style={{ background:'var(--neo-bg2)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'22px 16px', cursor:'pointer', textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
@@ -1104,15 +1171,16 @@ function CompCard({ comp, corR, children }) {
 }
 
 function PassoHeader({ numero, titulo, sub, cor, icon }) {
+  const mostrarCirculo = icon != null || numero != null
   return (
     <div style={{ marginBottom:4 }}>
       <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
-        <div style={{ width:28, height:28, borderRadius:'50%', flexShrink:0, background:cor?`${cor}22`:'rgba(200,169,110,0.15)', border:`1px solid ${cor||'var(--neo-gold)'}44`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, color:cor||'var(--neo-gold)' }}>
+        {mostrarCirculo && <div style={{ width:28, height:28, borderRadius:'50%', flexShrink:0, background:cor?`${cor}22`:'rgba(200,169,110,0.15)', border:`1px solid ${cor||'var(--neo-gold)'}44`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, color:cor||'var(--neo-gold)' }}>
           {icon||numero}
-        </div>
+        </div>}
         <div style={{ fontFamily:"'Barlow Condensed'", fontSize:18, fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase', color:'var(--neo-text)' }}>{titulo}</div>
       </div>
-      {sub && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', color:'var(--neo-text2)', paddingLeft:38, lineHeight:1.6 }}>{sub}</div>}
+      {sub && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', color:'var(--neo-text2)', paddingLeft: mostrarCirculo ? 38 : 0, lineHeight:1.6 }}>{sub}</div>}
     </div>
   )
 }
