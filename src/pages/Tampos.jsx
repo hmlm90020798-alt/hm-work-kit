@@ -7,10 +7,10 @@ import { addToOrcamento } from '../hooks/useOrcamento'
 import { ANIGRACO, TRANSPORTE, TIPOS_PEDRA, TIPOS_ALL } from '../data/anigracoData'
 import { calcPeca, novoProjeto, totProj, uuid, f2, c1fmt } from '../hooks/useTampos'
 
-export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone, copiedRefs, markCopied}){
+export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone, copiedRefs, markCopied, activoProjId}){
   const [calculos,setCalculos]=useState([])
-  const [orcamentos,setOrcamentos]=useState([])
   const [current,setCurrent]=useState(null)
+
   const [importModal,setImportModal]=useState(false)
   const [filtroTipo,setFiltroTipo]=useState('TODOS')
   const [matSearch,setMatSearch]=useState('')
@@ -27,9 +27,9 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone, cop
   useEffect(()=>{
     const u1=onSnapshot(collection(db,'tampos'),snap=>setCalculos(snap.docs.map(d=>({id:d.id,...d.data()}))),
       ()=>showToast('Erro ao carregar cálculos'))
-    const u2=onSnapshot(collection(db,'orcamentos'),snap=>setOrcamentos(snap.docs.map(d=>({id:d.id,...d.data()}))),
-      ()=>{})
-    return()=>{u1();u2()}
+    // Listener de orcamentos removido — path era inválido (colecção antiga 'orcamentos')
+    // O orçamento agora vive em projectos/{projId}/orcamento/ativo
+    return()=>{u1()}
   },[])
 
   // Materiais filtrados para a listagem
@@ -49,10 +49,11 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone, cop
     })
 
   // Actualizar item do tampo no orçamento se já existir
-  const sincronizarComOrcamento=async(tampoId,pvp,pecas,nome)=>{
+  const sincronizarComOrcamento=async(projId,tampoId,pvp,pecas,nome)=>{
+    if(!projId)return
     try{
-      const orcRef=doc(db,'orcamento_ativo','ativo')
-      const snap=await getDoc(orcRef)
+      const orcDocRef=doc(db,'projectos',projId,'orcamento','ativo')
+      const snap=await getDoc(orcDocRef)
       if(!snap.exists())return
       const orc=snap.data()
       const items=orc.items||[]
@@ -65,22 +66,22 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone, cop
         desc: (pecas||[]).map(p=>p.desc||p.label).filter(Boolean).join(' + '),
         ref: nome||item.ref,
       }:i)
-      await setDoc(orcRef,{...orc,items:newItems})
+      await setDoc(orcDocRef,{...orc,items:newItems})
     }catch{}
   }
 
   if(current) return <Calculadora current={current} setCurrent={setCurrent}
-    orcamentos={orcamentos} showToast={showToast} markCopied={markCopied} copiedRefs={copiedRefs}
+    showToast={showToast} markCopied={markCopied} copiedRefs={copiedRefs}
+    activoProjId={activoProjId}
     sincronizarComOrcamento={sincronizarComOrcamento}
     onBack={async(dadosActuais)=>{
-      // dadosActuais vem da Calculadora com o estado mais recente
       const c = dadosActuais || current
       if(c.nome?.trim()||(c.pecas||[]).some(p=>p.desc)){
         try {
           const data={...c};delete data.id
           if(c.id){
             await setDoc(doc(db,'tampos',c.id),data)
-            await sincronizarComOrcamento(c.id, dadosActuais?.pvp||0, c.pecas, c.nome)
+            await sincronizarComOrcamento(activoProjId, c.id, dadosActuais?.pvp||0, c.pecas, c.nome)
           }
           else{const r=await addDoc(collection(db,'tampos'),data);setCurrent(c=>({...c,id:r.id}))}
         } catch { showToast('Erro ao guardar cálculo') }
@@ -221,7 +222,7 @@ export default function Tampos({showToast, abrirCalculo, onAbrirCalculoDone, cop
 }
 
 // ── Calculadora ────────────────────────────────────────────────────────────
-function Calculadora({current,setCurrent,showToast,onBack,sincronizarComOrcamento,markCopied,copiedRefs}){
+function Calculadora({current,setCurrent,showToast,onBack,sincronizarComOrcamento,markCopied,copiedRefs,activoProjId}){
   const [tab,setTab]=useState('pecas')
   const [matModal,setMatModal]=useState(null) // 'A' | 'B'
   const [formulaOpen,setFormulaOpen]=useState(false)
@@ -260,7 +261,7 @@ function Calculadora({current,setCurrent,showToast,onBack,sincronizarComOrcament
     const data={...current};delete data.id
     if(current.id){
       await setDoc(doc(db,'tampos',current.id),data)
-      await sincronizarComOrcamento?.(current.id, TA.pvp, current.pecas, current.nome)
+      await sincronizarComOrcamento?.(activoProjId, current.id, TA.pvp, current.pecas, current.nome)
     }
     else{const r=await addDoc(collection(db,'tampos'),data);setCurrent(c=>({...c,id:r.id}))}
     showToast('Guardado')
@@ -473,7 +474,8 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
                 const esp=ref?.espessuras[primeiraPeca.espessura]
                 if(esp){c1Ref=c1fmt(esp.c1);refAnigraco=esp.refAnigraco||null}
               }
-              addToOrcamento({
+              if(!activoProjId){showToast('Sem projecto activo');return}
+              addToOrcamento(activoProjId, {
                 ref: nome,
                 desc: current.pecas.map(p=>p.desc||p.label).filter(Boolean).join(' + '),
                 cat:'Tampos',
