@@ -101,7 +101,33 @@ function hexToRgb(hex) {
   catch { return '56,189,248' }
 }
 
-const ESTADO_VAZIO = { passo:'tipo', tipo:null, compSel:[], compFeitos:[], compActual:null, kitSelId:null, kitItems:[] }
+// ── Identidade do projecto ────────────────────────────────────────────────
+const HIST_KEY    = 'hm_proj_historico'
+const HIST_MAX    = 5
+
+function gerarProjId() { return 'proj_' + Date.now() }
+
+function lerHistorico() {
+  try { return JSON.parse(localStorage.getItem(HIST_KEY)) || [] } catch { return [] }
+}
+
+function guardarNoHistorico(estado, totalOrc) {
+  if (!estado.projId || estado.passo === 'tipo') return
+  const hist = lerHistorico().filter(h => h.projId !== estado.projId)
+  const entrada = {
+    projId:  estado.projId,
+    nome:    estado.nome   || '',
+    tipo:    estado.tipo   || null,
+    campos:  estado.campos || {},
+    passo:   estado.passo,
+    ts:      Date.now(),
+    total:   totalOrc,
+  }
+  const nova = [entrada, ...hist].slice(0, HIST_MAX)
+  localStorage.setItem(HIST_KEY, JSON.stringify(nova))
+}
+
+const ESTADO_VAZIO = { passo:'tipo', tipo:null, compSel:[], compFeitos:[], compActual:null, kitSelId:null, kitItems:[], projId:null, nome:'', campos:{} }
 const estadoRef = (uid) => doc(db, 'projecto_ativo', uid)
 const prefsRef  = (uid) => doc(db, 'preferencias', uid)
 
@@ -126,6 +152,17 @@ export default function Projecto({ showToast, onNavegar }) {
   const [compActual, setCompActual] = useState(null)
   const [kitSelId,   setKitSelId]   = useState(null)
   const [kitItems,   setKitItems]   = useState([])
+
+  // Identidade do projecto
+  const [projId,  setProjId]  = useState(null)
+  const [nome,    setNome]    = useState('')
+  const [campos,  setCampos]  = useState({}) // { chave: valor }
+  // Modal de identidade
+  const [modalId, setModalId] = useState(false)
+  // Histório de projectos recentes
+  const [historico, setHistorico] = useState(lerHistorico)
+  // Confirmar retomar projecto do histórico
+  const [confirmarRetoma, setConfirmarRetoma] = useState(null) // entrada do histórico
 
   // Controlo de carregamento inicial — evita gravar antes de ler
   const [estadoCarregado, setEstadoCarregado] = useState(false)
@@ -163,6 +200,9 @@ export default function Projecto({ showToast, onNavegar }) {
         if (d.compActual) setCompActual(d.compActual)
         if (d.kitSelId)   setKitSelId(d.kitSelId)
         if (d.kitItems)   setKitItems(d.kitItems)
+        if (d.projId)     setProjId(d.projId)
+        if (d.nome)       setNome(d.nome)
+        if (d.campos)     setCampos(d.campos)
       } else {
         // Migrar localStorage legado (primeira vez)
         try {
@@ -205,10 +245,10 @@ export default function Projecto({ showToast, onNavegar }) {
     if (!user || !estadoCarregado) return
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
-      setDoc(estadoRef(user.uid), { passo, tipo, compSel, compFeitos, compActual, kitSelId, kitItems }).catch(() => {})
+      setDoc(estadoRef(user.uid), { passo, tipo, compSel, compFeitos, compActual, kitSelId, kitItems, projId, nome, campos }).catch(() => {})
     }, 600)
     return () => clearTimeout(saveTimer.current)
-  }, [passo, tipo, compSel, compFeitos, compActual, kitSelId, kitItems, user, estadoCarregado])
+  }, [passo, tipo, compSel, compFeitos, compActual, kitSelId, kitItems, projId, nome, campos, user, estadoCarregado])
 
   // ── Gravar tipos no Firestore ───────────────────────────────────────────
   const saveTipos = (t) => {
@@ -271,6 +311,8 @@ export default function Projecto({ showToast, onNavegar }) {
 
   // ── Acções ────────────────────────────────────────────────────────────
   const escolherTipo = (t) => {
+    const id = gerarProjId()
+    setProjId(id); setNome(''); setCampos({})
     setTipo(t.id); setCompSel([]); setCompFeitos([])
     setCompActual(null); setKitSelId(null); setKitItems([])
     setPasso('componentes')
@@ -352,11 +394,15 @@ export default function Projecto({ showToast, onNavegar }) {
   }
 
   const recomecarConfirmado = async (limparOrc = false) => {
+    // Guardar projecto actual no histórico antes de limpar
+    guardarNoHistorico({ projId, nome, tipo, campos, passo }, totalOrc)
+    setHistorico(lerHistorico())
     if (limparOrc) {
       try { await deleteDoc(doc(db, 'orcamento_ativo', 'ativo')) } catch {}
     }
     setTipo(null); setCompSel([]); setCompFeitos([])
     setCompActual(null); setKitSelId(null); setKitItems([])
+    setProjId(null); setNome(''); setCampos({})
     setConfirmRecomecar(false)
     setPasso('tipo')
     // Limpar estado no Firestore imediatamente
@@ -389,6 +435,53 @@ export default function Projecto({ showToast, onNavegar }) {
 
   const progressoPct = compSel.length>0 ? Math.round((compFeitos.length/compSel.length)*100) : 0
 
+  // ── Guardar identidade (modal ✎) ──────────────────────────────────────
+  const [modalNome,   setModalNome]   = useState('')
+  const [modalCampos, setModalCampos] = useState([]) // [{ chave, valor }]
+
+  const abrirModalId = () => {
+    setModalNome(nome)
+    setModalCampos(Object.entries(campos).map(([chave,valor])=>({chave,valor})))
+    setModalId(true)
+  }
+
+  const guardarIdentidade = () => {
+    const novoNome   = modalNome.trim()
+    const novosCampos = Object.fromEntries(
+      modalCampos.filter(c=>c.chave.trim()).map(c=>[c.chave.trim(), c.valor])
+    )
+    setNome(novoNome)
+    setCampos(novosCampos)
+    setModalId(false)
+    showToast(novoNome ? `Projecto: ${novoNome}` : 'Identidade guardada')
+  }
+
+  // ── Retomar projecto do histórico ─────────────────────────────────────
+  const retomarProjecto = (entrada) => {
+    // Se há projecto activo diferente, pedir confirmação
+    if (passo !== 'tipo' && projId && projId !== entrada.projId) {
+      setConfirmarRetoma(entrada)
+      return
+    }
+    _carregarEntradaHistorico(entrada)
+  }
+
+  const _carregarEntradaHistorico = (entrada) => {
+    // Guardar estado actual no histórico se válido
+    if (passo !== 'tipo' && projId) guardarNoHistorico({ projId, nome, tipo, campos, passo }, totalOrc)
+    // O histórico não guarda compSel/compFeitos/kitItems detalhados — retomamos no passo correcto
+    setProjId(entrada.projId)
+    setNome(entrada.nome || '')
+    setCampos(entrada.campos || {})
+    setTipo(entrada.tipo)
+    setCompSel([]); setCompFeitos([]); setCompActual(null); setKitSelId(null); setKitItems([])
+    // Retomar no início do tipo seleccionado (o utilizador continua a partir dos componentes)
+    setPasso('componentes')
+    setConfirmarRetoma(null)
+    setHistorico(lerHistorico())
+    showToast(`A retomar: ${entrada.nome || entrada.tipo || 'projecto'}`)
+  }
+
   // ─────────────────────────────────────────────────────────────────────
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%', overflow:'hidden', background:'var(--neo-bg)', color:'var(--neo-text)', fontFamily:"'Barlow',sans-serif" }}>
@@ -401,7 +494,10 @@ export default function Projecto({ showToast, onNavegar }) {
           )}
           <div>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text)' }}>Novo Projecto</div>
-            {tipoActual && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:tipoActual.cor, marginTop:1 }}>{tipoActual.icon} {tipoActual.label}</div>}
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              {tipoActual && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:tipoActual.cor, marginTop:1 }}>{tipoActual.icon} {tipoActual.label}</div>}
+              {nome && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.08em', color:'var(--neo-text2)', marginTop:1 }}>· {nome}</div>}
+            </div>
           </div>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
@@ -411,9 +507,15 @@ export default function Projecto({ showToast, onNavegar }) {
             </div>
           )}
           {passo!=='tipo' && (
-            <button onClick={recomecar} style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'var(--neo-radius-pill)', padding:'5px 12px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--neo-text2)' }}>
-              Recomeçar
-            </button>
+            <>
+              <button onClick={abrirModalId} title="Identificar projecto"
+                style={{ background: nome ? 'rgba(200,169,110,0.1)' : 'transparent', border:`1px solid ${nome ? 'rgba(200,169,110,0.3)' : 'rgba(255,255,255,0.08)'}`, borderRadius:'var(--neo-radius-pill)', padding:'5px 10px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', color: nome ? 'var(--neo-gold)' : 'var(--neo-text2)', transition:'all .15s' }}>
+                ✎
+              </button>
+              <button onClick={recomecar} style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'var(--neo-radius-pill)', padding:'5px 12px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--neo-text2)' }}>
+                Recomeçar
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -460,6 +562,49 @@ export default function Projecto({ showToast, onNavegar }) {
                     </button>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Histórico de projectos recentes */}
+            {historico.length > 0 && (
+              <div style={{ marginTop:28 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+                  <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.05)' }}/>
+                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--neo-text2)', flexShrink:0 }}>Recentes</span>
+                  <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.05)' }}/>
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                  {historico.map(h => {
+                    const tObj = tipos.find(t => t.id === h.tipo)
+                    const camposArr = Object.entries(h.campos || {})
+                    const dataStr  = h.ts ? new Date(h.ts).toLocaleDateString('pt-PT',{day:'numeric',month:'short'}) : ''
+                    return (
+                      <button key={h.projId} onClick={()=>retomarProjecto(h)}
+                        className="neo-hover"
+                        style={{ display:'flex', alignItems:'center', gap:12, background:'var(--neo-bg2)', border:'1px solid rgba(255,255,255,0.06)', borderLeft:'3px solid rgba(200,169,110,0.25)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'11px 14px', cursor:'pointer', textAlign:'left', width:'100%' }}>
+                        <span style={{ fontSize:18, flexShrink:0 }}>{tObj?.icon || '✦'}</span>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--neo-text)' }}>
+                              {h.nome || tObj?.label || 'Projecto'}
+                            </span>
+                            {h.nome && tObj && (
+                              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.08em', color:'var(--neo-text2)' }}>{tObj.icon} {tObj.label}</span>
+                            )}
+                          </div>
+                          <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:2, flexWrap:'wrap' }}>
+                            {camposArr.slice(0,2).map(([k,v]) => (
+                              <span key={k} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', color:'var(--neo-text2)' }}>{k}: {v}</span>
+                            ))}
+                            {dataStr && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', color:'var(--neo-text2)', opacity:0.6 }}>{dataStr}</span>}
+                            {h.total>0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:600, color:'var(--neo-gold)', marginLeft:'auto' }}>{f2(h.total)} €</span>}
+                          </div>
+                        </div>
+                        <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-gold2)', flexShrink:0, letterSpacing:'0.08em' }}>Retomar →</span>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             )}
           </div>
@@ -776,7 +921,94 @@ export default function Projecto({ showToast, onNavegar }) {
         </div>
       )}
 
-      {/* ══ PAINEL SUBSTITUIÇÃO ══ */}
+      {/* ══ MODAL IDENTIDADE ✎ ══ */}
+      {modalId && (
+        <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setModalId(false)}}>
+          <div className="neo-modal" style={{ maxWidth:380 }}>
+            <div className="neo-modal-head">
+              Identificar projecto
+              <button className="neo-modal-close" onClick={()=>setModalId(false)}>✕</button>
+            </div>
+
+            {/* Nome do cliente */}
+            <div style={{ marginBottom:18 }}>
+              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:6 }}>Nome do cliente</div>
+              <input
+                value={modalNome}
+                onChange={e=>setModalNome(e.target.value)}
+                placeholder="ex: João Silva"
+                autoFocus
+                style={{ width:'100%', background:'var(--neo-bg)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'var(--neo-radius-sm)', padding:'10px 12px', fontFamily:"'Barlow'", fontSize:14, color:'var(--neo-text)', outline:'none', boxSizing:'border-box' }}
+              />
+            </div>
+
+            {/* Campos livres */}
+            <div style={{ marginBottom:18 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text2)' }}>Campos adicionais</div>
+                <button onClick={()=>setModalCampos(p=>[...p,{chave:'',valor:''}])}
+                  style={{ background:'transparent', border:'1px solid rgba(200,169,110,0.25)', borderRadius:'var(--neo-radius-pill)', padding:'3px 10px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', color:'var(--neo-gold)' }}>
+                  + Adicionar
+                </button>
+              </div>
+              {modalCampos.length === 0 && (
+                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)', letterSpacing:'0.08em', opacity:.6 }}>
+                  ex: Processo, Nº de obra, Nota...
+                </div>
+              )}
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                {modalCampos.map((c,i)=>(
+                  <div key={i} style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    <input
+                      value={c.chave}
+                      onChange={e=>setModalCampos(p=>p.map((x,j)=>j===i?{...x,chave:e.target.value}:x))}
+                      placeholder="Campo"
+                      style={{ width:100, flexShrink:0, background:'var(--neo-bg)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'var(--neo-radius-sm)', padding:'7px 10px', fontFamily:"'Barlow Condensed'", fontSize:11, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--neo-text2)', outline:'none' }}
+                    />
+                    <input
+                      value={c.valor}
+                      onChange={e=>setModalCampos(p=>p.map((x,j)=>j===i?{...x,valor:e.target.value}:x))}
+                      placeholder="Valor"
+                      style={{ flex:1, background:'var(--neo-bg)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'var(--neo-radius-sm)', padding:'7px 10px', fontFamily:"'Barlow'", fontSize:13, color:'var(--neo-text)', outline:'none' }}
+                    />
+                    <button onClick={()=>setModalCampos(p=>p.filter((_,j)=>j!==i))}
+                      style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--neo-text2)', fontSize:14, padding:'4px 6px', lineHeight:1, flexShrink:0 }}>✕</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display:'flex', gap:8 }}>
+              <button className="neo-btn neo-btn-ghost" onClick={()=>setModalId(false)} style={{ flex:1, height:42, fontSize:10 }}>Cancelar</button>
+              <button className="neo-btn neo-btn-gold" onClick={guardarIdentidade} style={{ flex:2, height:42, fontSize:10 }}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MODAL CONFIRMAR RETOMA ══ */}
+      {confirmarRetoma && (
+        <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setConfirmarRetoma(null)}}>
+          <div className="neo-modal" style={{ maxWidth:340 }}>
+            <div className="neo-modal-head">
+              Projecto em curso
+              <button className="neo-modal-close" onClick={()=>setConfirmarRetoma(null)}>✕</button>
+            </div>
+            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, color:'var(--neo-text2)', letterSpacing:'0.06em', lineHeight:1.9, marginBottom:20 }}>
+              Tens um projecto activo.<br/>
+              <span style={{ fontSize:10 }}>Ao retomar outro, o actual fica guardado no histórico.</span>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <button className="neo-btn neo-btn-gold" onClick={()=>_carregarEntradaHistorico(confirmarRetoma)} style={{ width:'100%', height:44, fontSize:10 }}>
+                Retomar — {confirmarRetoma.nome || confirmarRetoma.tipo || 'projecto'}
+              </button>
+              <button className="neo-btn neo-btn-ghost" onClick={()=>setConfirmarRetoma(null)} style={{ width:'100%', height:40, fontSize:9, opacity:.6 }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {subst && (
         <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setSubst(null)}}>
           <div className="neo-modal" style={{ maxWidth:480 }}>

@@ -356,6 +356,11 @@ function Shell() {
                 — {tipoLabel}
               </span>
             )}
+            {estadoProjecto?.nome && (
+              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.08em', color:'rgba(200,169,110,0.5)', marginLeft:2 }}>
+                · {estadoProjecto.nome}
+              </span>
+            )}
             <span style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', color:'rgba(200,169,110,0.5)', textTransform:'uppercase' }}>
               em curso
             </span>
