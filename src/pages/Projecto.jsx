@@ -17,19 +17,19 @@ const TIPOS_DEFAULT = [
 ]
 
 const COMPONENTES = [
-  { id:'base',       label:'Kit base',        icon:'📦', desc:'Artigos essenciais',                    cor:'#c8943a',
+  { id:'base',       label:'Kit base',         icon:'📦', desc:'Artigos essenciais do projecto',  cor:'#c8943a',
     match:(n,c,t)=>{ const nl=n.toLowerCase(),cl=(c||'').toLowerCase(),tl=(t||'').toLowerCase(); return nl.includes('base')||(cl&&cl.includes(tl)) }, destino:null },
-  { id:'eletro',     label:'Eletrodomesticos', icon:'⚡', desc:'Electrodomesticos encastraveis',        cor:'#8a9e6e',
+  { id:'eletro',     label:'Eletrodomesticos', icon:'⚡', desc:'Electrodomesticos encastraveis',   cor:'#8a9e6e',
     match:(n)=>n.toLowerCase().includes('eletro')||n.toLowerCase().includes('electro'), destino:'biblioteca', destCat:'Eletrodomesticos' },
-  { id:'acessorios', label:'Acessorios',       icon:'🔩', desc:'Puxadores, calhas, dobradicas',         cor:'#b07acc',
+  { id:'acessorios', label:'Acessorios',        icon:'🔩', desc:'Puxadores, calhas e outros',       cor:'#b07acc',
     match:(n)=>n.toLowerCase().includes('acess'), destino:'biblioteca', destCat:'Acessorios' },
-  { id:'ferragens',  label:'Ferragens',        icon:'🔧', desc:'Ferragens de cozinha e montagem',       cor:'#7a9e9a',
+  { id:'ferragens',  label:'Ferragens',          icon:'🔧', desc:'Ferragens de cozinha e montagem',  cor:'#7a9e9a',
     match:(n)=>n.toLowerCase().includes('ferragem')||n.toLowerCase().includes('ferrag'), destino:'biblioteca', destCat:'Ferragens' },
-  { id:'iluminacao', label:'Iluminacao',       icon:'💡', desc:'Iluminacao embutida e decorativa',      cor:'#d4b87a',
+  { id:'iluminacao', label:'Iluminacao',         icon:'💡', desc:'Iluminacao embutida e decorativa', cor:'#d4b87a',
     match:(n)=>n.toLowerCase().includes('ilumina')||n.toLowerCase().includes('luz'), destino:'biblioteca', destCat:'Iluminacao' },
-  { id:'instalacao', label:'Instalacao',       icon:'🛠', desc:'Servicos de montagem e instalacao',    cor:'#9a7acc',
+  { id:'instalacao', label:'Instalacao',         icon:'🛠', desc:'Servicos de montagem',             cor:'#9a7acc',
     match:(n)=>n.toLowerCase().includes('instala')||n.toLowerCase().includes('montagem'), destino:'maodeobra', destCat:null },
-  { id:'tampos',     label:'Tampos',           icon:'⬛', desc:'Calculadora ANIGRACO',                  cor:'#4a8fa8',
+  { id:'tampos',     label:'Tampos',             icon:'⬛', desc:'Calculadora ANIGRACO',             cor:'#4a8fa8',
     match:(n)=>n.toLowerCase().includes('tampo'), destino:'tampos', destCat:null, sempreCalculadora:true },
 ]
 
@@ -50,7 +50,6 @@ function kitsParaComp(comp, kits, tipoLabel) {
   return kits.filter(k => comp.match(k.name, k.contexto, tipoLabel))
 }
 
-// Passos: 'lista' | 'novo_nome' | 'componentes' | 'execucao' | 'resumo' | 'ver_proj'
 export default function Projecto({ showToast, onNavegar }) {
   const { user } = useAuth()
 
@@ -59,57 +58,46 @@ export default function Projecto({ showToast, onNavegar }) {
   const [projectos, setProjectos] = useState([])
   const [projCarregado, setProjCarregado] = useState(false)
 
-  // Projecto em edição
   const [projId,  setProjId]  = useState(null)
   const [nome,    setNome]    = useState('')
   const [campos,  setCampos]  = useState({})
   const [tipo,    setTipo]    = useState(null)
 
-  // Passo actual
-  const [passo, setPasso] = useState('lista')
-
-  // Guia
+  // passo: 'lista' | 'nome' | 'componentes' | 'execucao' | 'resumo' | 'detalhe'
+  const [passo,      setPasso]      = useState('lista')
   const [compSel,    setCompSel]    = useState([])
   const [compFeitos, setCompFeitos] = useState([])
   const [compActual, setCompActual] = useState(null)
   const [kitSelId,   setKitSelId]   = useState(null)
   const [kitItems,   setKitItems]   = useState([])
 
-  // Orçamento
-  const [orcItems, setOrcItems] = useState([])
+  const [novoTipo,       setNovoTipo]       = useState(null)
+  const [novoNomeInput,  setNovoNomeInput]  = useState('')
+  const [confirmSaida,   setConfirmSaida]   = useState(false)
 
-  // Modais
-  const [confirmApagar,    setConfirmApagar]    = useState(null)
-  const [confirmSaltar,    setConfirmSaltar]    = useState(false)
-  const [confirmSairGuia,  setConfirmSairGuia]  = useState(false)
-  const [modalId,          setModalId]          = useState(false)
+  const [orcItems,      setOrcItems]      = useState([])
+  const [modalId,       setModalId]       = useState(false)
+  const [confirmApagar, setConfirmApagar] = useState(null)
+  const [confirmSaltar, setConfirmSaltar] = useState(false)
 
-  // Dados
   const [kits,    setKits]    = useState([])
   const [artigos, setArtigos] = useState([])
   const [loading, setLoading] = useState(false)
   const [kitsEncontrados, setKitsEncontrados] = useState([])
   const [subst, setSubst] = useState(null)
 
-  // Modal identidade
   const [modalNome,   setModalNome]   = useState('')
   const [modalCampos, setModalCampos] = useState([])
-
-  // Novo projecto - nome inicial
-  const [novoTipoSel,  setNovoTipoSel]  = useState(null)
-  const [novoNomeInput, setNovoNomeInput] = useState('')
 
   const saveTimer = useRef(null)
   const [guiaCarregado, setGuiaCarregado] = useState(false)
 
-  // Carregar kits e artigos
   useEffect(() => {
     const u1 = onSnapshot(collection(db,'modelos'), s => setKits(s.docs.map(d=>({id:d.id,...d.data()}))))
     const u2 = onSnapshot(collection(db,'artigos'), s => setArtigos(s.docs.map(d=>({id:d.id,...d.data()}))))
     return () => { u1(); u2() }
   }, [])
 
-  // Carregar tipos
   useEffect(() => {
     if (!user) return
     getDoc(prefsRef(user.uid)).then(snap => {
@@ -117,7 +105,6 @@ export default function Projecto({ showToast, onNavegar }) {
     }).catch(() => {})
   }, [user])
 
-  // Carregar lista de projectos
   useEffect(() => {
     if (!user) return
     const unsub = onSnapshot(collection(db, 'projectos'), snap => {
@@ -131,7 +118,15 @@ export default function Projecto({ showToast, onNavegar }) {
     return () => unsub()
   }, [user])
 
-  // Orçamento do projecto activo
+  useEffect(() => {
+    if (!user || !projCarregado) return
+    getDoc(activoRef(user.uid)).then(snap => {
+      if (snap.exists() && snap.data().projId) {
+        _carregarEstado(snap.data().projId).catch(() => {})
+      }
+    }).catch(() => {})
+  }, [user, projCarregado])
+
   useEffect(() => {
     if (!projId) { setOrcItems([]); return }
     const unsub = onSnapshot(orcRef(projId), snap => {
@@ -140,28 +135,24 @@ export default function Projecto({ showToast, onNavegar }) {
     return () => unsub()
   }, [projId])
 
-  // Gravar guia (debounce)
   useEffect(() => {
-    if (!user || !guiaCarregado || !projId || passo === 'lista' || passo === 'novo_nome') return
+    if (!user || !guiaCarregado || !projId || passo === 'lista' || passo === 'nome' || passo === 'detalhe') return
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
       setDoc(projListaRef(projId), {
         uid: user.uid, projId, nome, tipo, campos,
-        passo: passo === 'ver_proj' ? 'resumo' : passo,
-        compSel, compFeitos, compActual, kitSelId, kitItems,
+        passo, compSel, compFeitos, compActual, kitSelId, kitItems,
         total: _calcTotal(orcItems), ts: Date.now(),
       }, { merge: true }).catch(() => {})
     }, 600)
     return () => clearTimeout(saveTimer.current)
   }, [passo, compSel, compFeitos, compActual, kitSelId, kitItems, nome, campos, projId, user, guiaCarregado])
 
-  // Actualizar total
   useEffect(() => {
     if (!projId || !user) return
     setDoc(projListaRef(projId), { total: _calcTotal(orcItems), ts: Date.now() }, { merge: true }).catch(() => {})
   }, [orcItems, projId, user])
 
-  // Kits para o componente actual
   useEffect(() => {
     if (!compActual || !kits.length) return
     const comp = COMPONENTES.find(c => c.id === compActual)
@@ -179,9 +170,9 @@ export default function Projecto({ showToast, onNavegar }) {
     return items.reduce((s,i) => s + (i.price||0) * (i.qty||1), 0)
   }
 
-  const tipoActual   = tipos.find(t => t.id === tipo)
-  const tiposActivos = tipos.filter(t => t.activo)
-  const totalOrc     = _calcTotal(orcItems)
+  const tipoActual    = tipos.find(t => t.id === tipo)
+  const tiposActivos  = tipos.filter(t => t.activo)
+  const totalOrc      = _calcTotal(orcItems)
   const compObjActual = COMPONENTES.find(c => c.id === compActual)
   const kitSel        = kits.find(k => k.id === kitSelId) || null
   const compPorFazer  = compSel.filter(c => !compFeitos.includes(c))
@@ -190,45 +181,33 @@ export default function Projecto({ showToast, onNavegar }) {
   const artsResto = subst ? artigos.filter(a=>a.cat===subst.cat&&!(subst.sub&&a.sub===subst.sub)).sort((a,b)=>(a.ref||'').localeCompare(b.ref||'')) : []
   const artsCat   = subst ? [...artsSub, ...artsResto] : []
 
-  // Carregar projecto em memória
   const _carregarEstado = async (id) => {
     const snap = await getDoc(projListaRef(id))
     if (!snap.exists()) return
     const d = snap.data()
     setProjId(id); setNome(d.nome||''); setCampos(d.campos||{}); setTipo(d.tipo||null)
-    setCompSel(d.compSel||[]); setCompFeitos(d.compFeitos||[])
+    setPasso(d.passo||'componentes'); setCompSel(d.compSel||[]); setCompFeitos(d.compFeitos||[])
     setCompActual(d.compActual||null); setKitSelId(d.kitSelId||null); setKitItems(d.kitItems||[])
     setGuiaCarregado(true)
     if (user) setDoc(activoRef(user.uid), { projId: id }).catch(() => {})
   }
 
-  // Abrir projecto existente -> vai para vista do projecto
   const abrirProjecto = async (id) => {
-    try {
-      await _carregarEstado(id)
-      setPasso('ver_proj')
-    } catch(e) { console.error(e) }
+    try { await _carregarEstado(id); setPasso('detalhe') }
+    catch(e) { console.error(e) }
   }
 
-  // Retomar guia de um projecto a meio
-  const retomarGuia = async (id) => {
-    try {
-      const snap = await getDoc(projListaRef(id))
-      if (!snap.exists()) return
-      const d = snap.data()
-      await _carregarEstado(id)
-      setPasso(d.passo || 'componentes')
-    } catch(e) { console.error(e) }
+  const verOrcamento = async (id) => {
+    try { await _carregarEstado(id); onNavegar?.('orcamentos') }
+    catch(e) { console.error(e) }
   }
 
-  // Gravar e voltar à lista
-  const voltarALista = () => {
-    if (projId && user) {
+  const voltarALista = (guardar = true) => {
+    if (guardar && projId && user) {
       clearTimeout(saveTimer.current)
       setDoc(projListaRef(projId), {
         uid: user.uid, projId, nome, tipo, campos,
-        passo: passo === 'ver_proj' ? 'resumo' : passo,
-        compSel, compFeitos, compActual, kitSelId, kitItems,
+        passo, compSel, compFeitos, compActual, kitSelId, kitItems,
         total: totalOrc, ts: Date.now(),
       }, { merge: true }).catch(() => {})
       setDoc(activoRef(user.uid), { projId: null }).catch(() => {})
@@ -236,50 +215,47 @@ export default function Projecto({ showToast, onNavegar }) {
     setProjId(null); setNome(''); setCampos({}); setTipo(null)
     setPasso('lista'); setCompSel([]); setCompFeitos([])
     setCompActual(null); setKitSelId(null); setKitItems([])
-    setGuiaCarregado(false)
+    setGuiaCarregado(false); setNovoTipo(null); setNovoNomeInput('')
   }
 
-  // Pedir confirmação para sair do guia
-  const pedirSairGuia = () => setConfirmSairGuia(true)
+  const clicarInicio = () => {
+    if (passo === 'lista') return
+    if (passo === 'nome' || passo === 'detalhe') { voltarALista(true); return }
+    setConfirmSaida(true)
+  }
 
-  // Criar novo projecto - passo 1: escolher tipo
-  const iniciarNovoProjecto = (tipoObj) => {
-    setNovoTipoSel(tipoObj)
+  const iniciarNovo = (tipoObj) => {
+    setNovoTipo(tipoObj)
     setNovoNomeInput('')
-    setPasso('novo_nome')
+    setPasso('nome')
   }
 
-  // Criar novo projecto - passo 2: confirmar nome e criar
-  const confirmarNovoProjecto = async () => {
-    if (!novoTipoSel) return
+  const confirmarNomeECriar = async () => {
+    if (!novoTipo) return
     const id = gerarProjId()
-    const docData = {
-      uid: user.uid, projId: id,
-      nome: novoNomeInput.trim(), tipo: novoTipoSel.id, campos: {},
-      passo: 'componentes',
-      compSel: [], compFeitos: [], compActual: null, kitSelId: null, kitItems: [],
+    const nomeUsar = novoNomeInput.trim()
+    await setDoc(projListaRef(id), {
+      uid: user.uid, projId: id, nome: nomeUsar, tipo: novoTipo.id, campos: {},
+      passo: 'componentes', compSel: [], compFeitos: [], compActual: null, kitSelId: null, kitItems: [],
       total: 0, ts: Date.now(),
-    }
-    await setDoc(projListaRef(id), docData).catch(() => {})
+    }).catch(() => {})
     await setDoc(activoRef(user.uid), { projId: id }).catch(() => {})
-    setProjId(id); setNome(novoNomeInput.trim()); setCampos({}); setTipo(novoTipoSel.id)
+    setProjId(id); setNome(nomeUsar); setCampos({}); setTipo(novoTipo.id)
     setCompSel([]); setCompFeitos([]); setCompActual(null); setKitSelId(null); setKitItems([])
-    setPasso('componentes')
-    setGuiaCarregado(true)
+    setPasso('componentes'); setGuiaCarregado(true)
+    setNovoTipo(null); setNovoNomeInput('')
   }
 
-  // Apagar projecto
   const apagarProjecto = async (id) => {
     try {
       await deleteDoc(orcRef(id)).catch(() => {})
       await deleteDoc(projListaRef(id))
-      if (id === projId) voltarALista()
+      if (id === projId) voltarALista(false)
       showToast('Projecto apagado')
-    } catch { showToast('Erro ao apagar') }
+    } catch { showToast('Erro ao apagar projecto') }
     setConfirmApagar(null)
   }
 
-  // Acções do guia
   const toggleComp = (id) => setCompSel(p => p.includes(id)?p.filter(x=>x!==id):[...p,id])
 
   const avancarDeComponentes = () => {
@@ -346,15 +322,16 @@ export default function Projecto({ showToast, onNavegar }) {
     else { marcarFeitoEAvancar(compActual) }
   }
 
-  const voltarPassoGuia = () => {
-    if (passo==='componentes') pedirSairGuia()
-    else if (passo==='execucao') setPasso('componentes')
-    else if (passo==='resumo') setPasso('execucao')
+  const voltarPasso = () => {
+    if (passo==='nome')        { setPasso('lista'); setNovoTipo(null) }
+    else if (passo==='detalhe')     { voltarALista(true) }
+    else if (passo==='componentes') { setPasso('detalhe') }
+    else if (passo==='execucao')    { setPasso('componentes') }
+    else if (passo==='resumo')      { setPasso('execucao') }
   }
 
   const progressoPct = compSel.length>0 ? Math.round((compFeitos.length/compSel.length)*100) : 0
 
-  // Modal identidade
   const abrirModalId = () => {
     setModalNome(nome)
     setModalCampos(Object.entries(campos).map(([chave,valor])=>({chave,valor})))
@@ -376,11 +353,14 @@ export default function Projecto({ showToast, onNavegar }) {
     if (user) setDoc(prefsRef(user.uid), { projTipos: t }, { merge: true }).catch(() => {})
   }
 
-  const noGuia = ['componentes','execucao','resumo'].includes(passo)
-  const titulo = passo === 'lista' ? 'Projectos'
-    : passo === 'novo_nome' ? 'Novo Projecto'
-    : passo === 'ver_proj' ? (tipoActual?.label || 'Projecto')
-    : 'Novo Projecto'
+  const topoTitulo = () => {
+    if (passo === 'lista')   return 'Projectos'
+    if (passo === 'nome')    return 'Novo Projecto'
+    if (passo === 'detalhe') return nome || tipoActual?.label || 'Projecto'
+    return 'Novo Projecto'
+  }
+
+  const mostrarBotaoInicio = passo !== 'lista'
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%', overflow:'hidden', background:'var(--neo-bg)', color:'var(--neo-text)', fontFamily:"'Barlow',sans-serif" }}>
@@ -389,17 +369,13 @@ export default function Projecto({ showToast, onNavegar }) {
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 16px', height:52, flexShrink:0, background:'var(--neo-bg)', boxShadow:'0 2px 8px rgba(0,0,0,0.4)' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           {passo !== 'lista' && (
-            <button
-              onClick={noGuia ? pedirSairGuia : voltarALista}
-              style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--neo-text2)', fontSize:18, padding:'4px 8px', lineHeight:1 }}>
-              &#8592;
-            </button>
+            <button onClick={voltarPasso} style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--neo-text2)', fontSize:18, padding:'4px 6px', lineHeight:1 }}>{'<'}</button>
           )}
           <div>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text)' }}>
-              {titulo}
+              {topoTitulo()}
             </div>
-            {(noGuia || passo === 'ver_proj') && tipoActual && (
+            {(passo !== 'lista' && passo !== 'nome') && tipoActual && (
               <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                 <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:tipoActual.cor, marginTop:1 }}>{tipoActual.icon} {tipoActual.label}</div>
                 {nome && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.08em', color:'var(--neo-text2)', marginTop:1 }}>· {nome}</div>}
@@ -408,15 +384,21 @@ export default function Projecto({ showToast, onNavegar }) {
           </div>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          {totalOrc > 0 && passo !== 'lista' && passo !== 'novo_nome' && (
+          {totalOrc > 0 && passo !== 'lista' && passo !== 'nome' && (
             <div style={{ background:'rgba(200,169,110,0.1)', border:'1px solid rgba(200,169,110,0.25)', borderRadius:'var(--neo-radius-pill)', padding:'4px 12px', fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, color:'var(--neo-gold)', letterSpacing:'0.08em' }}>
               {f2(totalOrc)} EUR
             </div>
           )}
-          {(noGuia || passo === 'ver_proj') && (
+          {passo !== 'lista' && passo !== 'nome' && (
             <button onClick={abrirModalId} title="Identificar projecto"
               style={{ background: nome ? 'rgba(200,169,110,0.1)' : 'transparent', border:`1px solid ${nome ? 'rgba(200,169,110,0.3)' : 'rgba(255,255,255,0.08)'}`, borderRadius:'var(--neo-radius-pill)', padding:'5px 10px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', color: nome ? 'var(--neo-gold)' : 'var(--neo-text2)', transition:'all .15s' }}>
-              ✎
+              edit
+            </button>
+          )}
+          {mostrarBotaoInicio && (
+            <button onClick={clicarInicio}
+              style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'var(--neo-radius-pill)', padding:'5px 12px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--neo-text2)' }}>
+              Inicio
             </button>
           )}
         </div>
@@ -425,28 +407,24 @@ export default function Projecto({ showToast, onNavegar }) {
       {/* BARRA PROGRESSO */}
       {['execucao','resumo'].includes(passo) && compSel.length>0 && (
         <div style={{ height:3, background:'var(--neo-bg2)', flexShrink:0 }}>
-          <div style={{ height:'100%', width:`${progressoPct}%`, background:'linear-gradient(90deg,var(--neo-gold2),var(--neo-gold))', transition:'width .4s ease' }}/>
+          <div style={{ height:'100%', width:`${progressoPct}%`, background:'linear-gradient(90deg,var(--neo-gold2),var(--neo-gold))', transition:'width .4s ease', boxShadow:'0 0 8px rgba(200,169,110,0.4)' }}/>
         </div>
       )}
 
       <div className="neo-scroll" style={{ flex:1, overflowY:'auto', padding:'20px 16px 40px' }}>
 
-        {/* LISTA DE PROJECTOS */}
+        {/* LISTA */}
         {passo === 'lista' && (
           <div>
             {projectos.length > 0 && (
               <div style={{ marginBottom:28 }}>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.22em', textTransform:'uppercase', color:'var(--neo-gold)', marginBottom:10 }}>
-                  Os teus projectos
-                </div>
+                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.22em', textTransform:'uppercase', color:'var(--neo-gold)', marginBottom:10 }}>Os teus projectos</div>
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                   {projectos.map(proj => {
                     const tObj = tipos.find(t => t.id === proj.tipo)
                     const camposArr = Object.entries(proj.campos || {})
-                    const emGuia = proj.passo === 'componentes' || proj.passo === 'execucao'
                     return (
-                      <div key={proj.projId}
-                        style={{ background:'var(--neo-bg2)', border:'1px solid rgba(200,169,110,0.18)', borderLeft:'3px solid var(--neo-gold)', borderRadius:'var(--neo-radius)', overflow:'hidden' }}>
+                      <div key={proj.projId} style={{ background:'var(--neo-bg2)', border:'1px solid rgba(200,169,110,0.18)', borderLeft:'3px solid var(--neo-gold)', borderRadius:'var(--neo-radius)', overflow:'hidden' }}>
                         <div style={{ padding:'14px 16px 10px' }}>
                           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                             <span style={{ fontSize:20, flexShrink:0 }}>{tObj?.icon || '*'}</span>
@@ -455,15 +433,11 @@ export default function Projecto({ showToast, onNavegar }) {
                                 {proj.nome || tObj?.label || 'Projecto'}
                               </div>
                               {proj.nome && tObj && (
-                                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.08em', color:'var(--neo-text2)', marginTop:2 }}>
-                                  {tObj.icon} {tObj.label}
-                                </div>
+                                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.08em', color:'var(--neo-text2)', marginTop:2 }}>{tObj.icon} {tObj.label}</div>
                               )}
                             </div>
                             {(proj.total||0) > 0 && (
-                              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:700, color:'var(--neo-gold)', flexShrink:0 }}>
-                                {f2(proj.total)} EUR
-                              </div>
+                              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:700, color:'var(--neo-gold)', flexShrink:0 }}>{f2(proj.total)} EUR</div>
                             )}
                           </div>
                           {camposArr.length > 0 && (
@@ -476,17 +450,15 @@ export default function Projecto({ showToast, onNavegar }) {
                             </div>
                           )}
                         </div>
-                        <div style={{ display:'grid', gridTemplateColumns: emGuia ? '1fr 1fr auto' : '1fr auto', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr auto', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
                           <button onClick={() => abrirProjecto(proj.projId)}
                             style={{ background:'transparent', border:'none', borderRight:'1px solid rgba(255,255,255,0.06)', cursor:'pointer', padding:'11px 16px', fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-gold)', textAlign:'left' }}>
-                            Abrir projecto
+                            Abrir
                           </button>
-                          {emGuia && (
-                            <button onClick={() => retomarGuia(proj.projId)}
-                              style={{ background:'transparent', border:'none', borderRight:'1px solid rgba(255,255,255,0.06)', cursor:'pointer', padding:'11px 16px', fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', textAlign:'left' }}>
-                              Continuar guia
-                            </button>
-                          )}
+                          <button onClick={() => verOrcamento(proj.projId)}
+                            style={{ background:'transparent', border:'none', borderRight:'1px solid rgba(255,255,255,0.06)', cursor:'pointer', padding:'11px 16px', fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', textAlign:'left' }}>
+                            Orcamento
+                          </button>
                           <button onClick={() => setConfirmApagar(proj.projId)}
                             style={{ background:'transparent', border:'none', cursor:'pointer', padding:'11px 16px', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', opacity:0.6 }}>
                             X
@@ -502,18 +474,17 @@ export default function Projecto({ showToast, onNavegar }) {
             <PassoHeader numero={null} titulo="Novo projecto" sub="Selecciona o tipo para comecar"/>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:10, marginTop:16 }}>
               {tiposActivos.map(t => (
-                <button key={t.id} onClick={() => iniciarNovoProjecto(t)} className="proj-tipo-card"
+                <button key={t.id} onClick={() => iniciarNovo(t)} className="proj-tipo-card"
                   style={{ background:'var(--neo-bg2)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'22px 16px', cursor:'pointer', textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
                   <span style={{ fontSize:32, lineHeight:1 }}>{t.icon}</span>
                   <span style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text)' }}>{t.label}</span>
                 </button>
               ))}
             </div>
-
             <div style={{ marginTop:20 }}>
               <button onClick={()=>setEditTipos(o=>!o)}
                 style={{ background:'transparent', border:'none', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text2)', padding:'4px 0', opacity:0.6 }}>
-                {editTipos ? '✓ Fechar' : '* Gerir tipos'}
+                {editTipos ? 'v Fechar' : 'Gerir tipos'}
               </button>
               {editTipos && (
                 <div style={{ marginTop:12, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', border:'1px solid rgba(255,255,255,0.07)', padding:'14px' }}>
@@ -533,142 +504,104 @@ export default function Projecto({ showToast, onNavegar }) {
           </div>
         )}
 
-        {/* NOVO PROJECTO - NOME */}
-        {passo === 'novo_nome' && novoTipoSel && (
+        {/* PASSO NOME */}
+        {passo === 'nome' && novoTipo && (
           <div>
-            <div style={{ textAlign:'center', marginBottom:32 }}>
-              <div style={{ fontSize:52, marginBottom:12 }}>{novoTipoSel.icon}</div>
-              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:20, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:novoTipoSel.cor }}>
-                {novoTipoSel.label}
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:28 }}>
+              <span style={{ fontSize:40 }}>{novoTipo.icon}</span>
+              <div>
+                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:20, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:novoTipo.cor }}>{novoTipo.label}</div>
+                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', letterSpacing:'0.1em', marginTop:2 }}>Novo projecto</div>
               </div>
             </div>
-            <div style={{ marginBottom:24 }}>
-              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:8 }}>
-                Nome do cliente (opcional)
-              </div>
+            <PassoHeader numero={null} titulo="Como se chama o cliente?" sub="O nome ajuda a distinguir os projectos na lista. Podes alterar depois."/>
+            <div style={{ marginTop:20 }}>
               <input
                 value={novoNomeInput}
                 onChange={e=>setNovoNomeInput(e.target.value)}
-                onKeyDown={e=>{ if(e.key==='Enter') confirmarNovoProjecto() }}
+                onKeyDown={e=>{ if(e.key==='Enter') confirmarNomeECriar() }}
                 placeholder="ex: Joao Silva"
                 autoFocus
-                style={{ width:'100%', background:'var(--neo-bg2)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'var(--neo-radius)', padding:'14px 16px', fontFamily:"'Barlow'", fontSize:16, color:'var(--neo-text)', outline:'none', boxSizing:'border-box' }}
+                style={{ width:'100%', background:'var(--neo-bg2)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'var(--neo-radius)', padding:'14px 16px', fontFamily:"'Barlow'", fontSize:16, color:'var(--neo-text)', outline:'none', boxSizing:'border-box', marginBottom:12 }}
               />
-              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', letterSpacing:'0.08em', marginTop:8, opacity:0.6 }}>
-                Podes identificar o projecto agora ou mais tarde
-              </div>
+              <button onClick={confirmarNomeECriar} className="neo-btn neo-btn-gold"
+                style={{ width:'100%', height:48, fontSize:11, letterSpacing:'0.12em', borderRadius:'var(--neo-radius)' }}>
+                {novoNomeInput.trim() ? `Comecar - ${novoNomeInput.trim()}` : 'Comecar sem nome'}
+              </button>
             </div>
-            <button onClick={confirmarNovoProjecto} className="neo-btn neo-btn-gold"
-              style={{ width:'100%', height:52, fontSize:12, letterSpacing:'0.12em', borderRadius:'var(--neo-radius)' }}>
-              Comecar projecto
-            </button>
           </div>
         )}
 
-        {/* VER PROJECTO EXISTENTE */}
-        {passo === 'ver_proj' && (
+        {/* DETALHE DO PROJECTO */}
+        {passo === 'detalhe' && projId && (
           <div>
-            {/* Cabecalho */}
-            <div style={{ background:'rgba(200,169,110,0.06)', border:'1px solid rgba(200,169,110,0.2)', borderRadius:'var(--neo-radius)', padding:'16px 20px', marginBottom:20 }}>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: totalOrc > 0 ? 8 : 0 }}>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)' }}>
-                  {tipoActual?.icon} {tipoActual?.label}
-                </div>
-                {totalOrc > 0 && (
-                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:20, fontWeight:700, color:'var(--neo-gold)' }}>
-                    {f2(totalOrc)} EUR
-                  </div>
-                )}
-              </div>
-              {orcItems.length > 0 && (
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', letterSpacing:'0.08em' }}>
-                  {orcItems.length} item{orcItems.length!==1?'s':''} no orcamento
-                </div>
-              )}
+            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.22em', textTransform:'uppercase', color:'var(--neo-gold)', marginBottom:14 }}>
+              Categorias deste projecto
             </div>
-
-            {/* Categorias ja tratadas */}
-            {compFeitos.length > 0 && (
-              <div style={{ marginBottom:20 }}>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
-                  Categorias tratadas
-                </div>
-                <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-                  {compFeitos.map(id => {
-                    const c = COMPONENTES.find(x=>x.id===id)
-                    const itensDaCategoria = orcItems.filter(i => {
-                      if (c?.sempreCalculadora) return i.origem === 'Tampos'
-                      if (c?.destCat) return i.cat === c.destCat || i.origem === c.destCat
-                      if (c?.destino === 'maodeobra') return i.origem === 'Mao de Obra'
-                      // kit base - itens do kit
-                      return kitSelId && kits.find(k=>k.id===kitSelId)?.name === i.origem
-                    })
-                    const subtotal = itensDaCategoria.reduce((s,i) => s+(i.price||0)*(i.qty||1), 0)
-                    return (
-                      <button key={id}
-                        onClick={() => { iniciarComp(id) }}
-                        style={{ display:'flex', alignItems:'center', gap:12, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius-sm)', border:'1px solid rgba(255,255,255,0.06)', borderLeft:`3px solid ${c?.cor||'var(--neo-gold)'}`, padding:'10px 14px', cursor:'pointer', textAlign:'left', width:'100%' }}>
-                        <span style={{ fontSize:18, flexShrink:0 }}>{c?.icon}</span>
-                        <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:c?.cor||'var(--neo-gold)' }}>{c?.label}</div>
-                          {itensDaCategoria.length > 0 && (
-                            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', marginTop:2 }}>
-                              {itensDaCategoria.length} item{itensDaCategoria.length!==1?'s':''}{subtotal>0?` · ${f2(subtotal)} EUR`:''}
-                            </div>
-                          )}
-                        </div>
-                        <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', letterSpacing:'0.1em' }}>ver</span>
-                      </button>
-                    )
-                  })}
-                </div>
+            {compFeitos.length === 0 && (
+              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, color:'var(--neo-text2)', letterSpacing:'0.08em', padding:'20px 0' }}>
+                Ainda sem categorias tratadas.
               </div>
             )}
-
-            {/* Acoes */}
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              <button onClick={() => setPasso('componentes')} className="neo-btn neo-btn-gold"
-                style={{ width:'100%', height:48, fontSize:11 }}>
-                + Adicionar componente
-              </button>
-              <button onClick={() => onNavegar?.('orcamentos')} className="neo-btn neo-btn-ghost"
-                style={{ width:'100%', height:44, fontSize:10 }}>
-                Ver orcamento completo
-              </button>
+            <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:20 }}>
+              {compFeitos.map(id => {
+                const c = COMPONENTES.find(x=>x.id===id)
+                const itensDaOrigem = orcItems.filter(i => {
+                  if (c?.sempreCalculadora) return i.origem === 'Tampos'
+                  if (c?.destino === 'maodeobra') return i.origem === 'Mao de Obra'
+                  return i.cat === c?.destCat || (i.origem||'').toLowerCase().includes(c?.id||'')
+                })
+                return (
+                  <button key={id}
+                    onClick={() => { setCompActual(id); setPasso('execucao') }}
+                    style={{ display:'flex', alignItems:'center', gap:12, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius-sm)', border:'1px solid rgba(255,255,255,0.06)', borderLeft:`3px solid ${c?.cor||'var(--neo-gold)'}`, padding:'12px 14px', cursor:'pointer', textAlign:'left', width:'100%' }}>
+                    <span style={{ fontSize:18 }}>{c?.icon}</span>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:c?.cor||'var(--neo-gold)' }}>{c?.label}</div>
+                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', marginTop:2 }}>
+                        {itensDaOrigem.length > 0 ? `${itensDaOrigem.length} artigo${itensDaOrigem.length!==1?'s':''}` : 'Ver ou alterar'}
+                      </div>
+                    </div>
+                    <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', letterSpacing:'0.1em' }}>editar</span>
+                  </button>
+                )
+              })}
             </div>
+            <button onClick={() => setPasso('componentes')} className="neo-btn neo-btn-ghost"
+              style={{ width:'100%', height:44, fontSize:10, marginBottom:8 }}>
+              + Adicionar categoria
+            </button>
+            <button onClick={() => onNavegar?.('orcamentos')} className="neo-btn neo-btn-gold"
+              style={{ width:'100%', height:44, fontSize:10 }}>
+              Ver orcamento completo
+            </button>
           </div>
         )}
 
         {/* COMPONENTES */}
         {passo === 'componentes' && tipoActual && (
           <div>
-            <PassoHeader numero={null} titulo="O que inclui este projecto?" sub="Selecciona tudo o que o cliente pretende"/>
+            <PassoHeader numero={2} titulo="O que inclui este projecto?" sub="Selecciona tudo o que o cliente pretende"/>
             <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:20 }}>
               {COMPONENTES.map(comp => {
                 const sel = compSel.includes(comp.id)
                 const corR = hexToRgb(comp.cor)
                 const nKits = kitsParaComp(comp, kits, tipoActual.label).length
                 const temKits = nKits > 0
-                const jaFeito = compFeitos.includes(comp.id)
                 return (
                   <button key={comp.id} onClick={()=>toggleComp(comp.id)} className="proj-comp-card"
-                    style={{ display:'flex', alignItems:'center', gap:14, background:sel?`rgba(${corR},0.1)`:jaFeito?'rgba(200,169,110,0.05)':'var(--neo-bg2)', border:sel?`1px solid ${comp.cor}55`:jaFeito?'1px solid rgba(200,169,110,0.2)':'1px solid rgba(255,255,255,0.06)', borderLeft:sel?`3px solid ${comp.cor}`:jaFeito?'3px solid rgba(200,169,110,0.4)':'3px solid transparent', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'14px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
-                    <div style={{ width:20, height:20, borderRadius:5, flexShrink:0, border:sel?`2px solid ${comp.cor}`:jaFeito?'2px solid rgba(200,169,110,0.6)':'2px solid rgba(255,255,255,0.15)', background:sel?comp.cor:jaFeito?'rgba(200,169,110,0.3)':'transparent', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#0f0d08', fontWeight:700 }}>
-                      {sel&&'v'}{!sel&&jaFeito&&'v'}
+                    style={{ display:'flex', alignItems:'center', gap:14, background:sel?`rgba(${corR},0.1)`:'var(--neo-bg2)', border:sel?`1px solid ${comp.cor}55`:'1px solid rgba(255,255,255,0.06)', borderLeft:sel?`3px solid ${comp.cor}`:'3px solid transparent', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'14px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
+                    <div style={{ width:20, height:20, borderRadius:5, flexShrink:0, border:sel?`2px solid ${comp.cor}`:'2px solid rgba(255,255,255,0.15)', background:sel?comp.cor:'transparent', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#0f0d08', fontWeight:700 }}>
+                      {sel&&'v'}
                     </div>
                     <span style={{ fontSize:20, flexShrink:0 }}>{comp.icon}</span>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:sel?comp.cor:jaFeito?'rgba(200,169,110,0.7)':'var(--neo-text)' }}>
-                        {comp.label}
-                      </div>
+                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:sel?comp.cor:'var(--neo-text)' }}>{comp.label}</div>
                       <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'var(--neo-text2)', marginTop:2 }}>
-                        {jaFeito ? 'ja tratado - selecciona para rever'
-                          : comp.sempreCalculadora ? 'Calculadora ANIGRACO'
-                          : temKits ? `${nKits} kit${nKits!==1?'s':''} disponivel${nKits!==1?'is':''}`
-                          : comp.desc}
+                        {comp.sempreCalculadora ? 'Calculadora ANIGRACO' : temKits ? `${nKits} kit${nKits!==1?'s':''} disponivel${nKits!==1?'s':''}` : comp.desc}
                       </div>
                     </div>
-                    {temKits && !comp.sempreCalculadora && !jaFeito && (
+                    {temKits && !comp.sempreCalculadora && (
                       <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:`rgba(${corR},0.15)`, color:comp.cor, border:`1px solid ${comp.cor}33`, flexShrink:0 }}>
                         {nKits} kit{nKits!==1?'s':''}
                       </span>
@@ -707,11 +640,9 @@ export default function Projecto({ showToast, onNavegar }) {
           const corR = hexToRgb(comp.cor)
           const proximo = compSel.find(c=>c!==compActual&&!compFeitos.includes(c))
           const temKits = kitsEncontrados.length > 0
-
           return (
             <div>
               <PassoHeader numero={compFeitos.length+1} titulo={comp.label} sub={''} cor={comp.cor} icon={comp.icon}/>
-
               <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:12, marginBottom:24 }}>
                 {compSel.map(id => {
                   const c=COMPONENTES.find(x=>x.id===id)
@@ -762,21 +693,15 @@ export default function Projecto({ showToast, onNavegar }) {
                       </div>
                     </div>
                   )}
-
                   {kitSel && (
                     <div>
                       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:comp.cor }}>
-                          {kitSel.name}
-                        </div>
+                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:comp.cor }}>{kitSel.name}</div>
                         {kitsEncontrados.length>1 && (
                           <button onClick={()=>{setKitSelId(null);setKitItems([])}} style={{ background:'transparent', border:'none', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)' }}>
                             trocar kit
                           </button>
                         )}
-                      </div>
-                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
-                        X remove · sub substitui por outro da mesma categoria
                       </div>
                       <div style={{ background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', overflow:'hidden' }}>
                         {kitItems.map((item,idx) => (
@@ -793,7 +718,6 @@ export default function Projecto({ showToast, onNavegar }) {
                       </div>
                     </div>
                   )}
-
                   {!kitSel && kitsEncontrados.length===1 && (
                     <div style={{ padding:'20px', textAlign:'center', color:'var(--neo-text2)', fontFamily:"'Barlow Condensed'", fontSize:10 }}>A carregar kit...</div>
                   )}
@@ -802,14 +726,7 @@ export default function Projecto({ showToast, onNavegar }) {
 
               {!comp.sempreCalculadora && !temKits && (
                 <CompCard comp={comp} corR={corR}>
-                  <p>
-                    {comp.destCat
-                      ? `Selecciona os artigos de "${comp.destCat}" na Biblioteca e volta aqui.`
-                      : 'Selecciona os servicos na Mao de Obra e volta aqui.'}
-                  </p>
-                  <div style={{ background:'rgba(200,169,110,0.06)', border:'1px solid rgba(200,169,110,0.15)', borderRadius:'var(--neo-radius-sm)', padding:'10px 14px', marginBottom:20, fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.12em', color:'var(--neo-text2)' }}>
-                    Podes criar um kit de <strong style={{color:'var(--neo-gold)'}}>{comp.label}</strong> na seccao <strong style={{color:'var(--neo-gold)'}}>Kits</strong> para nao teres de seleccionar manualmente da proxima vez.
-                  </div>
+                  <p>{comp.destCat ? `Selecciona os artigos de "${comp.destCat}" na Biblioteca e volta aqui.` : 'Selecciona os servicos na Mao de Obra e volta aqui.'}</p>
                   <button onClick={()=>onNavegar?.(comp.destino||'biblioteca', comp.destCat||null)} className="neo-btn neo-btn-gold" style={{ height:48, padding:'0 32px', fontSize:11, letterSpacing:'0.12em' }}>
                     Abrir {comp.label}
                   </button>
@@ -819,17 +736,12 @@ export default function Projecto({ showToast, onNavegar }) {
               {!comp.sempreCalculadora && (
                 <button onClick={tentarSaltar} className="neo-btn neo-btn-ghost"
                   style={{ width:'100%', height:44, fontSize:10, marginTop: temKits&&kitSel ? 0 : 12 }}>
-                  {compPorFazer.length===1
-                    ? 'Concluido - ver resumo'
-                    : `Feito - proximo: ${COMPONENTES.find(c=>c.id===proximo)?.label||''}`}
+                  {compPorFazer.length===1 ? 'v Concluido - ver resumo' : `v Feito - proximo: ${COMPONENTES.find(c=>c.id===proximo)?.label||''}`}
                 </button>
               )}
               {comp.sempreCalculadora && (
-                <button onClick={tentarSaltar} className="neo-btn neo-btn-ghost"
-                  style={{ width:'100%', height:44, fontSize:10, marginTop:12 }}>
-                  {compPorFazer.length===1
-                    ? 'Tampos calculados - ver resumo'
-                    : `Tampos calculados - proximo: ${COMPONENTES.find(c=>c.id===proximo)?.label||''}`}
+                <button onClick={tentarSaltar} className="neo-btn neo-btn-ghost" style={{ width:'100%', height:44, fontSize:10, marginTop:12 }}>
+                  {compPorFazer.length===1 ? 'v Tampos calculados - ver resumo' : `v Tampos calculados - proximo: ${COMPONENTES.find(c=>c.id===proximo)?.label||''}`}
                 </button>
               )}
             </div>
@@ -843,7 +755,7 @@ export default function Projecto({ showToast, onNavegar }) {
             {totalOrc > 0 && (
               <div style={{ background:'rgba(200,169,110,0.08)', border:'1px solid rgba(200,169,110,0.25)', borderRadius:'var(--neo-radius)', padding:'20px 24px', textAlign:'center', marginTop:20, marginBottom:20 }}>
                 <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:8 }}>Total PVP indicativo</div>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:36, fontWeight:700, color:'var(--neo-gold)' }}>{f2(totalOrc)} EUR</div>
+                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:36, fontWeight:700, color:'var(--neo-gold)', textShadow:'0 0 20px rgba(200,169,110,0.3)' }}>{f2(totalOrc)} EUR</div>
                 <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, color:'var(--neo-text2)', letterSpacing:'0.1em', marginTop:6 }}>{orcItems.length} item{orcItems.length!==1?'s':''} no orcamento</div>
               </div>
             )}
@@ -860,13 +772,11 @@ export default function Projecto({ showToast, onNavegar }) {
               })}
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              <button onClick={()=>onNavegar?.('orcamentos')} className="neo-btn neo-btn-gold"
-                style={{ width:'100%', height:48, fontSize:11 }}>
+              <button onClick={()=>onNavegar?.('orcamentos')} className="neo-btn neo-btn-gold" style={{ width:'100%', height:48, fontSize:11 }}>
                 Ver orcamento completo
               </button>
-              <button onClick={voltarALista} className="neo-btn neo-btn-ghost"
-                style={{ width:'100%', height:44, fontSize:10 }}>
-                Voltar a lista de projectos
+              <button onClick={()=>setPasso('detalhe')} className="neo-btn neo-btn-ghost" style={{ width:'100%', height:44, fontSize:10 }}>
+                Voltar ao projecto
               </button>
             </div>
           </div>
@@ -874,7 +784,31 @@ export default function Projecto({ showToast, onNavegar }) {
 
       </div>
 
-      {/* MODAL APAGAR */}
+      {/* MODAL CONFIRMAR SAIDA */}
+      {confirmSaida && (
+        <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setConfirmSaida(false)}}>
+          <div className="neo-modal" style={{ maxWidth:340 }}>
+            <div className="neo-modal-head">
+              Sair do guia
+              <button className="neo-modal-close" onClick={()=>setConfirmSaida(false)}>X</button>
+            </div>
+            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, color:'var(--neo-text2)', letterSpacing:'0.06em', lineHeight:1.9, marginBottom:24 }}>
+              Queres guardar o progresso antes de sair?<br/>
+              <span style={{ fontSize:10 }}>Podes retomar este projecto mais tarde.</span>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <button className="neo-btn neo-btn-gold" onClick={()=>{ setConfirmSaida(false); voltarALista(true) }} style={{ width:'100%', height:44, fontSize:10 }}>
+                Guardar e ir ao inicio
+              </button>
+              <button className="neo-btn neo-btn-ghost" onClick={()=>{ setConfirmSaida(false); voltarALista(false) }} style={{ width:'100%', height:40, fontSize:9, opacity:0.6 }}>
+                Sair sem guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRMAR APAGAR */}
       {confirmApagar && (
         <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setConfirmApagar(null)}}>
           <div className="neo-modal" style={{ maxWidth:340 }}>
@@ -898,7 +832,7 @@ export default function Projecto({ showToast, onNavegar }) {
         </div>
       )}
 
-      {/* MODAL SALTAR */}
+      {/* MODAL CONFIRMAR SALTAR */}
       {confirmSaltar && (
         <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setConfirmSaltar(false)}}>
           <div className="neo-modal" style={{ maxWidth:340 }}>
@@ -908,38 +842,14 @@ export default function Projecto({ showToast, onNavegar }) {
             </div>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, color:'var(--neo-text2)', letterSpacing:'0.06em', lineHeight:1.9, marginBottom:24 }}>
               Nao adicionaste nenhum artigo para este componente.<br/>
-              <span style={{ fontSize:10 }}>Queres avançar sem adicionar nada?</span>
+              <span style={{ fontSize:10 }}>Queres avancar mesmo assim?</span>
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               <button className="neo-btn neo-btn-ghost" onClick={()=>{ setConfirmSaltar(false); marcarFeitoEAvancar(compActual) }} style={{ width:'100%', height:44, fontSize:10 }}>
-                Sim, avançar
+                Sim, avancar sem adicionar
               </button>
               <button className="neo-btn neo-btn-gold" onClick={()=>setConfirmSaltar(false)} style={{ width:'100%', height:44, fontSize:10 }}>
                 Voltar e adicionar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL SAIR DO GUIA */}
-      {confirmSairGuia && (
-        <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setConfirmSairGuia(false)}}>
-          <div className="neo-modal" style={{ maxWidth:340 }}>
-            <div className="neo-modal-head">
-              Sair do guia
-              <button className="neo-modal-close" onClick={()=>setConfirmSairGuia(false)}>X</button>
-            </div>
-            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, color:'var(--neo-text2)', letterSpacing:'0.06em', lineHeight:1.9, marginBottom:24 }}>
-              O progresso sera guardado automaticamente.<br/>
-              <span style={{ fontSize:10 }}>Podes retomar este projecto a qualquer momento.</span>
-            </div>
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              <button className="neo-btn neo-btn-gold" onClick={()=>{ setConfirmSairGuia(false); voltarALista() }} style={{ width:'100%', height:44, fontSize:10 }}>
-                Guardar e voltar a lista
-              </button>
-              <button className="neo-btn neo-btn-ghost" onClick={()=>setConfirmSairGuia(false)} style={{ width:'100%', height:40, fontSize:9, opacity:0.6 }}>
-                Continuar no guia
               </button>
             </div>
           </div>
@@ -956,13 +866,8 @@ export default function Projecto({ showToast, onNavegar }) {
             </div>
             <div style={{ marginBottom:18 }}>
               <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:6 }}>Nome do cliente</div>
-              <input
-                value={modalNome}
-                onChange={e=>setModalNome(e.target.value)}
-                placeholder="ex: Joao Silva"
-                autoFocus
-                style={{ width:'100%', background:'var(--neo-bg)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'var(--neo-radius-sm)', padding:'10px 12px', fontFamily:"'Barlow'", fontSize:14, color:'var(--neo-text)', outline:'none', boxSizing:'border-box' }}
-              />
+              <input value={modalNome} onChange={e=>setModalNome(e.target.value)} placeholder="ex: Joao Silva" autoFocus
+                style={{ width:'100%', background:'var(--neo-bg)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'var(--neo-radius-sm)', padding:'10px 12px', fontFamily:"'Barlow'", fontSize:14, color:'var(--neo-text)', outline:'none', boxSizing:'border-box' }}/>
             </div>
             <div style={{ marginBottom:18 }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
@@ -973,9 +878,7 @@ export default function Projecto({ showToast, onNavegar }) {
                 </button>
               </div>
               {modalCampos.length === 0 && (
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)', letterSpacing:'0.08em', opacity:0.6 }}>
-                  ex: Processo, Nr de obra, Nota...
-                </div>
+                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)', letterSpacing:'0.08em', opacity:0.6 }}>ex: Processo, Nr de obra, Nota...</div>
               )}
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                 {modalCampos.map((c,i)=>(
@@ -1113,13 +1016,13 @@ function KitItemRow({ item, onChange, onSubstituir }) {
       </div>
       {item.price>0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, color:'var(--neo-text2)', flexShrink:0 }}>{f2(item.price)} EUR</span>}
       {item.link && (
-        <a href={item.link} target="_blank" rel="noreferrer" title="Abrir link do artigo"
+        <a href={item.link} target="_blank" rel="noreferrer" title="Abrir link"
           style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:26, height:26, borderRadius:'var(--neo-radius-pill)', background:'var(--neo-bg)', boxShadow:'var(--neo-shadow-out-sm)', textDecoration:'none', color:'var(--neo-gold2)', fontSize:11, flexShrink:0 }}
-          onClick={e=>e.stopPropagation()}>&#8599;</a>
+          onClick={e=>e.stopPropagation()}>lnk</a>
       )}
       {item.cat && (
         <button onClick={onSubstituir} title={`Substituir - ver outros em ${item.cat}`}
-          style={{ background:'var(--neo-bg)', border:'none', borderRadius:'var(--neo-radius-pill)', width:26, height:26, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'var(--neo-shadow-out-sm)', color:'var(--neo-text2)', fontSize:9, flexShrink:0 }}>
+          style={{ background:'var(--neo-bg)', border:'none', borderRadius:'var(--neo-radius-pill)', width:26, height:26, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'var(--neo-shadow-out-sm)', color:'var(--neo-text2)', fontSize:11, flexShrink:0 }}>
           sub
         </button>
       )}
