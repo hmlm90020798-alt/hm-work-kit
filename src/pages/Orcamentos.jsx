@@ -27,11 +27,12 @@ function corParaOrigem(origem, index) {
 // Origens sem qty — o valor já está calculado
 const SEM_QTY = new Set(['Tampos', 'Mão de Obra'])
 
-export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCopied }) {
+export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCopied, onAbrirProposta }) {
   const [orc,          setOrc]          = useState(null)
   const [copied,       setCopied]       = useState({})
   const [confirmClear, setConfirmClear] = useState(false)
   const [collapsed,    setCollapsed]    = useState({}) // chave ausente = recolhido; true = expandido
+  const [propostaOpen, setPropostaOpen] = useState(false)
   // Painel de substituição
   const [subst,        setSubst]        = useState(null) // { item, cat }
   const [artigos,      setArtigos]      = useState([])
@@ -173,7 +174,10 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
   const artsCat = subst ? [...artsSub, ...artsResto] : []
 
   return (
-    <div className="neo-screen">
+    <div style={{ display:'flex', height:'100%', overflow:'hidden' }}>
+
+    {/* ── PAINEL ORÇAMENTO ── */}
+    <div className="neo-screen" style={{ flex:1, minWidth:0, borderRight: propostaOpen ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
 
       {/* TOPBAR */}
       <div className="neo-topbar">
@@ -187,16 +191,33 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
             </span>
           )}
         </div>
-        {!isEmpty && (
-          <div style={{ display:'flex', gap:8 }}>
+        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          {!isEmpty && (<>
             <button onClick={copyAll} style={{ background:'transparent', border:'1px solid var(--neo-gold2)', borderRadius:'var(--neo-radius-pill)', padding:'6px 12px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:600, letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--neo-gold)' }}>
               ⎘ Copiar tudo
             </button>
             <button onClick={() => setConfirmClear(true)} className="neo-btn neo-btn-danger" style={{ height:28, padding:'0 12px', fontSize:9, borderRadius:'var(--neo-radius-pill)' }}>
               Limpar
             </button>
-          </div>
-        )}
+          </>)}
+          {/* Botão split-screen proposta */}
+          <button
+            onClick={() => {
+              if (onAbrirProposta) { setPropostaOpen(o => !o) }
+            }}
+            title={propostaOpen ? 'Fechar proposta' : 'Ver proposta lado a lado'}
+            style={{
+              background: propostaOpen ? 'rgba(200,169,110,0.15)' : 'transparent',
+              border: `1px solid ${propostaOpen ? 'rgba(200,169,110,0.4)' : 'rgba(255,255,255,0.1)'}`,
+              borderRadius:'var(--neo-radius-pill)', padding:'6px 12px', cursor:'pointer',
+              fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:600,
+              letterSpacing:'0.12em', textTransform:'uppercase',
+              color: propostaOpen ? 'var(--neo-gold)' : 'var(--neo-text2)',
+              transition:'all .15s', display:'flex', alignItems:'center', gap:5,
+            }}>
+            ⊟ Proposta
+          </button>
+        </div>
       </div>
 
       {/* VAZIO */}
@@ -234,11 +255,24 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
                       {gItems.length}
                     </span>
                     {gtotal>0 && (
-                      <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, color:cor, marginLeft:'auto' }}>
-                        {f2(gtotal)} €
-                      </span>
+                      <div style={{ display:'flex', alignItems:'center', gap:6, marginLeft:'auto' }}>
+                        <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, color:cor }}>
+                          {f2(gtotal)} €
+                        </span>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation()
+                            navigator.clipboard.writeText(f2(gtotal)).catch(()=>{})
+                            showToast(`${origem} — ${f2(gtotal)} € copiado`)
+                          }}
+                          title="Copiar subtotal"
+                          style={{ background:'transparent', border:'none', cursor:'pointer', padding:'2px 5px', borderRadius:'var(--neo-radius-pill)', color:'var(--neo-text2)', fontSize:10, lineHeight:1, opacity:.6, transition:'opacity .15s' }}
+                          onMouseOver={e=>e.currentTarget.style.opacity='1'}
+                          onMouseOut={e=>e.currentTarget.style.opacity='.6'}
+                        >⎘</button>
+                      </div>
                     )}
-                    <span style={{ fontSize:10, color:'var(--neo-text2)', marginLeft:gtotal>0?8:0, transform:isCol?'rotate(-90deg)':'rotate(0deg)', transition:'transform .2s', display:'inline-block' }}>▾</span>
+                    <span style={{ fontSize:10, color:'var(--neo-text2)', marginLeft:gtotal>0?0:0, transform:isCol?'rotate(-90deg)':'rotate(0deg)', transition:'transform .2s', display:'inline-block' }}>▾</span>
                   </button>
 
                   {/* Itens */}
@@ -383,6 +417,24 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
           </div>
         </div>
       )}
+    </div>{/* fim painel orçamento */}
+
+    {/* ── PAINEL PROPOSTA (split-screen) ── */}
+    {propostaOpen && onAbrirProposta && (
+      <div style={{ width:'45%', flexShrink:0, display:'flex', flexDirection:'column', overflow:'hidden', background:'var(--neo-bg)' }}>
+        {/* Header do painel proposta */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 16px', height:52, flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.4)', background:'var(--neo-bg)' }}>
+          <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, letterSpacing:'0.18em', textTransform:'uppercase', color:'var(--neo-gold)' }}>
+            Proposta
+          </span>
+          <button onClick={() => setPropostaOpen(false)} style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--neo-text2)', fontSize:16, padding:'4px 6px', lineHeight:1 }}>✕</button>
+        </div>
+        <div style={{ flex:1, overflow:'hidden' }}>
+          {onAbrirProposta()}
+        </div>
+      </div>
+    )}
+
     </div>
   )
 }
