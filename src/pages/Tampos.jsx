@@ -689,11 +689,26 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
       {/* Modal material */}
       {matModal&&<MaterialModal tipoProjeto={current.tipo}
         onSelect={(tipo,desc,grupo,espessura)=>{
+          // Actualizar pvp/c1 dos acabamentos existentes para os valores do novo material
+          const actualizarAcabamentos=(acabamentosActuais)=>{
+            const novoMat=ANIGRACO[tipo]
+            const novosAcabDisp=novoMat?.acabamentos||[]
+            if(!acabamentosActuais||acabamentosActuais.length===0) return []
+            // Para cada acabamento activo, procurar o equivalente no novo material pelo nome
+            return acabamentosActuais.map(a=>{
+              const equiv=novosAcabDisp.find(x=>x.nome===a.nome)
+              // Se existe no novo material → actualizar pvp/c1; se não → remover
+              return equiv ? {...a, pvp:equiv.pvp, c1:equiv.c1, unidade:equiv.unidade} : null
+            }).filter(Boolean)
+          }
           if(matModal==='B'){
-            // Manter acabamentos da peça B ao trocar de material
-            upd('opcaoB',{...current.opcaoB,pecas:(current.opcaoB?.pecas||[]).map((p,i)=>i===0?{...p,tipo,desc,grupo,espessura}:p)})
+            const pecaB=(current.opcaoB?.pecas||[])[0]
+            const acabActualizados=actualizarAcabamentos(pecaB?.acabamentos)
+            upd('opcaoB',{...current.opcaoB,pecas:(current.opcaoB?.pecas||[]).map((p,i)=>i===0?{...p,tipo,desc,grupo,espessura,acabamentos:acabActualizados}:p)})
           }else{
-            upd('pecas',current.pecas.map(p=>p.id===matModal?{...p,tipo,desc,grupo,espessura,acabamentos:[]}:p))
+            upd('pecas',current.pecas.map(p=>p.id===matModal
+              ?{...p,tipo,desc,grupo,espessura,acabamentos:actualizarAcabamentos(p.acabamentos)}
+              :p))
           }
           setMatModal(null)
         }}
