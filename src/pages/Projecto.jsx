@@ -142,13 +142,13 @@ export default function Projecto({ showToast, onNavegar }) {
   }, [user])
 
   // ── Carregar projecto activo (qual está aberto) ───────────────────────
+  // Apenas carrega o estado em memória — não entra no guia nem navega
   useEffect(() => {
     if (!user || !projCarregado) return
     getDoc(activoRef(user.uid)).then(snap => {
       if (snap.exists() && snap.data().projId) {
         const id = snap.data().projId
-        // Carregar estado do guia desse projecto
-        _abrirProjecto(id, false)
+        _carregarEstado(id).catch(() => {})
       }
     }).catch(() => {})
   }, [user, projCarregado])
@@ -218,31 +218,30 @@ export default function Projecto({ showToast, onNavegar }) {
   const artsCat = subst ? [...artsSub, ...artsResto] : []
 
   // ── Abrir projecto ────────────────────────────────────────────────────
-  const _abrirProjecto = async (id, marcarActivo = true) => {
+  // Carregar estado de um projecto para memória local (sem navegar)
+  const _carregarEstado = async (id) => {
+    const snap = await getDoc(projListaRef(id))
+    if (!snap.exists()) return
+    const d = snap.data()
+    setProjId(id); setNome(d.nome || ''); setCampos(d.campos || {}); setTipo(d.tipo || null)
+    setPasso(d.passo || 'componentes'); setCompSel(d.compSel || []); setCompFeitos(d.compFeitos || [])
+    setCompActual(d.compActual || null); setKitSelId(d.kitSelId || null); setKitItems(d.kitItems || [])
+    setGuiaCarregado(true)
+    if (user) setDoc(activoRef(user.uid), { projId: id }).catch(() => {})
+  }
+
+  // Abrir projecto — marca activo e vai directamente para Orçamentos
+  const _abrirProjecto = async (id) => {
     try {
-      const snap = await getDoc(projListaRef(id))
-      if (!snap.exists()) return
-      const d = snap.data()
-      setProjId(id)
-      setNome(d.nome || '')
-      setCampos(d.campos || {})
-      setTipo(d.tipo || null)
-      setPasso(d.passo || 'componentes')
-      setCompSel(d.compSel || [])
-      setCompFeitos(d.compFeitos || [])
-      setCompActual(d.compActual || null)
-      setKitSelId(d.kitSelId || null)
-      setKitItems(d.kitItems || [])
-      setGuiaCarregado(true)
-      if (marcarActivo && user) {
-        setDoc(activoRef(user.uid), { projId: id }).catch(() => {})
-      } else {
-        setGuiaCarregado(true)
-      }
-    } catch (e) {
-      console.error(e)
-      setGuiaCarregado(true)
-    }
+      await _carregarEstado(id)
+      onNavegar?.('orcamentos')
+    } catch (e) { console.error(e) }
+  }
+
+  // Retomar guia — só quando o utilizador pede explicitamente
+  const _retomarGuia = async (id) => {
+    try { await _carregarEstado(id) }
+    catch (e) { console.error(e) }
   }
 
   // ── Fechar / sair do projecto activo (volta à lista) ──────────────────
@@ -465,7 +464,7 @@ export default function Projecto({ showToast, onNavegar }) {
                   {projectos.map(proj => {
                     const tObj = tipos.find(t => t.id === proj.tipo)
                     const camposArr = Object.entries(proj.campos || {})
-                    const passoLabel = proj.passo === 'resumo' ? 'Concluído' : proj.passo === 'componentes' ? 'Componentes' : proj.passo === 'execucao' ? 'Em execução' : ''
+                    const guiaEmCurso = proj.passo === 'componentes' || proj.passo === 'execucao'
                     return (
                       <div key={proj.projId}
                         style={{ background:'var(--neo-bg2)', border:'1px solid rgba(200,169,110,0.18)', borderLeft:'3px solid var(--neo-gold)', borderRadius:'var(--neo-radius)', overflow:'hidden' }}>
@@ -480,10 +479,6 @@ export default function Projecto({ showToast, onNavegar }) {
                                 {proj.nome && tObj && (
                                   <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.08em', color:'var(--neo-text2)' }}>{tObj.icon} {tObj.label}</span>
                                 )}
-                                {passoLabel && (
-                                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'1px 7px', borderRadius:'var(--neo-radius-pill)', background:'rgba(200,169,110,0.1)', color:'var(--neo-gold)', border:'1px solid rgba(200,169,110,0.2)' }}>{passoLabel}</span>
-                                )}
-                              </div>
                             </div>
                             {(proj.total||0) > 0 && (
                               <div style={{ fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:700, color:'var(--neo-gold)', flexShrink:0 }}>
@@ -502,14 +497,20 @@ export default function Projecto({ showToast, onNavegar }) {
                           )}
                         </div>
                         {/* Acções */}
-                        <div style={{ display:'grid', gridTemplateColumns:'1fr auto', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+                        <div style={{ display:'grid', gridTemplateColumns: guiaEmCurso ? '1fr 1fr auto' : '1fr auto', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
                           <button onClick={() => _abrirProjecto(proj.projId)}
                             style={{ background:'transparent', border:'none', borderRight:'1px solid rgba(255,255,255,0.06)', cursor:'pointer', padding:'11px 16px', fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-gold)', textAlign:'left' }}>
-                            Abrir →
+                            Ver orçamento →
                           </button>
+                          {guiaEmCurso && (
+                            <button onClick={() => _retomarGuia(proj.projId)}
+                              style={{ background:'transparent', border:'none', borderRight:'1px solid rgba(255,255,255,0.06)', cursor:'pointer', padding:'11px 16px', fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', textAlign:'left' }}>
+                              ▶ Continuar guia
+                            </button>
+                          )}
                           <button onClick={() => setConfirmApagar(proj.projId)}
                             style={{ background:'transparent', border:'none', cursor:'pointer', padding:'11px 16px', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', opacity:.6 }}>
-                            ✕ Apagar
+                            ✕
                           </button>
                         </div>
                       </div>
