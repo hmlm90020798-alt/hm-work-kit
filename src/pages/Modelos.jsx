@@ -499,6 +499,7 @@ function ItemRow({item,onQty,onRemove,onStar,showToast,wasCopied,onCopied}){
             {label&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.1em',textTransform:'uppercase',color:'#8a8a82',background:'var(--neo-bg)',padding:'2px 7px',borderRadius:'var(--neo-radius-pill)',flexShrink:0}}>{label}</span>}
             {item.price>0&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:12,fontWeight:700,color:'var(--neo-gold)',whiteSpace:'nowrap'}}>{item.price.toFixed(2)} €</span>}
             {item.supplier&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.08em',textTransform:'uppercase',color:'#8a8a82',whiteSpace:'nowrap'}}>{item.supplier}</span>}
+            {item.link&&<a href={item.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{display:'inline-flex',alignItems:'center',padding:'2px 7px',borderRadius:'var(--neo-radius-pill)',background:'var(--neo-bg)',textDecoration:'none',color:'var(--neo-gold2)',fontFamily:"'Barlow Condensed'",fontSize:9,flexShrink:0}}>↗</a>}
           </div>}
         </div>
 
@@ -519,8 +520,8 @@ function ItemRow({item,onQty,onRemove,onStar,showToast,wasCopied,onCopied}){
           {item.supplier&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-text2)',padding:'2px 8px',background:'var(--neo-bg)',borderRadius:'var(--neo-radius-pill)'}}>{item.supplier}</span>}
         </div>
         {item.notes&&<div style={{fontSize:11,fontWeight:300,color:'var(--neo-text2)',lineHeight:1.5,marginTop:4}}>{item.notes}</div>}
-        {item.link&&<a href={item.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-gold2)',textDecoration:'none',display:'inline-block',marginTop:4}}>
-          ↗ {item.link.replace(/^https?:\/\//,'').slice(0,50)}
+        {item.link&&<a href={item.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{display:'inline-flex',alignItems:'center',gap:4,marginTop:6,padding:'4px 12px',borderRadius:'var(--neo-radius-pill)',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',textDecoration:'none',color:'var(--neo-gold2)',fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.08em'}}>
+          ↗ <span style={{maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.link.replace(/^https?:\/\//,'').split('/')[0]}</span>
         </a>}
       </div>}
     </div>
