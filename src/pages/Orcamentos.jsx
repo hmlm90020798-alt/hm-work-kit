@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { db } from '../firebase'
-import { doc, onSnapshot, setDoc, deleteDoc, collection, getDocs } from 'firebase/firestore'
-
-const ORC_ID  = 'ativo'
-const ORC_REF = () => doc(db, 'orcamento_ativo', ORC_ID)
+import { onSnapshot, setDoc, deleteDoc, collection, getDocs } from 'firebase/firestore'
+import { orcRef as makeOrcRef } from '../hooks/useOrcamento'
 function f2(n) { return parseFloat(n || 0).toFixed(2) }
 
 // Origens com cor fixa
@@ -27,7 +25,7 @@ function corParaOrigem(origem, index) {
 // Origens sem qty — o valor já está calculado
 const SEM_QTY = new Set(['Tampos', 'Mão de Obra'])
 
-export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCopied, onAbrirProposta }) {
+export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCopied, onAbrirProposta, activoProjId }) {
   const [orc,          setOrc]          = useState(null)
   const [copied,       setCopied]       = useState({})
   const [confirmClear, setConfirmClear] = useState(false)
@@ -38,11 +36,12 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
   const [artigos,      setArtigos]      = useState([])
 
   useEffect(() => {
-    const unsub = onSnapshot(ORC_REF(), snap => {
+    if (!activoProjId) { setOrc({ items: [] }); return }
+    const unsub = onSnapshot(makeOrcRef(activoProjId), snap => {
       setOrc(snap.exists() ? snap.data() : { items: [] })
     }, () => showToast('Erro ao carregar orçamento'))
     return unsub
-  }, [])
+  }, [activoProjId])
 
   // Carregar artigos para o painel de substituição
   useEffect(() => {
@@ -61,29 +60,33 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
   const isEmpty = items.length === 0
 
   const setQty = async (idx, qty) => {
+    if (!activoProjId) return
     const val = parseFloat(qty)
     if (isNaN(val) || val <= 0) return
     const newItems = items.map((i, n) => n===idx ? {...i, qty:val} : i)
-    try { await setDoc(ORC_REF(), {...orc, items:newItems}) }
+    try { await setDoc(makeOrcRef(activoProjId), {...orc, items:newItems}) }
     catch { showToast('Erro ao actualizar quantidade') }
   }
 
   const setPrice = async (idx, price) => {
+    if (!activoProjId) return
     const val = parseFloat(price)
     if (isNaN(val) || val < 0) return
     const newItems = items.map((i, n) => n===idx ? {...i, price:val} : i)
-    try { await setDoc(ORC_REF(), {...orc, items:newItems}) }
+    try { await setDoc(makeOrcRef(activoProjId), {...orc, items:newItems}) }
     catch { showToast('Erro ao actualizar preço') }
   }
 
   const remove = async (idx) => {
+    if (!activoProjId) return
     const newItems = items.filter((_, n) => n!==idx)
-    try { await setDoc(ORC_REF(), {...orc, items:newItems}); showToast('Removido') }
+    try { await setDoc(makeOrcRef(activoProjId), {...orc, items:newItems}); showToast('Removido') }
     catch { showToast('Erro ao remover item') }
   }
 
   // Substituir artigo no orçamento
   const substituir = async (itemIdx, artNovo) => {
+    if (!activoProjId) return
     const newItems = items.map((i, n) => n===itemIdx
       ? { ...i,
           ref:      artNovo.ref,
@@ -93,18 +96,18 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
           price:    artNovo.price || 0,
           supplier: artNovo.supplier || '',
           link:     artNovo.link || '',
-          // manter origem e qty
         }
       : i)
     try {
-      await setDoc(ORC_REF(), {...orc, items:newItems})
+      await setDoc(makeOrcRef(activoProjId), {...orc, items:newItems})
       setSubst(null)
       showToast(`Substituído por ${artNovo.ref}`)
     } catch { showToast('Erro ao substituir') }
   }
 
   const clearAll = async () => {
-    try { await deleteDoc(ORC_REF()); setConfirmClear(false); showToast('Orçamento limpo') }
+    if (!activoProjId) return
+    try { await deleteDoc(makeOrcRef(activoProjId)); setConfirmClear(false); showToast('Orçamento limpo') }
     catch { showToast('Erro ao limpar orçamento') }
   }
 
@@ -220,8 +223,21 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
         </div>
       </div>
 
-      {/* VAZIO */}
-      {isEmpty && (
+      {/* VAZIO — sem projecto activo */}
+      {!activoProjId && (
+        <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16, padding:'40px 20px' }}>
+          <div style={{ width:56, height:56, borderRadius:'50%', background:'var(--neo-bg2)', boxShadow:'var(--neo-shadow-in)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, opacity:.4 }}>◻</div>
+          <div style={{ textAlign:'center' }}>
+            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:8 }}>Sem projecto activo</div>
+            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)', letterSpacing:'0.08em', lineHeight:2 }}>
+              Abre ou cria um projecto em <span style={{color:'var(--neo-gold)'}}>Projectos</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VAZIO — projecto activo mas orçamento vazio */}
+      {activoProjId && isEmpty && (
         <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16, padding:'40px 20px' }}>
           <div style={{ width:56, height:56, borderRadius:'50%', background:'var(--neo-bg2)', boxShadow:'var(--neo-shadow-in)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, opacity:.4 }}>◻</div>
           <div style={{ textAlign:'center' }}>
@@ -235,7 +251,7 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
       )}
 
       {/* LISTA */}
-      {!isEmpty && (
+      {activoProjId && !isEmpty && (
         <>
           <div className="neo-scroll" style={{ flex:1, overflowY:'auto', padding:'8px 0' }}>
             {ordemGrupos.map((origem, idx) => {
