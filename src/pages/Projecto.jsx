@@ -636,7 +636,7 @@ export default function Projecto({ showToast, onNavegar }) {
                   const feito=compFeitos.includes(id); const actual=id===compActual
                   return (
                     <span key={id} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', fontWeight:actual?700:400, background:feito?'rgba(200,169,110,0.12)':actual?`rgba(${hexToRgb(c?.cor||'#c8943a')},0.18)`:'var(--neo-bg2)', color:feito?'var(--neo-gold)':actual?(c?.cor||'var(--neo-gold)'):'var(--neo-text2)', border:actual?`1px solid ${c?.cor||'var(--neo-gold)'}44`:'1px solid rgba(255,255,255,0.06)' }}>
-                      {feito?'✓ ':actual?'▶ ':''}{c?.label||id}
+                      {feito?'✓ ':actual?'> ':''}{c?.label||id}
                     </span>
                   )
                 })}

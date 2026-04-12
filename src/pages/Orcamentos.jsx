@@ -524,7 +524,7 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, onPrice, onSub
                 key={item.qty}
                 onBlur={e=>onQty(e.target.value)}
                 onKeyDown={e=>{ if(e.key==='Enter') { e.target.blur() } }}
-                style={{ fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,color:'var(--neo-text)',background:'transparent',border:'none',borderBottom:'1px solid rgba(255,255,255,0.12)',outline:'none',width:44,textAlign:'center',padding:'1px 2px',fontSize:16 }}
+                style={{ fontFamily:"'Barlow Condensed'",fontWeight:600,color:'var(--neo-text)',background:'transparent',border:'none',borderBottom:'1px solid rgba(255,255,255,0.12)',outline:'none',width:44,textAlign:'center',padding:'1px 2px',fontSize:16 }}
               />
               <button onClick={()=>onQty((parseFloat(item.qty)||1)+1)} style={{ width:22,height:22,borderRadius:'50%',border:'none',background:'var(--neo-bg)',boxShadow:'var(--neo-shadow-out-sm)',cursor:'pointer',color:'var(--neo-text2)',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1 }}>+</button>
               {item.price>0&&<span style={{ fontFamily:"'Barlow Condensed'",fontSize:12,color:'var(--neo-text2)',marginLeft:4 }}>{subtotal.toFixed(2)} €</span>}
