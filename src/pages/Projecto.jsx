@@ -14,7 +14,7 @@ const TIPOS_DEFAULT = [
   { id:'closet',     label:'Closet',        icon:'👕', cor:'#8a9e6e', activo:true  },
   { id:'suite',      label:'Suíte',         icon:'🛏', cor:'#b07acc', activo:false },
   { id:'escritorio', label:'Escritório',    icon:'💼', cor:'#7a9e9a', activo:false },
-  { id:'outro',      label:'Outro',         icon:'✦',  cor:'#7a7a72', activo:true  },
+  { id:'outro',      label:'Outro',         icon:'*',  cor:'#7a7a72', activo:true  },
 ]
 
 // ── Componentes ───────────────────────────────────────────────────────────
@@ -341,7 +341,7 @@ export default function Projecto({ showToast, onNavegar }) {
       }, ()=>{})
     }
     setLoading(false)
-    showToast(`"${kitSel.name}" — ${para.length} artigos adicionados`)
+    showToast(`"${kitSel.name}" - ${para.length} artigos adicionados`)
     marcarFeitoEAvancar(compActual)
   }
 
@@ -413,7 +413,7 @@ export default function Projecto({ showToast, onNavegar }) {
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 16px', height:52, flexShrink:0, background:'var(--neo-bg)', boxShadow:'0 2px 8px rgba(0,0,0,0.4)' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           {passo !== 'tipo' && (
-            <button onClick={voltarPasso} style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--neo-text2)', fontSize:18, padding:'4px 6px', lineHeight:1 }}>←</button>
+            <button onClick={voltarPasso} style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--neo-text2)', fontSize:18, padding:'4px 6px', lineHeight:1 }}><-</button>
           )}
           <div>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text)' }}>
@@ -422,7 +422,7 @@ export default function Projecto({ showToast, onNavegar }) {
             {passo !== 'tipo' && tipoActual && (
               <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                 <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:tipoActual.cor, marginTop:1 }}>{tipoActual.icon} {tipoActual.label}</div>
-                {nome && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.08em', color:'var(--neo-text2)', marginTop:1 }}>· {nome}</div>}
+                {nome && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.08em', color:'var(--neo-text2)', marginTop:1 }}>. {nome}</div>}
               </div>
             )}
           </div>
@@ -436,7 +436,7 @@ export default function Projecto({ showToast, onNavegar }) {
           {passo !== 'tipo' && (
             <button onClick={abrirModalId} title="Identificar projecto"
               style={{ background: nome ? 'rgba(200,169,110,0.1)' : 'transparent', border:`1px solid ${nome ? 'rgba(200,169,110,0.3)' : 'rgba(255,255,255,0.08)'}`, borderRadius:'var(--neo-radius-pill)', padding:'5px 10px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', color: nome ? 'var(--neo-gold)' : 'var(--neo-text2)', transition:'all .15s' }}>
-              ✎
+              *
             </button>
           )}
         </div>
@@ -451,7 +451,7 @@ export default function Projecto({ showToast, onNavegar }) {
 
       <div className="neo-scroll" style={{ flex:1, overflowY:'auto', padding:'20px 16px 40px' }}>
 
-        {/* ══ ECRÃ DE LISTA ══ */}
+        {/* == ECRÃ DE LISTA == */}
         {passo === 'tipo' && (
           <div>
             {/* Projectos em curso */}
@@ -470,7 +470,7 @@ export default function Projecto({ showToast, onNavegar }) {
                         style={{ background:'var(--neo-bg2)', border:'1px solid rgba(200,169,110,0.18)', borderLeft:'3px solid var(--neo-gold)', borderRadius:'var(--neo-radius)', overflow:'hidden' }}>
                         <div style={{ padding:'14px 16px 10px' }}>
                           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                            <span style={{ fontSize:20, flexShrink:0 }}>{tObj?.icon || '✦'}</span>
+                            <span style={{ fontSize:20, flexShrink:0 }}>{tObj?.icon || '*'}</span>
                             <div style={{ flex:1, minWidth:0 }}>
                               <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--neo-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                                 {proj.nome || tObj?.label || 'Projecto'}
@@ -500,7 +500,7 @@ export default function Projecto({ showToast, onNavegar }) {
                         <div style={{ display:'grid', gridTemplateColumns: guiaEmCurso ? '1fr 1fr auto' : '1fr auto', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
                           <button onClick={() => _abrirProjecto(proj.projId)}
                             style={{ background:'transparent', border:'none', borderRight:'1px solid rgba(255,255,255,0.06)', cursor:'pointer', padding:'11px 16px', fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-gold)', textAlign:'left' }}>
-                            Ver orçamento →
+                            Ver orcamento
                           </button>
                           {guiaEmCurso && (
                             <button onClick={() => _retomarGuia(proj.projId)}
@@ -510,7 +510,7 @@ export default function Projecto({ showToast, onNavegar }) {
                           )}
                           <button onClick={() => setConfirmApagar(proj.projId)}
                             style={{ background:'transparent', border:'none', cursor:'pointer', padding:'11px 16px', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', opacity:.6 }}>
-                            ✕
+                            x
                           </button>
                         </div>
                       </div>
@@ -540,7 +540,7 @@ export default function Projecto({ showToast, onNavegar }) {
             <div style={{ marginTop:20 }}>
               <button onClick={()=>setEditTipos(o=>!o)}
                 style={{ background:'transparent', border:'none', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text2)', padding:'4px 0', opacity:.6 }}>
-                {editTipos ? '✓ Fechar' : '⚙ Gerir tipos'}
+                {editTipos ? 'v Fechar' : '* Gerir tipos'}
               </button>
               {editTipos && (
                 <div style={{ marginTop:12, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', border:'1px solid rgba(255,255,255,0.07)', padding:'14px' }}>
@@ -560,10 +560,10 @@ export default function Projecto({ showToast, onNavegar }) {
           </div>
         )}
 
-        {/* ══ PASSO 2: COMPONENTES ══ */}
+        {/* == PASSO 2: COMPONENTES == */}
         {passo === 'componentes' && tipoActual && (
           <div>
-            <PassoHeader numero={2} titulo="O que inclui este projecto?" sub="Selecciona tudo o que o cliente pretende — a app trata de encontrar os kits certos"/>
+            <PassoHeader numero={2} titulo="O que inclui este projecto?" sub="Selecciona tudo o que o cliente pretende - a app trata de encontrar os kits certos"/>
             <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:20 }}>
               {COMPONENTES.map(comp => {
                 const sel = compSel.includes(comp.id)
@@ -574,7 +574,7 @@ export default function Projecto({ showToast, onNavegar }) {
                   <button key={comp.id} onClick={()=>toggleComp(comp.id)} className="proj-comp-card"
                     style={{ display:'flex', alignItems:'center', gap:14, background:sel?`rgba(${corR},0.1)`:'var(--neo-bg2)', border:sel?`1px solid ${comp.cor}55`:'1px solid rgba(255,255,255,0.06)', borderLeft:sel?`3px solid ${comp.cor}`:'3px solid transparent', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'14px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
                     <div style={{ width:20, height:20, borderRadius:5, flexShrink:0, border:sel?`2px solid ${comp.cor}`:'2px solid rgba(255,255,255,0.15)', background:sel?comp.cor:'transparent', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#0f0d08', fontWeight:700 }}>
-                      {sel&&'✓'}
+                      {sel&&'v'}
                     </div>
                     <span style={{ fontSize:20, flexShrink:0 }}>{comp.icon}</span>
                     <div style={{ flex:1, minWidth:0 }}>
@@ -611,14 +611,14 @@ export default function Projecto({ showToast, onNavegar }) {
                 </div>
                 <button onClick={avancarDeComponentes} className="neo-btn neo-btn-gold"
                   style={{ width:'100%', height:48, fontSize:11, letterSpacing:'0.12em', borderRadius:'var(--neo-radius)' }}>
-                  Começar →
+                  Comecar
                 </button>
               </div>
             )}
           </div>
         )}
 
-        {/* ══ PASSO 3: EXECUÇÃO ══ */}
+        {/* == PASSO 3: EXECUÇÃO == */}
         {passo === 'execucao' && compActual && compObjActual && (() => {
           const comp = compObjActual
           const corR = hexToRgb(comp.cor)
@@ -636,7 +636,7 @@ export default function Projecto({ showToast, onNavegar }) {
                   const feito=compFeitos.includes(id); const actual=id===compActual
                   return (
                     <span key={id} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', fontWeight:actual?700:400, background:feito?'rgba(200,169,110,0.12)':actual?`rgba(${hexToRgb(c?.cor||'#c8943a')},0.18)`:'var(--neo-bg2)', color:feito?'var(--neo-gold)':actual?(c?.cor||'var(--neo-gold)'):'var(--neo-text2)', border:actual?`1px solid ${c?.cor||'var(--neo-gold)'}44`:'1px solid rgba(255,255,255,0.06)' }}>
-                      {feito?'✓ ':actual?'> ':''}{c?.label||id}
+                      {feito?'v ':actual?'> ':''}{c?.label||id}
                     </span>
                   )
                 })}
@@ -645,9 +645,9 @@ export default function Projecto({ showToast, onNavegar }) {
               {/* Tampos */}
               {comp.sempreCalculadora && (
                 <CompCard comp={comp} corR={corR}>
-                  <p>Abre a calculadora ANIGRACO, faz o cálculo e guarda — depois volta aqui para continuar.</p>
+                  <p>Abre a calculadora ANIGRACO, faz o cálculo e guarda - depois volta aqui para continuar.</p>
                   <button onClick={()=>onNavegar?.('tampos',null)} className="neo-btn neo-btn-gold" style={{ height:48, padding:'0 32px', fontSize:11, letterSpacing:'0.12em' }}>
-                    Abrir calculadora →
+                    Abrir calculadora
                   </button>
                 </CompCard>
               )}
@@ -658,7 +658,7 @@ export default function Projecto({ showToast, onNavegar }) {
                   {kitsEncontrados.length>1 && !kitSel && (
                     <div style={{ marginBottom:16 }}>
                       <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:700, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
-                        Vários kits disponíveis — escolhe qual usar:
+                        Vários kits disponíveis - escolhe qual usar:
                       </div>
                       <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                         {kitsEncontrados.map(kit => {
@@ -675,7 +675,7 @@ export default function Projecto({ showToast, onNavegar }) {
                                   {tot>0&&<span style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:600, color:'var(--neo-gold)' }}>{f2(tot)} €</span>}
                                 </div>
                               </div>
-                              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:comp.cor, letterSpacing:'0.1em' }}>Usar →</span>
+                              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:comp.cor, letterSpacing:'0.1em' }}>Usar</span>
                             </button>
                           )
                         })}
@@ -691,12 +691,12 @@ export default function Projecto({ showToast, onNavegar }) {
                         </div>
                         {kitsEncontrados.length>1 && (
                           <button onClick={()=>{setKitSelId(null);setKitItems([])}} style={{ background:'transparent', border:'none', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)' }}>
-                            ← trocar kit
+                            <- trocar kit
                           </button>
                         )}
                       </div>
                       <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
-                        ✕ remove · ↗ substitui por outro da mesma categoria
+                        x remove . ^ substitui por outro da mesma categoria
                       </div>
                       <div style={{ background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', overflow:'hidden' }}>
                         {kitItems.map((item,idx) => (
@@ -708,14 +708,14 @@ export default function Projecto({ showToast, onNavegar }) {
                       <div style={{ display:'flex', gap:8, marginTop:14 }}>
                         <button onClick={tentarSaltar} className="neo-btn neo-btn-ghost" style={{ flex:1, height:44, fontSize:10 }}>Saltar</button>
                         <button onClick={confirmarKit} disabled={loading} className="neo-btn neo-btn-gold" style={{ flex:2, height:44, fontSize:10 }}>
-                          {loading?'A adicionar…':`Adicionar (${kitItems.filter(i=>i.incluido).length} artigos) →`}
+                          {loading?'A adicionar...':`Adicionar (${kitItems.filter(i=>i.incluido).length} artigos) ->`}
                         </button>
                       </div>
                     </div>
                   )}
 
                   {!kitSel && kitsEncontrados.length===1 && (
-                    <div style={{ padding:'20px', textAlign:'center', color:'var(--neo-text2)', fontFamily:"'Barlow Condensed'", fontSize:10 }}>A carregar kit…</div>
+                    <div style={{ padding:'20px', textAlign:'center', color:'var(--neo-text2)', fontFamily:"'Barlow Condensed'", fontSize:10 }}>A carregar kit...</div>
                   )}
                 </div>
               )}
@@ -732,7 +732,7 @@ export default function Projecto({ showToast, onNavegar }) {
                     💡 Podes criar um kit de <strong style={{color:'var(--neo-gold)'}}>{comp.label}</strong> na secção <strong style={{color:'var(--neo-gold)'}}>Kits</strong> para não teres de seleccionar manualmente da próxima vez.
                   </div>
                   <button onClick={()=>onNavegar?.(comp.destino||'biblioteca', comp.destCat||null)} className="neo-btn neo-btn-gold" style={{ height:48, padding:'0 32px', fontSize:11, letterSpacing:'0.12em' }}>
-                    Abrir {comp.label} →
+                    Abrir {comp.label}
                   </button>
                 </CompCard>
               )}
@@ -741,26 +741,26 @@ export default function Projecto({ showToast, onNavegar }) {
                 <button onClick={tentarSaltar} className="neo-btn neo-btn-ghost"
                   style={{ width:'100%', height:44, fontSize:10, marginTop: temKits&&kitSel ? 0 : 12 }}>
                   {compPorFazer.length===1
-                    ? '✓ Concluído — ver resumo'
-                    : `✓ Feito — próximo: ${COMPONENTES.find(c=>c.id===proximo)?.label||''}`}
+                    ? 'v Concluído - ver resumo'
+                    : `v Feito - próximo: ${COMPONENTES.find(c=>c.id===proximo)?.label||''}`}
                 </button>
               )}
               {comp.sempreCalculadora && (
                 <button onClick={tentarSaltar} className="neo-btn neo-btn-ghost"
                   style={{ width:'100%', height:44, fontSize:10, marginTop:12 }}>
                   {compPorFazer.length===1
-                    ? '✓ Tampos calculados — ver resumo'
-                    : `✓ Tampos calculados — próximo: ${COMPONENTES.find(c=>c.id===proximo)?.label||''}`}
+                    ? 'v Tampos calculados - ver resumo'
+                    : `v Tampos calculados - próximo: ${COMPONENTES.find(c=>c.id===proximo)?.label||''}`}
                 </button>
               )}
             </div>
           )
         })()}
 
-        {/* ══ PASSO 4: RESUMO ══ */}
+        {/* == PASSO 4: RESUMO == */}
         {passo === 'resumo' && (
           <div>
-            <PassoHeader numero="✓" titulo="Projecto concluído" sub={tipoActual?`${tipoActual.icon} ${tipoActual.label}`:''} cor="var(--neo-gold)"/>
+            <PassoHeader numero="v" titulo="Projecto concluído" sub={tipoActual?`${tipoActual.icon} ${tipoActual.label}`:''} cor="var(--neo-gold)"/>
             {totalOrc > 0 && (
               <div style={{ background:'rgba(200,169,110,0.08)', border:'1px solid rgba(200,169,110,0.25)', borderRadius:'var(--neo-radius)', padding:'20px 24px', textAlign:'center', marginTop:20, marginBottom:20 }}>
                 <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:8 }}>Total PVP indicativo</div>
@@ -775,7 +775,7 @@ export default function Projecto({ showToast, onNavegar }) {
                   <div key={id} style={{ display:'flex', alignItems:'center', gap:12, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius-sm)', border:'1px solid rgba(255,255,255,0.06)', borderLeft:`3px solid ${c?.cor||'var(--neo-gold)'}`, padding:'10px 14px' }}>
                     <span style={{ fontSize:16 }}>{c?.icon}</span>
                     <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:c?.cor||'var(--neo-gold)' }}>{c?.label}</span>
-                    <span style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-gold)', letterSpacing:'0.1em' }}>✓</span>
+                    <span style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-gold)', letterSpacing:'0.1em' }}>v</span>
                   </div>
                 )
               })}
@@ -783,11 +783,11 @@ export default function Projecto({ showToast, onNavegar }) {
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               <button onClick={()=>onNavegar?.('orcamentos')} className="neo-btn neo-btn-gold"
                 style={{ width:'100%', height:48, fontSize:11 }}>
-                Ver orçamento completo →
+                Ver orcamento completo
               </button>
               <button onClick={fecharProjecto} className="neo-btn neo-btn-ghost"
                 style={{ width:'100%', height:44, fontSize:10 }}>
-                ← Voltar à lista de projectos
+                <- Voltar à lista de projectos
               </button>
             </div>
           </div>
@@ -795,13 +795,13 @@ export default function Projecto({ showToast, onNavegar }) {
 
       </div>
 
-      {/* ══ MODAL CONFIRMAR APAGAR ══ */}
+      {/* == MODAL CONFIRMAR APAGAR == */}
       {confirmApagar && (
         <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setConfirmApagar(null)}}>
           <div className="neo-modal" style={{ maxWidth:340 }}>
             <div className="neo-modal-head">
               Apagar projecto
-              <button className="neo-modal-close" onClick={()=>setConfirmApagar(null)}>✕</button>
+              <button className="neo-modal-close" onClick={()=>setConfirmApagar(null)}>x</button>
             </div>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, color:'var(--neo-text2)', letterSpacing:'0.06em', lineHeight:1.9, marginBottom:24 }}>
               Tens a certeza? Esta acção apaga o projecto e o seu orçamento.<br/>
@@ -819,13 +819,13 @@ export default function Projecto({ showToast, onNavegar }) {
         </div>
       )}
 
-      {/* ══ MODAL CONFIRMAR SALTAR SEM ARTIGOS ══ */}
+      {/* == MODAL CONFIRMAR SALTAR SEM ARTIGOS == */}
       {confirmSaltar && (
         <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setConfirmSaltar(false)}}>
           <div className="neo-modal" style={{ maxWidth:340 }}>
             <div className="neo-modal-head">
               Sem artigos adicionados
-              <button className="neo-modal-close" onClick={()=>setConfirmSaltar(false)}>✕</button>
+              <button className="neo-modal-close" onClick={()=>setConfirmSaltar(false)}>x</button>
             </div>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, color:'var(--neo-text2)', letterSpacing:'0.06em', lineHeight:1.9, marginBottom:24 }}>
               Não adicionaste nenhum artigo ao orçamento para este componente.<br/>
@@ -836,20 +836,20 @@ export default function Projecto({ showToast, onNavegar }) {
                 Sim, avançar sem adicionar
               </button>
               <button className="neo-btn neo-btn-gold" onClick={()=>setConfirmSaltar(false)} style={{ width:'100%', height:44, fontSize:10 }}>
-                ← Voltar e adicionar
+                <- Voltar e adicionar
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ══ MODAL IDENTIDADE ✎ ══ */}
+      {/* == MODAL IDENTIDADE * == */}
       {modalId && (
         <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setModalId(false)}}>
           <div className="neo-modal" style={{ maxWidth:380 }}>
             <div className="neo-modal-head">
               Identificar projecto
-              <button className="neo-modal-close" onClick={()=>setModalId(false)}>✕</button>
+              <button className="neo-modal-close" onClick={()=>setModalId(false)}>x</button>
             </div>
             <div style={{ marginBottom:18 }}>
               <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:6 }}>Nome do cliente</div>
@@ -882,7 +882,7 @@ export default function Projecto({ showToast, onNavegar }) {
                     <input value={c.valor} onChange={e=>setModalCampos(p=>p.map((x,j)=>j===i?{...x,valor:e.target.value}:x))} placeholder="Valor"
                       style={{ flex:1, background:'var(--neo-bg)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'var(--neo-radius-sm)', padding:'7px 10px', fontFamily:"'Barlow'", fontSize:13, color:'var(--neo-text)', outline:'none' }}/>
                     <button onClick={()=>setModalCampos(p=>p.filter((_,j)=>j!==i))}
-                      style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--neo-text2)', fontSize:14, padding:'4px 6px', lineHeight:1, flexShrink:0 }}>✕</button>
+                      style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--neo-text2)', fontSize:14, padding:'4px 6px', lineHeight:1, flexShrink:0 }}>x</button>
                   </div>
                 ))}
               </div>
@@ -895,16 +895,16 @@ export default function Projecto({ showToast, onNavegar }) {
         </div>
       )}
 
-      {/* ══ MODAL SUBSTITUIÇÃO ══ */}
+      {/* == MODAL SUBSTITUIÇÃO == */}
       {subst && (
         <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setSubst(null)}}>
           <div className="neo-modal" style={{ maxWidth:480 }}>
             <div className="neo-modal-head">
               Substituir artigo
-              <button className="neo-modal-close" onClick={()=>setSubst(null)}>✕</button>
+              <button className="neo-modal-close" onClick={()=>setSubst(null)}>x</button>
             </div>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
-              {subst.sub || subst.cat} — escolhe o artigo substituto
+              {subst.sub || subst.cat} - escolhe o artigo substituto
             </div>
             {kitItems[subst.idx] && (
               <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background:'rgba(200,169,110,0.06)', border:'1px solid rgba(200,169,110,0.2)', borderRadius:'var(--neo-radius-sm)', marginBottom:14 }}>
@@ -936,7 +936,7 @@ export default function Projecto({ showToast, onNavegar }) {
                             <div style={{ fontSize:12, fontWeight:300, color:'var(--neo-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{art.desc}</div>
                             <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:1 }}>
                               {art.supplier&&<span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)' }}>{art.supplier}</span>}
-                              {art.link&&<a href={art.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, color:'var(--neo-gold2)', textDecoration:'none', letterSpacing:'0.08em' }}>↗ link</a>}
+                              {art.link&&<a href={art.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, color:'var(--neo-gold2)', textDecoration:'none', letterSpacing:'0.08em' }}>^ link</a>}
                             </div>
                           </div>
                           <button onClick={()=>substituir(art)} className="neo-btn neo-btn-gold" style={{ height:30, padding:'0 14px', fontSize:9, flexShrink:0 }}>
@@ -1003,23 +1003,23 @@ function KitItemRow({ item, onChange, onSubstituir }) {
   return (
     <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderBottom:'1px solid rgba(255,255,255,0.05)', background:item.incluido?'transparent':'rgba(0,0,0,0.12)', opacity:item.incluido?1:0.45, transition:'all .15s' }}>
       <button onClick={()=>onChange(!item.incluido)} style={{ width:20, height:20, borderRadius:4, border:item.incluido?'2px solid var(--neo-gold)':'2px solid rgba(255,255,255,0.15)', background:item.incluido?'var(--neo-gold)':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, cursor:'pointer', fontSize:11, color:'#0f0d08', fontWeight:700 }}>
-        {item.incluido&&'✓'}
+        {item.incluido&&'v'}
       </button>
       <span style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:700, letterSpacing:'0.06em', color:'var(--neo-gold)', flexShrink:0, minWidth:65 }}>{item.ref}</span>
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ fontSize:12, fontWeight:300, color:'var(--neo-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.desc}</div>
-        {item.cat && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', marginTop:1 }}>{item.cat}{item.sub?' · '+item.sub:''}</div>}
+        {item.cat && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', marginTop:1 }}>{item.cat}{item.sub?' . '+item.sub:''}</div>}
       </div>
       {item.price>0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, color:'var(--neo-text2)', flexShrink:0 }}>{f2(item.price)} €</span>}
       {item.link && (
         <a href={item.link} target="_blank" rel="noreferrer" title="Abrir link do artigo"
           style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:26, height:26, borderRadius:'var(--neo-radius-pill)', background:'var(--neo-bg)', boxShadow:'var(--neo-shadow-out-sm)', textDecoration:'none', color:'var(--neo-gold2)', fontSize:11, flexShrink:0 }}
-          onClick={e=>e.stopPropagation()}>↗</a>
+          onClick={e=>e.stopPropagation()}>^</a>
       )}
       {item.cat && (
-        <button onClick={onSubstituir} title={`Substituir — ver outros em ${item.cat}`}
+        <button onClick={onSubstituir} title={`Substituir - ver outros em ${item.cat}`}
           style={{ background:'var(--neo-bg)', border:'none', borderRadius:'var(--neo-radius-pill)', width:26, height:26, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'var(--neo-shadow-out-sm)', color:'var(--neo-text2)', fontSize:11, flexShrink:0 }}>
-          ⇄
+          <>
         </button>
       )}
     </div>
