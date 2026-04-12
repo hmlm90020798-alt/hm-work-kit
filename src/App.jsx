@@ -360,7 +360,7 @@ function Shell() {
 
         {page === 'projecto'   && <Projecto   showToast={showToast} onNavegar={navegarDeProjecto} />}
         {page === 'biblioteca' && <Biblioteca showToast={showToast} {...copyProps} catFiltroInicial={bibCatFiltro} onCatFiltroUsado={()=>setBibCatFiltro(null)} />}
-        {page === 'modelos'    && <Modelos    showToast={showToast} {...copyProps} />}
+        {page === 'modelos'    && <Modelos    showToast={showToast} {...copyProps} userId={user.uid} />}
         {page === 'orcamentos' && <Orcamentos showToast={showToast} {...copyProps} onOpenTampo={(c)=>{ setTampoParaAbrir(c); setPage('tampos') }} />}
         {page === 'tampos'     && <Tampos     showToast={showToast} {...copyProps} abrirCalculo={tampoParaAbrir} onAbrirCalculoDone={()=>setTampoParaAbrir(null)} />}
         {page === 'maodeobra'  && <MaoDeObra  showToast={showToast} {...copyProps} userId={user.uid} />}

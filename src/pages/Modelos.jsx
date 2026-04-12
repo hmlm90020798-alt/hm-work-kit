@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { db } from '../firebase'
-import { collection, doc, onSnapshot, setDoc, deleteDoc, addDoc } from 'firebase/firestore'
+import { collection, doc, onSnapshot, setDoc, deleteDoc, addDoc, getDoc } from 'firebase/firestore'
 import { addToOrcamento } from '../hooks/useOrcamento'
 import { MAO_DE_OBRA } from '../data/maoDeObra'
 
@@ -8,7 +8,7 @@ const MO_SECCOES = [...new Set(MAO_DE_OBRA.map(s=>s.seccao))].sort()
 
 const CONTEXTOS = ['Cozinha','Casa de Banho','Quarto','Escritório','Parceiro','Outro']
 
-export default function Modelos({ showToast, copiedRefs, markCopied }) {
+export default function Modelos({ showToast, copiedRefs, markCopied, userId }) {
   const [modelos, setModelos] = useState([])
   const [artigos, setArtigos] = useState([])
   const [detailId, setDetailId] = useState(null)  // só guardamos o ID
@@ -17,6 +17,10 @@ export default function Modelos({ showToast, copiedRefs, markCopied }) {
   const [form,     setForm]     = useState({ name:'', contexto:'', notas:'' })
   const [artSearch, setArtSearch] = useState('')
   const [artModal,  setArtModal]  = useState(false)
+  // Ordenação da lista de kits — persistida no Firestore
+  const [kitSort, setKitSort] = useState('criacao') // 'criacao' | 'az' | 'contexto'
+  // Ordenação dos itens do kit activo — persistida no documento do modelo
+  const [itemSort, setItemSort] = useState('criacao') // 'criacao' | 'az' | 'cat'
 
   useEffect(() => {
     const u1 = onSnapshot(collection(db,'modelos'), snap =>
@@ -25,11 +29,40 @@ export default function Modelos({ showToast, copiedRefs, markCopied }) {
     const u2 = onSnapshot(collection(db,'artigos'), snap =>
       setArtigos(snap.docs.map(d=>({id:d.id,...d.data()}))),
       () => showToast('Erro ao carregar artigos'))
+    // Carregar preferência de ordenação da lista de kits
+    if (userId) {
+      getDoc(doc(db,'preferencias',userId)).then(snap => {
+        if (snap.exists() && snap.data().kitSort) setKitSort(snap.data().kitSort)
+      }).catch(()=>{})
+    }
     return () => { u1(); u2() }
   }, [])
 
+  // Quando muda o modelo activo, carregar itemSort do documento
+  useEffect(() => {
+    if (!detailId) return
+    const m = modelos.find(m => m.id === detailId)
+    if (m) setItemSort(m.itemSort || 'criacao')
+  }, [detailId, modelos])
+
   // Modelo activo — sempre actualizado do Firestore via onSnapshot
   const modelo = modelos.find(m => m.id === detailId) || null
+
+  // Mudar ordenação da lista de kits — persiste em preferencias/{uid}
+  const changeKitSort = async (sort) => {
+    setKitSort(sort)
+    if (userId) {
+      try { await setDoc(doc(db,'preferencias',userId), { kitSort: sort }, { merge: true }) } catch {}
+    }
+  }
+
+  // Mudar ordenação dos itens do kit — persiste no documento do modelo
+  const changeItemSort = async (sort) => {
+    setItemSort(sort)
+    if (modelo) {
+      try { await setDoc(doc(db,'modelos',modelo.id), { ...modelo, itemSort: sort }) } catch {}
+    }
+  }
 
   // ── CRUD modelo ──────────────────────────────────────────────────────────
   const saveModelo = async () => {
@@ -178,7 +211,12 @@ export default function Modelos({ showToast, copiedRefs, markCopied }) {
         <span style={{fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.2em',color:'var(--neo-text2)',textTransform:'uppercase'}}>A carregar…</span>
       </div>
     )
-    const items = modelo.items||[]
+    const itemsRaw = modelo.items||[]
+    const items = [...itemsRaw].sort((a,b) => {
+      if (itemSort==='az') return (a.ref||'').localeCompare(b.ref||'')
+      if (itemSort==='cat') return ((a.cat||'')+(a.sub||'')).localeCompare((b.cat||'')+(b.sub||''))
+      return 0 // criacao — ordem original
+    })
     return (
       <>
       <div style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden',background:'var(--neo-bg)'}}>
@@ -208,6 +246,22 @@ export default function Modelos({ showToast, copiedRefs, markCopied }) {
             {items.length} artigo{items.length!==1?'s':''}{items.length>0?<> · <span style={{color:'var(--neo-gold)'}}>{total(items).toFixed(2)} €</span></>:''}
           </div>
         </div>
+
+        {/* Barra de ordenação dos itens */}
+        {items.length > 1 && (
+          <div style={{display:'flex',alignItems:'center',gap:6,padding:'8px 16px',borderBottom:'1px solid rgba(255,255,255,0.05)',flexShrink:0}}>
+            <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text2)',marginRight:2}}>Ordenar</span>
+            {[{v:'criacao',l:'Criação'},{v:'az',l:'A→Z'},{v:'cat',l:'Categoria'}].map(o=>(
+              <button key={o.v} onClick={()=>changeItemSort(o.v)} style={{
+                padding:'3px 10px',borderRadius:'var(--neo-radius-pill)',border:'none',cursor:'pointer',
+                fontFamily:"'Barlow Condensed'",fontSize:8,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',
+                background:itemSort===o.v?'var(--neo-bg2)':'transparent',
+                boxShadow:itemSort===o.v?'var(--neo-shadow-out-sm)':'none',
+                color:itemSort===o.v?'var(--neo-gold)':'var(--neo-text2)',transition:'all .15s',
+              }}>{o.l}</button>
+            ))}
+          </div>
+        )}
 
         {/* Lista de artigos */}
         <div className="neo-scroll" style={{flex:1,overflowY:'auto'}}>
@@ -365,9 +419,14 @@ export default function Modelos({ showToast, copiedRefs, markCopied }) {
   }
 
   // ── LIST VIEW ────────────────────────────────────────────────────────────
+  const modelosSorted = [...modelos].sort((a,b) => {
+    if (kitSort==='az') return (a.name||'').localeCompare(b.name||'')
+    if (kitSort==='contexto') return ((a.contexto||'Geral')+(a.name||'')).localeCompare((b.contexto||'Geral')+(b.name||''))
+    return 0 // criacao — ordem Firestore
+  })
   const grupos = {}
-  modelos.forEach(m => {
-    const k = m.contexto||'Geral'
+  modelosSorted.forEach(m => {
+    const k = kitSort==='contexto' ? (m.contexto||'Geral') : 'todos'
     if (!grupos[k]) grupos[k]=[]
     grupos[k].push(m)
   })
@@ -385,6 +444,22 @@ export default function Modelos({ showToast, copiedRefs, markCopied }) {
         </button>
       </div>
 
+      {/* Barra de ordenação da lista de kits */}
+      {modelos.length > 1 && (
+        <div style={{display:'flex',alignItems:'center',gap:6,padding:'8px 16px',borderBottom:'1px solid rgba(255,255,255,0.05)',flexShrink:0}}>
+          <span style={{fontFamily:"'Barlow Condensed'",fontSize:8,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--neo-text2)',marginRight:2}}>Ordenar</span>
+          {[{v:'criacao',l:'Criação'},{v:'az',l:'A→Z'},{v:'contexto',l:'Contexto'}].map(o=>(
+            <button key={o.v} onClick={()=>changeKitSort(o.v)} style={{
+              padding:'3px 10px',borderRadius:'var(--neo-radius-pill)',border:'none',cursor:'pointer',
+              fontFamily:"'Barlow Condensed'",fontSize:8,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',
+              background:kitSort===o.v?'var(--neo-bg2)':'transparent',
+              boxShadow:kitSort===o.v?'var(--neo-shadow-out-sm)':'none',
+              color:kitSort===o.v?'var(--neo-gold)':'var(--neo-text2)',transition:'all .15s',
+            }}>{o.l}</button>
+          ))}
+        </div>
+      )}
+
       <div className="neo-scroll" style={{flex:1,overflowY:'auto',padding:'10px 14px 32px'}}>
         {modelos.length===0 && (
           <div style={{padding:'60px 20px',textAlign:'center'}}>
@@ -398,9 +473,11 @@ export default function Modelos({ showToast, copiedRefs, markCopied }) {
         )}
         {Object.entries(grupos).map(([ctx,mods])=>(
           <div key={ctx} style={{marginBottom:18}}>
-            <div style={{fontFamily:"'Barlow Condensed'",fontSize:9,fontWeight:700,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--neo-gold2)',marginBottom:8,paddingLeft:2}}>
-              {ctx}
-            </div>
+            {kitSort==='contexto' && (
+              <div style={{fontFamily:"'Barlow Condensed'",fontSize:9,fontWeight:700,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--neo-gold2)',marginBottom:8,paddingLeft:2}}>
+                {ctx}
+              </div>
+            )}
             {mods.map(m=>(
               <ModelCard key={m.id} m={m} total={total(m.items)}
                 onOpen={()=>setDetailId(m.id)}
