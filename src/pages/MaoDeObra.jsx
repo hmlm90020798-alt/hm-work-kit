@@ -21,7 +21,7 @@ function f2(n) { return parseFloat(n||0).toFixed(2) }
 // Referência Firestore — preferências MO por utilizador
 const moPrefsRef = (uid) => doc(db, 'preferencias', uid)
 
-export default function MaoDeObra({ showToast, copiedRefs, markCopied, userId }) {
+export default function MaoDeObra({ showToast, copiedRefs, markCopied, userId, activoProjId }) {
   const [seccao,    setSeccao]    = useState('Todos')
   const [search,    setSearch]    = useState('')
   const [tipo,      setTipo]      = useState('Todos')
@@ -207,7 +207,8 @@ export default function MaoDeObra({ showToast, copiedRefs, markCopied, userId })
                     {items.map(s=>(
                       <ServicoCard key={s.id} s={s} showToast={showToast}
                         wasCopied={copiedRefs?.has(s.id)}
-                        markCopied={markCopied}/>
+                        markCopied={markCopied}
+                        activoProjId={activoProjId}/>
                     ))}
                   </div>
                 )}
@@ -231,7 +232,8 @@ export default function MaoDeObra({ showToast, copiedRefs, markCopied, userId })
             {TRANSVERSAIS.map(s=>(
               <ServicoCard key={s.id} s={s} showToast={showToast}
                 wasCopied={copiedRefs?.has(s.id)}
-                markCopied={markCopied}/>
+                markCopied={markCopied}
+                activoProjId={activoProjId}/>
             ))}
           </div>
         </div>
@@ -240,7 +242,7 @@ export default function MaoDeObra({ showToast, copiedRefs, markCopied, userId })
   )
 }
 
-function ServicoCard({ s, showToast, wasCopied, markCopied }) {
+function ServicoCard({ s, showToast, wasCopied, markCopied, activoProjId }) {
   const [open,    setOpen]    = useState(false)
   const [qty,     setQty]     = useState('')
   const [copiedId, setCopiedId] = useState(false)
@@ -271,7 +273,7 @@ function ServicoCard({ s, showToast, wasCopied, markCopied }) {
     e.stopPropagation()
     const finalQty = isMedida ? qtyNum : 1
     if (isMedida && finalQty <= 0) { showToast('Introduz a quantidade primeiro'); return }
-    addToOrcamento({
+    addToOrcamento(activoProjId, {
       ref:    s.id,
       desc:   s.nome + (isMedida && finalQty>0 ? ` (${finalQty} ${s.un})` : ''),
       cat:    s.seccao,

@@ -226,7 +226,7 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
       {/* VAZIO — sem projecto activo */}
       {!activoProjId && (
         <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16, padding:'40px 20px' }}>
-          <div style={{ width:56, height:56, borderRadius:'50%', background:'var(--neo-bg2)', boxShadow:'var(--neo-shadow-in)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, opacity:.4 }}>◻</div>
+          <div style={{ width:56, height:56, borderRadius:'50%', background:'var(--neo-bg2)', boxShadow:'var(--neo-shadow-in)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, opacity:0.4 }}>◻</div>
           <div style={{ textAlign:'center' }}>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:8 }}>Sem projecto activo</div>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)', letterSpacing:'0.08em', lineHeight:2 }}>
@@ -239,7 +239,7 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
       {/* VAZIO — projecto activo mas orçamento vazio */}
       {activoProjId && isEmpty && (
         <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16, padding:'40px 20px' }}>
-          <div style={{ width:56, height:56, borderRadius:'50%', background:'var(--neo-bg2)', boxShadow:'var(--neo-shadow-in)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, opacity:.4 }}>◻</div>
+          <div style={{ width:56, height:56, borderRadius:'50%', background:'var(--neo-bg2)', boxShadow:'var(--neo-shadow-in)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, opacity:0.4 }}>◻</div>
           <div style={{ textAlign:'center' }}>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, letterSpacing:'0.18em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:8 }}>Orçamento vazio</div>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)', letterSpacing:'0.08em', lineHeight:2 }}>
@@ -282,7 +282,7 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
                             showToast(`${origem} — ${f2(gtotal)} € copiado`)
                           }}
                           title="Copiar subtotal"
-                          style={{ background:'transparent', border:'none', cursor:'pointer', padding:'2px 5px', borderRadius:'var(--neo-radius-pill)', color:'var(--neo-text2)', fontSize:10, lineHeight:1, opacity:.6, transition:'opacity .15s' }}
+                          style={{ background:'transparent', border:'none', cursor:'pointer', padding:'2px 5px', borderRadius:'var(--neo-radius-pill)', color:'var(--neo-text2)', fontSize:10, lineHeight:1, opacity:0.6, transition:'opacity .15s' }}
                           onMouseOver={e=>e.currentTarget.style.opacity='1'}
                           onMouseOut={e=>e.currentTarget.style.opacity='.6'}
                         >⎘</button>
@@ -476,7 +476,7 @@ function OrcItem({ item, copied, onCopy, onRemove, onOpen, onQty, onPrice, onSub
           <CopyChip val={item.ref} copied={!!copied[item.ref+'_ref']||wasCopied} onCopy={()=>onCopy(item.ref,'Referência',item.ref+'_ref')} mainRef cor={cor}/>
           {isTampo && (
             <button onClick={onOpen} style={{ padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', border:'1px solid rgba(74,143,168,0.4)', background:'transparent', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:'#4a8fa8' }}>
-              → Calculadora
+               Calculadora
             </button>
           )}
           <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:6 }}>

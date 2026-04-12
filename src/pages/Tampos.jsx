@@ -346,7 +346,7 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
             <div>
               <label className="neo-label" style={{marginBottom:4,pointerEvents:'none'}}>Material</label>
               <div style={{fontFamily:"'Barlow Condensed'",fontSize:15,fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',color:p.desc?'var(--neo-text)':'var(--neo-text3)'}}>
-                {p.desc?`${p.tipo.charAt(0)+p.tipo.slice(1).toLowerCase()} — ${p.desc}`:'Seleccionar →'}
+                {p.desc?`${p.tipo.charAt(0)+p.tipo.slice(1).toLowerCase()} — ${p.desc}`:'Seleccionar '}
               </div>
               {p.grupo&&<div style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-text3)',marginTop:2}}>Grupo {p.grupo}</div>}
             </div>
@@ -449,7 +449,7 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
     <div className="neo-screen">
       {/* Topbar */}
       <div className="neo-topbar">
-        <button className="neo-btn neo-btn-ghost" style={{padding:'0 10px',fontSize:10}} onClick={()=>onBack({...current, pvp:TA.pvp})}>← Tampos</button>
+        <button className="neo-btn neo-btn-ghost" style={{padding:'0 10px',fontSize:10}} onClick={()=>onBack({...current, pvp:TA.pvp})}> Tampos</button>
         <div style={{display:'flex',gap:6}}>
           <button className="neo-btn neo-btn-ghost" style={{height:28,padding:'0 10px',fontSize:9}} onClick={limparDados}>Limpar</button>
           <button className="neo-btn neo-btn-ghost" style={{height:28,padding:'0 10px',fontSize:9}} onClick={gerarPDF}>PDF</button>
@@ -542,7 +542,7 @@ body{font-family:Arial,sans-serif;margin:0;padding:32px;font-size:13px;color:#11
         <div style={{padding:'6px 16px 2px'}}>
           <button onClick={()=>setFormulaOpen(o=>!o)}
             style={{background:'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--neo-gold)',display:'flex',alignItems:'center',gap:6,padding:'8px 0',opacity:0.7}}>
-            <span style={{fontSize:10}}>{formulaOpen?'▼':'▶'}</span> Fórmula PVP
+            <span style={{fontSize:10}}>{formulaOpen?'▼':'>'}</span> Fórmula PVP
           </button>
           {formulaOpen&&<FormulaPanel margem={margem} setMargem={setMargem} c1Auto={TA.c1} showToast={showToast}/>}
         </div>
@@ -804,7 +804,7 @@ function FormulaPanel({margem,setMargem,c1Auto,showToast}){
           <button onClick={copyPvp} className={`neo-copy ${pvpCalc?'':''}` }
             style={{fontSize:18,fontWeight:700,color:pvpCalc?'var(--neo-gold)':'var(--neo-text3)',background:'transparent',border:'none',cursor:pvpCalc?'pointer':'default',padding:'4px 0',fontFamily:"'Barlow Condensed'",letterSpacing:'0.06em'}}>
             {pvpCalc?f2(pvpCalc)+' €':'—'}
-            {pvpCalc?<span style={{fontSize:10,marginLeft:6,opacity:.6}}>⎘</span>:null}
+            {pvpCalc?<span style={{fontSize:10,marginLeft:6,opacity:0.6}}>⎘</span>:null}
           </button>
         </div>
       </div>

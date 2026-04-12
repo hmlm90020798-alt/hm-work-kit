@@ -176,7 +176,7 @@ function Shell() {
               fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:700, letterSpacing:'0.1em',
               textTransform:'uppercase', color:'#c8a96e', display:'flex', alignItems:'center', gap:5,
               whiteSpace:'nowrap' }}>
-            ✓ {copiedRefs.size} <span style={{ opacity:.6, fontWeight:400 }}>limpar</span>
+            ✓ {copiedRefs.size} <span style={{ opacity:0.6, fontWeight:400 }}>limpar</span>
           </button>
         )}
 
@@ -238,7 +238,7 @@ function Shell() {
                           <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.18em',
                             textTransform:'uppercase', color:'#7a7a72', marginTop:5 }}>{p.sub}</div>
                         </div>
-                        <span style={{ fontFamily:"'Barlow Condensed'", fontSize:14, color:'#6a5a2a' }}>→</span>
+                        <span style={{ fontFamily:"'Barlow Condensed'", fontSize:14, color:'#6a5a2a' }}></span>
                       </div>
                     </button>
                   )
@@ -337,7 +337,7 @@ function Shell() {
       {/* PÁGINA */}
       <main style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
 
-        {/* Banner "← Voltar ao Projecto" */}
+        {/* Banner " Voltar ao Projecto" */}
         {mostrarBanner && (
           <button onClick={() => goTo('projecto')} style={{
             display:'flex', alignItems:'center', gap:10,
@@ -348,7 +348,7 @@ function Shell() {
           }}
           onMouseOver={e=>e.currentTarget.style.background='rgba(200,169,110,0.12)'}
           onMouseOut={e=>e.currentTarget.style.background='rgba(200,169,110,0.07)'}>
-            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-gold)', letterSpacing:'0.1em' }}>←</span>
+            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-gold)', letterSpacing:'0.1em' }}></span>
             <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:600, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-gold)' }}>
               Voltar ao Projecto
             </span>
