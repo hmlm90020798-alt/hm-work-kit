@@ -453,6 +453,14 @@ export default function Projecto({ showToast, onNavegar }) {
     setNome(novoNome)
     setCampos(novosCampos)
     setModalId(false)
+    // Gravar imediatamente — não depender do debounce que pode ser cancelado
+    if (user) {
+      clearTimeout(saveTimer.current)
+      setDoc(estadoRef(user.uid), {
+        passo, tipo, compSel, compFeitos, compActual, kitSelId, kitItems,
+        projId, nome: novoNome, campos: novosCampos
+      }).catch(() => {})
+    }
     showToast(novoNome ? `Projecto: ${novoNome}` : 'Identidade guardada')
   }
 
