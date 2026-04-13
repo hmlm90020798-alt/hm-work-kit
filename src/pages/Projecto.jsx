@@ -260,7 +260,14 @@ export default function Projecto({ showToast, onNavegar }) {
 
   const avancarDeComponentes = () => {
     if (!compSel.length) { showToast('Selecciona pelo menos um componente'); return }
-    iniciarComp(compSel[0])
+    // Comecar pelo primeiro que ainda nao foi feito
+    const porFazer = compSel.filter(c => !compFeitos.includes(c))
+    if (!porFazer.length) {
+      // Todos ja feitos - ir para resumo
+      setPasso('resumo')
+      return
+    }
+    iniciarComp(porFazer[0])
   }
 
   const iniciarComp = (compId) => {
@@ -567,7 +574,14 @@ export default function Projecto({ showToast, onNavegar }) {
                 )
               })}
             </div>
-            <button onClick={() => setPasso('componentes')} className="neo-btn neo-btn-ghost"
+            <button onClick={() => {
+                // Garantir que os componentes ja feitos aparecem como seleccionados
+                setCompSel(prev => {
+                  const todos = [...new Set([...compFeitos, ...prev])]
+                  return todos
+                })
+                setPasso('componentes')
+              }} className="neo-btn neo-btn-ghost"
               style={{ width:'100%', height:44, fontSize:10, marginBottom:8 }}>
               + Adicionar categoria
             </button>
