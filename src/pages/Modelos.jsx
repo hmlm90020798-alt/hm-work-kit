@@ -22,6 +22,14 @@ export default function Modelos({ showToast, copiedRefs, markCopied, userId }) {
   // Ordenação dos itens do kit activo — persistida no documento do modelo
   const [itemSort, setItemSort] = useState('criacao') // 'criacao' | 'az' | 'cat'
 
+  const [cats, setCats] = useState([])
+
+  useEffect(() => {
+    const uc = onSnapshot(collection(db,'categorias'), s => setCats(s.docs.map(d=>({id:d.id,...d.data()}))))
+    return () => uc()
+  }, [])
+
+
   useEffect(() => {
     const u1 = onSnapshot(collection(db,'modelos'), snap =>
       setModelos(snap.docs.map(d=>({id:d.id,...d.data()}))),
@@ -414,7 +422,7 @@ export default function Modelos({ showToast, copiedRefs, markCopied, userId }) {
         </div>
       </div>
 
-      <ModeloFormModal open={modal} editId={editId} form={form} setForm={setForm} onSave={saveModelo} onClose={()=>{setModal(false);setEditId(null)}}/>
+      <ModeloFormModal open={modal} editId={editId} form={form} setForm={setForm} onSave={saveModelo} onClose={()=>{setModal(false);setEditId(null)}} cats={cats}/>
       </>
     )
   }
@@ -490,7 +498,7 @@ export default function Modelos({ showToast, copiedRefs, markCopied, userId }) {
         ))}
       </div>
     </div>
-    <ModeloFormModal open={modal} editId={editId} form={form} setForm={setForm} onSave={saveModelo} onClose={()=>{setModal(false);setEditId(null)}}/>
+    <ModeloFormModal open={modal} editId={editId} form={form} setForm={setForm} onSave={saveModelo} onClose={()=>{setModal(false);setEditId(null)}} cats={cats}/>
     </>
   )
 }
@@ -622,7 +630,7 @@ function OrcBtn({items,onAdd}){
 }
 
 // ── ModeloFormModal ───────────────────────────────────────────────────────────
-function ModeloFormModal({open,editId,form,setForm,onSave,onClose}){
+function ModeloFormModal({open,editId,form,setForm,onSave,onClose,cats=[]}){
   const I={width:'100%',background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-in-sm)',padding:'10px 14px',fontFamily:"'Barlow'",fontSize:14,fontWeight:300,color:'var(--neo-text)',outline:'none',transition:'box-shadow .2s'}
   const L={fontFamily:"'Barlow Condensed'",fontSize:9,fontWeight:600,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--neo-text2)',display:'block',marginBottom:8}
   return(
@@ -664,9 +672,13 @@ function ModeloFormModal({open,editId,form,setForm,onSave,onClose}){
         <div className="frow">
           <label style={L}>Categoria da Biblioteca (opcional)</label>
           <div style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-text2)',letterSpacing:'0.08em',marginBottom:8}}>Liga este kit a uma categoria - aparece automaticamente no guia de projectos</div>
-          <input value={form.categoria} onChange={e=>setForm(f=>({...f,categoria:e.target.value}))}
-            placeholder="ex: Eletrodomesticos, Sanitarios, Ferragens…"
-            style={{...I,fontFamily:"'Barlow Condensed'",fontSize:13,letterSpacing:'0.06em'}}/>
+          <select value={form.categoria} onChange={e=>setForm(f=>({...f,categoria:e.target.value}))}
+            style={{...I,fontFamily:"'Barlow Condensed'",fontSize:13,letterSpacing:'0.06em',cursor:'pointer'}}>
+            <option value="">— Sem categoria —</option>
+            {cats.sort((a,b)=>(a.order??999)-(b.order??999)).map(c=>(
+              <option key={c.id} value={c.name}>{c.icon?c.icon+' ':''}{c.name}</option>
+            ))}
+          </select>
         </div>
         <div className="modal-actions">
           <button className="neo-btn neo-btn-ghost" onClick={onClose}>Cancelar</button>

@@ -166,7 +166,7 @@ export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCop
 
   const saveCat = async (cat) => {
     try {
-      await setDoc(doc(db,'categorias',cat.id), {name:cat.name, subs:cat.subs||[], order:cat.order??999})
+      await setDoc(doc(db,'categorias',cat.id), {name:cat.name, subs:cat.subs||[], order:cat.order??999, icon:cat.icon||'', cor:cat.cor||''})
     } catch { showToast('Erro ao guardar categoria') }
   }
 
@@ -572,8 +572,16 @@ function CatModal({ open, cats, arts, onClose, onSave, showToast }) {
 
               {/* Card da categoria */}
               <div style={{flex:1,padding:'10px 12px',borderRadius:6,background:'var(--neo-bg2)',border:'1px solid rgba(255,255,255,0.05)'}}>
-                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:(cat.subs||[]).length>0?6:0}}>
-                  <span style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-text)'}}>{cat.name}</span>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <input value={cat.icon||''} onChange={e=>onSave({...cat,icon:e.target.value.slice(0,2)})}
+                      placeholder="🏷" title="Icone (emoji)"
+                      style={{width:36,background:'var(--neo-bg)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:4,padding:'3px 6px',fontSize:16,textAlign:'center',color:'var(--neo-text)',outline:'none'}}/>
+                    <input value={cat.cor||''} onChange={e=>onSave({...cat,cor:e.target.value})}
+                      placeholder="#c8943a" title="Cor (hex)"
+                      style={{width:80,background:'var(--neo-bg)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:4,padding:'3px 8px',fontFamily:"'Barlow Condensed'",fontSize:11,color:cat.cor||'var(--neo-text2)',outline:'none'}}/>
+                    <span style={{fontFamily:"'Barlow Condensed'",fontSize:13,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:cat.cor||'var(--neo-text)'}}>{cat.name}</span>
+                  </div>
                   <button className="bib-act-btn del" onClick={()=>removeCat(cat)}>✕</button>
                 </div>
                 {(cat.subs||[]).length>0&&<div style={{paddingLeft:4,marginBottom:4}}>
