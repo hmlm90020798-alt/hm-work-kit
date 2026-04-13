@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { db } from '../firebase'
-import { collection, doc, onSnapshot, deleteDoc, getDoc, setDoc } from 'firebase/firestore'
+import { collection, doc, onSnapshot, deleteDoc, getDoc, setDoc, query, where } from 'firebase/firestore'
 import { orcRef } from './useOrcamento'
 
 const projRef  = (id)  => doc(db, 'projectos', id)
 const prefsRef = (uid) => doc(db, 'preferencias', uid)
 const activoRef= (uid) => doc(db, 'projecto_ativo', uid)
 
-function gerarId() { return 'proj_' + Date.now() }
+function gerarId() { return 'proj_' + Date.now() + '_' + Math.random().toString(36).slice(2,7) }
 
 export function useProjectos(user) {
   const [projectos,     setProjectos]     = useState([])
@@ -38,10 +38,10 @@ export function useProjectos(user) {
 
   useEffect(() => {
     if (!user) return
-    const unsub = onSnapshot(collection(db, 'projectos'), snap => {
+    const q = query(collection(db, 'projectos'), where('uid', '==', user.uid))
+    const unsub = onSnapshot(q, snap => {
       const lista = snap.docs
         .map(d => ({ projId: d.id, ...d.data() }))
-        .filter(p => p.uid === user.uid)
         .sort((a,b) => (b.ts||0) - (a.ts||0))
       setProjectos(lista)
       setProjCarregado(true)
