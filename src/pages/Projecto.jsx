@@ -178,14 +178,8 @@ export default function Projecto({ showToast, onNavegar }) {
             onAdicionar={() => proj.setPasso('adicionar')}
             onVerOrcamento={() => onNavegar?.('orcamentos')}
             onEditarGrupo={(origem) => {
-              // Navegar para a origem relevante
-              if (origem.toLowerCase().includes('mao') || origem.toLowerCase().includes('instalac')) {
-                onNavegar?.('maodeobra')
-              } else if (origem === 'Tampos') {
-                onNavegar?.('tampos')
-              } else {
-                onNavegar?.('biblioteca', origem)
-              }
+              // Vai para o ecra de adicionar para que o utilizador escolha o que quer fazer
+              proj.setPasso('adicionar')
             }}
           />
         )}

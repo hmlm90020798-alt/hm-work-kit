@@ -140,8 +140,7 @@ function Shell() {
   // Banner: há projecto activo com passo além de "tipo" e com total > 0
   const mostrarBanner = page !== 'projecto'
     && projectoActivo
-    && projectoActivo.passo
-    && projectoActivo.passo !== 'tipo'
+    && projectoActivo.projId
 
   const tipoLabel = projectoActivo?.tipo
     ? (TIPO_LABELS[projectoActivo.tipo] || projectoActivo.tipo)
