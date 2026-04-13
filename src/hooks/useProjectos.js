@@ -71,12 +71,12 @@ export function useProjectos(user) {
     if (!snap.exists()) return
     const d = snap.data()
     setProjId(id); setNome(d.nome||''); setCampos(d.campos||{}); setTipo(d.tipo||null)
+    setPasso('detalhe')
     if (user) setDoc(activoRef(user.uid), { projId: id }).catch(() => {})
   }
 
   async function abrirProjecto(id) {
     await _carregar(id)
-    setPasso('detalhe')
   }
 
   async function criarProjecto(tipoObj, nomeCliente) {
