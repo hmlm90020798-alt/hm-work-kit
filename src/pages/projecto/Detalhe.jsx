@@ -38,8 +38,8 @@ export default function Detalhe({ orcItems, totalOrc, onAdicionar, onVerOrcament
 
       <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:20 }}>
         {grupos.map(g => (
-          <button key={g.origem} onClick={() => onEditarGrupo?.(g.origem)}
-            style={{ display:'flex', alignItems:'center', gap:12, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius-sm)', border:'1px solid rgba(255,255,255,0.06)', borderLeft:'3px solid var(--neo-gold)', padding:'12px 14px', cursor:'pointer', textAlign:'left', width:'100%' }}>
+          <div key={g.origem}
+            style={{ display:'flex', alignItems:'center', gap:12, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius-sm)', border:'1px solid rgba(255,255,255,0.06)', borderLeft:'3px solid var(--neo-gold)', padding:'12px 14px' }}>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--neo-gold)' }}>
                 {g.origem}
@@ -51,7 +51,7 @@ export default function Detalhe({ orcItems, totalOrc, onAdicionar, onVerOrcament
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'var(--neo-gold)', flexShrink:0 }}>
               {f2(g.total)} EUR
             </div>
-          </button>
+          </div>
         ))}
       </div>
 
