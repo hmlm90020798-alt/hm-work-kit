@@ -1,49 +1,63 @@
 import React from 'react'
-import { resolverComp } from './constantes'
+import { f2 } from './constantes'
 
-export default function Detalhe({ compFeitos, orcItems, cats, onEditarComp, onAdicionarCategoria, onVerOrcamento }) {
+// Agrupa itens do orcamento por origem
+function agruparPorOrigem(orcItems) {
+  const grupos = {}
+  for (const item of orcItems) {
+    const origem = item.origem || 'Outros'
+    if (!grupos[origem]) grupos[origem] = []
+    grupos[origem].push(item)
+  }
+  return Object.entries(grupos).map(([origem, items]) => ({
+    origem,
+    items,
+    total: items.reduce((s,i) => s + (i.price||0)*(i.qty||1), 0),
+  }))
+}
+
+export default function Detalhe({ orcItems, totalOrc, onAdicionar, onVerOrcamento, onEditarGrupo }) {
+  const grupos = agruparPorOrigem(orcItems)
+
   return (
     <div>
-      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.22em', textTransform:'uppercase', color:'var(--neo-gold)', marginBottom:14 }}>
-        Categorias deste projecto
-      </div>
+      {/* TOTAL */}
+      {totalOrc > 0 && (
+        <div style={{ background:'rgba(200,169,110,0.06)', border:'1px solid rgba(200,169,110,0.15)', borderRadius:'var(--neo-radius)', padding:'16px 20px', marginBottom:20, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--neo-text2)' }}>Total PVP indicativo</div>
+          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:22, fontWeight:700, color:'var(--neo-gold)' }}>{f2(totalOrc)} EUR</div>
+        </div>
+      )}
 
-      {compFeitos.length === 0 && (
-        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, color:'var(--neo-text2)', letterSpacing:'0.08em', padding:'20px 0' }}>
-          Ainda sem categorias tratadas.
+      {/* GRUPOS */}
+      {grupos.length === 0 && (
+        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, color:'var(--neo-text2)', letterSpacing:'0.08em', padding:'24px 0 16px' }}>
+          Projecto vazio. Clica em "+ Adicionar" para comecar.
         </div>
       )}
 
       <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:20 }}>
-        {compFeitos.map(n => {
-          const c = resolverComp(n, cats)
-          const itensDaOrigem = orcItems.filter(i => {
-            if (c?.sempreCalculadora) return i.origem === 'Tampos'
-            if (c?.destino === 'maodeobra') return (i.origem||'').toLowerCase().includes('mao') || (i.origem||'').toLowerCase().includes('instalac')
-            const cat = (c?.destCat||n).toLowerCase()
-            return (i.cat||'').toLowerCase() === cat ||
-                   (i.origem||'').toLowerCase() === cat ||
-                   (i.origem||'').toLowerCase().includes(cat.split(' ')[0])
-          })
-          return (
-            <button key={n} onClick={() => onEditarComp(n)}
-              style={{ display:'flex', alignItems:'center', gap:12, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius-sm)', border:'1px solid rgba(255,255,255,0.06)', borderLeft:`3px solid ${c?.cor||'var(--neo-gold)'}`, padding:'12px 14px', cursor:'pointer', textAlign:'left', width:'100%' }}>
-              <span style={{ fontSize:18 }}>{c?.icon || '📋'}</span>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:c?.cor||'var(--neo-gold)' }}>{c?.label||n}</div>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', marginTop:2 }}>
-                  {itensDaOrigem.length > 0 ? `${itensDaOrigem.length} artigo${itensDaOrigem.length!==1?'s':''}` : 'Ver ou alterar'}
-                </div>
+        {grupos.map(g => (
+          <button key={g.origem} onClick={() => onEditarGrupo?.(g.origem)}
+            style={{ display:'flex', alignItems:'center', gap:12, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius-sm)', border:'1px solid rgba(255,255,255,0.06)', borderLeft:'3px solid var(--neo-gold)', padding:'12px 14px', cursor:'pointer', textAlign:'left', width:'100%' }}>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--neo-gold)' }}>
+                {g.origem}
               </div>
-              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', letterSpacing:'0.1em' }}>editar</span>
-            </button>
-          )
-        })}
+              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', marginTop:2 }}>
+                {g.items.length} artigo{g.items.length!==1?'s':''}
+              </div>
+            </div>
+            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'var(--neo-gold)', flexShrink:0 }}>
+              {f2(g.total)} EUR
+            </div>
+          </button>
+        ))}
       </div>
 
-      <button onClick={onAdicionarCategoria} className="neo-btn neo-btn-ghost"
+      <button onClick={onAdicionar} className="neo-btn neo-btn-ghost"
         style={{ width:'100%', height:44, fontSize:10, marginBottom:8 }}>
-        + Adicionar categoria
+        + Adicionar
       </button>
       <button onClick={onVerOrcamento} className="neo-btn neo-btn-gold"
         style={{ width:'100%', height:44, fontSize:10 }}>

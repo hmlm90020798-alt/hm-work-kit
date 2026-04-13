@@ -1,24 +1,19 @@
 import React, { useState, useEffect } from 'react'
 import { db } from '../firebase'
-import { doc, collection, onSnapshot, setDoc } from 'firebase/firestore'
+import { doc, onSnapshot } from 'firebase/firestore'
 import { useAuth } from '../context/AuthContext'
 import { orcRef } from '../hooks/useOrcamento'
 import { useProjectos } from '../hooks/useProjectos'
-import { ESPECIAIS, f2, resolverComp } from './projecto/constantes'
-import Lista   from './projecto/Lista'
-import Detalhe from './projecto/Detalhe'
-import Guia    from './projecto/Guia'
-
-const prefsRef = (uid) => doc(db, 'preferencias', uid)
+import { f2 } from './projecto/constantes'
+import Lista    from './projecto/Lista'
+import Detalhe  from './projecto/Detalhe'
+import Adicionar from './projecto/Adicionar'
+import Execucao  from './projecto/Execucao'
 
 export default function Projecto({ showToast, onNavegar }) {
   const { user } = useAuth()
   const proj = useProjectos(user)
 
-  // Categorias da Biblioteca (Firestore)
-  const [cats, setCats] = useState([])
-
-  // Estado local
   const [orcItems,      setOrcItems]      = useState([])
   const [novoTipo,      setNovoTipo]      = useState(null)
   const [novoNomeInput, setNovoNomeInput] = useState('')
@@ -27,16 +22,6 @@ export default function Projecto({ showToast, onNavegar }) {
   const [modalId,       setModalId]       = useState(false)
   const [modalNome,     setModalNome]     = useState('')
   const [modalCampos,   setModalCampos]   = useState([])
-
-  // Carregar categorias do Firestore
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db,'categorias'), snap => {
-      const lista = snap.docs.map(d => ({id:d.id,...d.data()}))
-        .sort((a,b) => (a.order??999) - (b.order??999))
-      setCats(lista)
-    })
-    return () => unsub()
-  }, [])
 
   // Orcamento em tempo real
   useEffect(() => {
@@ -50,69 +35,56 @@ export default function Projecto({ showToast, onNavegar }) {
   // Actualizar total
   useEffect(() => {
     if (!proj.projId) return
-    const total = orcItems.reduce((s,i) => s + (i.price||0) * (i.qty||1), 0)
+    const total = orcItems.reduce((s,i) => s + (i.price||0)*(i.qty||1), 0)
     proj.actualizarTotal(total)
   }, [orcItems, proj.projId])
 
-  // Guardar guia com debounce
-  useEffect(() => {
-    if (!proj.projId || !proj.guiaCarregado) return
-    if (['lista','nome','detalhe'].includes(proj.passo)) return
-    proj.guardarGuia({
-      projId: proj.projId, uid: user?.uid,
-      nome: proj.nome, tipo: proj.tipo, campos: proj.campos,
-      passo: proj.passo, compSel: proj.compSel, compFeitos: proj.compFeitos,
-      compActual: proj.compActual, kitSelId: proj.kitSelId, kitItems: proj.kitItems,
-      total: orcItems.reduce((s,i) => s + (i.price||0) * (i.qty||1), 0),
-    })
-  }, [proj.passo, proj.compSel, proj.compFeitos, proj.compActual, proj.kitSelId, proj.kitItems, proj.nome, proj.campos])
-
-  const totalOrc   = orcItems.reduce((s,i) => s + (i.price||0) * (i.qty||1), 0)
+  const totalOrc   = orcItems.reduce((s,i) => s + (i.price||0)*(i.qty||1), 0)
   const tipoActual = proj.tipos.find(t => t.id === proj.tipo)
 
-  const iniciarNovo = (tipoObj) => {
-    setNovoTipo(tipoObj); setNovoNomeInput(''); proj.setPasso('nome')
-  }
+  function iniciarNovo(tipoObj) { setNovoTipo(tipoObj); setNovoNomeInput(''); proj.setPasso('nome') }
 
-  const confirmarNomeECriar = async () => {
+  async function confirmarNomeECriar() {
     if (!novoTipo) return
-    await proj.criarProjecto(novoTipo, novoNomeInput, [])
+    await proj.criarProjecto(novoTipo, novoNomeInput)
     setNovoTipo(null); setNovoNomeInput('')
   }
 
-  const clicarInicio = () => {
+  function clicarInicio() {
     if (proj.passo === 'lista') return
-    if (proj.passo === 'nome' || proj.passo === 'detalhe') { proj.resetarEstado(true); return }
+    if (proj.passo === 'nome') { proj.setPasso('lista'); setNovoTipo(null); return }
+    if (proj.passo === 'detalhe') { proj.fecharProjecto(); return }
     setConfirmSaida(true)
   }
 
-  const voltarPasso = () => {
-    if (proj.passo === 'nome')         { proj.setPasso('lista'); setNovoTipo(null) }
-    else if (proj.passo === 'detalhe')      { proj.resetarEstado(true) }
-    else if (proj.passo === 'componentes')  { proj.setPasso('detalhe') }
-    else if (proj.passo === 'execucao')     { proj.setPasso('componentes') }
-    else if (proj.passo === 'resumo')       { proj.setPasso('execucao') }
+  function voltarPasso() {
+    if (proj.passo === 'nome')       { proj.setPasso('lista'); setNovoTipo(null) }
+    else if (proj.passo === 'detalhe')   { proj.fecharProjecto() }
+    else if (proj.passo === 'adicionar') { proj.setPasso('detalhe') }
+    else if (proj.passo === 'execucao')  { proj.setPasso('adicionar') }
   }
 
-  const abrirModalId = () => {
+  function abrirModalId() {
     setModalNome(proj.nome)
     setModalCampos(Object.entries(proj.campos).map(([chave,valor])=>({chave,valor})))
     setModalId(true)
   }
 
-  const guardarIdentidade = () => {
+  function guardarIdentidade() {
     const novoNome    = modalNome.trim()
-    const novosCampos = Object.fromEntries(modalCampos.filter(c=>c.chave.trim()).map(c=>[c.chave.trim(), c.valor]))
+    const novosCampos = Object.fromEntries(modalCampos.filter(c=>c.chave.trim()).map(c=>[c.chave.trim(),c.valor]))
     proj.guardarIdentidade(novoNome, novosCampos)
     setModalId(false)
-    showToast(novoNome ? `Projecto: ${novoNome}` : 'Identidade guardada')
+    showToast(novoNome ? 'Projecto: '+novoNome : 'Identidade guardada')
   }
 
-  const topoTitulo = () => {
-    if (proj.passo === 'lista')   return 'Projectos'
-    if (proj.passo === 'nome')    return 'Novo Projecto'
-    if (proj.passo === 'detalhe') return proj.nome || tipoActual?.label || 'Projecto'
-    return 'Novo Projecto'
+  function topoTitulo() {
+    if (proj.passo === 'lista')    return 'Projectos'
+    if (proj.passo === 'nome')     return 'Novo Projecto'
+    if (proj.passo === 'detalhe')  return proj.nome || tipoActual?.label || 'Projecto'
+    if (proj.passo === 'adicionar') return 'Adicionar'
+    if (proj.passo === 'execucao' && proj.execTarefa) return proj.execTarefa.nome
+    return 'Projecto'
   }
 
   return (
@@ -128,7 +100,7 @@ export default function Projecto({ showToast, onNavegar }) {
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text)' }}>
               {topoTitulo()}
             </div>
-            {(proj.passo !== 'lista' && proj.passo !== 'nome') && tipoActual && (
+            {proj.passo !== 'lista' && proj.passo !== 'nome' && tipoActual && (
               <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                 <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:tipoActual.cor, marginTop:1 }}>{tipoActual.icon} {tipoActual.label}</div>
                 {proj.nome && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.08em', color:'var(--neo-text2)', marginTop:1 }}>· {proj.nome}</div>}
@@ -144,7 +116,7 @@ export default function Projecto({ showToast, onNavegar }) {
           )}
           {proj.passo !== 'lista' && proj.passo !== 'nome' && (
             <button onClick={abrirModalId}
-              style={{ background: proj.nome ? 'rgba(200,169,110,0.1)' : 'transparent', border:`1px solid ${proj.nome ? 'rgba(200,169,110,0.3)' : 'rgba(255,255,255,0.08)'}`, borderRadius:'var(--neo-radius-pill)', padding:'5px 10px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', color: proj.nome ? 'var(--neo-gold)' : 'var(--neo-text2)', transition:'all .15s' }}>
+              style={{ background:proj.nome?'rgba(200,169,110,0.1)':'transparent', border:'1px solid '+(proj.nome?'rgba(200,169,110,0.3)':'rgba(255,255,255,0.08)'), borderRadius:'var(--neo-radius-pill)', padding:'5px 10px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', color:proj.nome?'var(--neo-gold)':'var(--neo-text2)', transition:'all .15s' }}>
               edit
             </button>
           )}
@@ -162,9 +134,7 @@ export default function Projecto({ showToast, onNavegar }) {
         {/* LISTA */}
         {proj.passo === 'lista' && (
           <Lista
-            projectos={proj.projectos}
-            tipos={proj.tipos}
-            tiposActivos={proj.tiposActivos}
+            projectos={proj.projectos} tipos={proj.tipos} tiposActivos={proj.tiposActivos}
             onAbrir={proj.abrirProjecto}
             onOrcamento={async (id) => { await proj.abrirProjecto(id); onNavegar?.('orcamentos') }}
             onNovo={iniciarNovo}
@@ -189,17 +159,13 @@ export default function Projecto({ showToast, onNavegar }) {
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', color:'var(--neo-text2)', marginBottom:20 }}>
               O nome ajuda a distinguir os projectos. Podes alterar depois.
             </div>
-            <input
-              value={novoNomeInput}
-              onChange={e=>setNovoNomeInput(e.target.value)}
+            <input value={novoNomeInput} onChange={e=>setNovoNomeInput(e.target.value)}
               onKeyDown={e=>{ if(e.key==='Enter') confirmarNomeECriar() }}
-              placeholder="ex: Joao Silva"
-              autoFocus
-              style={{ width:'100%', background:'var(--neo-bg2)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'var(--neo-radius)', padding:'14px 16px', fontFamily:"'Barlow'", fontSize:16, color:'var(--neo-text)', outline:'none', boxSizing:'border-box', marginBottom:12 }}
-            />
+              placeholder="ex: Joao Silva" autoFocus
+              style={{ width:'100%', background:'var(--neo-bg2)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'var(--neo-radius)', padding:'14px 16px', fontFamily:"'Barlow'", fontSize:16, color:'var(--neo-text)', outline:'none', boxSizing:'border-box', marginBottom:12 }}/>
             <button onClick={confirmarNomeECriar} className="neo-btn neo-btn-gold"
               style={{ width:'100%', height:48, fontSize:11, letterSpacing:'0.12em', borderRadius:'var(--neo-radius)' }}>
-              {novoNomeInput.trim() ? `Comecar - ${novoNomeInput.trim()}` : 'Comecar sem nome'}
+              {novoNomeInput.trim() ? 'Comecar - '+novoNomeInput.trim() : 'Comecar sem nome'}
             </button>
           </div>
         )}
@@ -207,42 +173,46 @@ export default function Projecto({ showToast, onNavegar }) {
         {/* DETALHE */}
         {proj.passo === 'detalhe' && proj.projId && (
           <Detalhe
-            compFeitos={proj.compFeitos}
             orcItems={orcItems}
-            cats={cats}
-            onEditarComp={(n) => { proj.setCompActual(n); proj.setPasso('execucao') }}
-            onAdicionarCategoria={() => {
-              proj.setCompSel([])
-              proj.setPasso('componentes')
-            }}
+            totalOrc={totalOrc}
+            onAdicionar={() => proj.setPasso('adicionar')}
             onVerOrcamento={() => onNavegar?.('orcamentos')}
+            onEditarGrupo={(origem) => {
+              // Navegar para a origem relevante
+              if (origem.toLowerCase().includes('mao') || origem.toLowerCase().includes('instalac')) {
+                onNavegar?.('maodeobra')
+              } else if (origem === 'Tampos') {
+                onNavegar?.('tampos')
+              } else {
+                onNavegar?.('biblioteca', origem)
+              }
+            }}
           />
         )}
 
-        {/* GUIA */}
-        {['componentes','execucao','resumo'].includes(proj.passo) && (
-          <Guia
-            projId={proj.projId}
+        {/* ADICIONAR */}
+        {proj.passo === 'adicionar' && proj.projId && (
+          <Adicionar
             tipo={proj.tipo}
             tipos={proj.tipos}
-            nome={proj.nome}
-            passo={proj.passo}
-            setPasso={proj.setPasso}
-            compSel={proj.compSel}
-            setCompSel={proj.setCompSel}
-            compFeitos={proj.compFeitos}
-            setCompFeitos={proj.setCompFeitos}
-            compActual={proj.compActual}
-            setCompActual={proj.setCompActual}
+            onIniciar={(tarefa) => proj.iniciarExecucao(tarefa)}
+            onVoltar={() => proj.setPasso('detalhe')}
+          />
+        )}
+
+        {/* EXECUCAO */}
+        {proj.passo === 'execucao' && proj.execTarefa && (
+          <Execucao
+            projId={proj.projId}
+            tarefa={proj.execTarefa}
             kitSelId={proj.kitSelId}
             setKitSelId={proj.setKitSelId}
             kitItems={proj.kitItems}
             setKitItems={proj.setKitItems}
             orcItems={orcItems}
-            cats={cats}
             showToast={showToast}
             onNavegar={onNavegar}
-            onVoltarDetalhe={() => proj.setPasso('detalhe')}
+            onConcluir={() => proj.setPasso('detalhe')}
           />
         )}
 
@@ -253,19 +223,19 @@ export default function Projecto({ showToast, onNavegar }) {
         <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setConfirmSaida(false)}}>
           <div className="neo-modal" style={{ maxWidth:340 }}>
             <div className="neo-modal-head">
-              Sair do guia
+              Sair do projecto
               <button className="neo-modal-close" onClick={()=>setConfirmSaida(false)}>X</button>
             </div>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, color:'var(--neo-text2)', letterSpacing:'0.06em', lineHeight:1.9, marginBottom:24 }}>
-              Queres guardar o progresso antes de sair?<br/>
-              <span style={{ fontSize:10 }}>Podes retomar este projecto mais tarde.</span>
+              Queres voltar a lista de projectos?<br/>
+              <span style={{ fontSize:10 }}>O projecto fica guardado.</span>
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              <button className="neo-btn neo-btn-gold" onClick={()=>{ setConfirmSaida(false); proj.resetarEstado(true) }} style={{ width:'100%', height:44, fontSize:10 }}>
-                Guardar e ir ao inicio
+              <button className="neo-btn neo-btn-gold" onClick={()=>{ setConfirmSaida(false); proj.fecharProjecto() }} style={{ width:'100%', height:44, fontSize:10 }}>
+                Sim, ir ao inicio
               </button>
-              <button className="neo-btn neo-btn-ghost" onClick={()=>{ setConfirmSaida(false); proj.resetarEstado(false) }} style={{ width:'100%', height:40, fontSize:9, opacity:0.6 }}>
-                Sair sem guardar
+              <button className="neo-btn neo-btn-ghost" onClick={()=>setConfirmSaida(false)} style={{ width:'100%', height:40, fontSize:9, opacity:0.6 }}>
+                Cancelar
               </button>
             </div>
           </div>
@@ -285,7 +255,7 @@ export default function Projecto({ showToast, onNavegar }) {
               <span style={{ fontSize:10 }}>Nao e possivel recuperar.</span>
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              <button className="neo-btn neo-btn-danger" onClick={async ()=>{ await proj.apagarProjecto(confirmApagar); showToast('Projecto apagado'); setConfirmApagar(null) }} style={{ width:'100%', height:44, fontSize:10 }}>
+              <button className="neo-btn neo-btn-danger" onClick={async()=>{ await proj.apagarProjecto(confirmApagar); showToast('Projecto apagado'); setConfirmApagar(null) }} style={{ width:'100%', height:44, fontSize:10 }}>
                 Apagar definitivamente
               </button>
               <button className="neo-btn neo-btn-ghost" onClick={()=>setConfirmApagar(null)} style={{ width:'100%', height:40, fontSize:9, opacity:0.6 }}>
