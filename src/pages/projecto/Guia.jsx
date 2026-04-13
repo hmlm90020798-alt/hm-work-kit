@@ -37,6 +37,17 @@ export default function Guia({
 
   useEffect(() => {
     if (!compActual || !kits.length) return
+    // kit base directo: compActual = 'kit::<id>'
+    if (compActual.startsWith('kit::')) {
+      const kitId = compActual.replace('kit::', '')
+      const kit = kits.find(k => k.id === kitId)
+      if (kit) {
+        setKitsEncontrados([kit])
+        setKitSelId(kit.id)
+        setKitItems((kit.items||[]).map(i=>({...i,incluido:true})))
+      }
+      return
+    }
     const comp = resolverComp(compActual, cats)
     if (!comp) return
     const tipoLabel = tipos.find(t => t.id === tipo)?.label || ''
@@ -113,11 +124,14 @@ export default function Guia({
       <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:12, marginBottom:24 }}>
         {compSel.map(n => {
           const c = resolverComp(n, cats)
+          const kitDir = n.startsWith('kit::') ? kits.find(k=>k.id===n.replace('kit::','')) : null
+          const label = kitDir ? kitDir.name : (c?.label||n)
+          const cor = kitDir ? '#c8943a' : (c?.cor||'#c8943a')
           const feito  = compFeitos.includes(n)
           const actual = n === compActual
           return (
-            <span key={n} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', fontWeight:actual?700:400, background:feito?'rgba(200,169,110,0.12)':actual?'rgba('+hexToRgb(c?.cor||'#c8943a')+',0.18)':'var(--neo-bg2)', color:feito?'var(--neo-gold)':actual?(c?.cor||'var(--neo-gold)'):'var(--neo-text2)', border:actual?'1px solid '+(c?.cor||'var(--neo-gold)')+'44':'1px solid rgba(255,255,255,0.06)' }}>
-              {feito?'v ':actual?'> ':''}{c?.label||n}
+            <span key={n} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', fontWeight:actual?700:400, background:feito?'rgba(200,169,110,0.12)':actual?'rgba('+hexToRgb(cor)+',0.18)':'var(--neo-bg2)', color:feito?'var(--neo-gold)':actual?(cor||'var(--neo-gold)'):'var(--neo-text2)', border:actual?'1px solid '+(cor||'var(--neo-gold)')+'44':'1px solid rgba(255,255,255,0.06)' }}>
+              {feito?'v ':actual?'> ':''}{label}
             </span>
           )
         })}
@@ -216,7 +230,7 @@ export default function Guia({
                   const tot = (kit.items||[]).reduce((s,i)=>s+(i.price||0)*(i.qty||1),0)
                   const jaFeito = compFeitos.includes(kit.name)
                   return (
-                    <button key={kit.id} onClick={()=>{ iniciarComp(kit.name); setCompSel(p=>[...p, kit.name]) }}
+                    <button key={kit.id} onClick={()=>{ const ref='kit::'+kit.id; setCompSel(p=>[...p,ref]); iniciarComp(ref) }}
                       style={{ display:'flex', alignItems:'center', gap:12, width:'100%', background:'transparent', border:'none', borderBottom:'1px solid rgba(255,255,255,0.05)', padding:'12px 16px', cursor:'pointer', textAlign:'left' }}>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--neo-text)' }}>{kit.name}</div>
@@ -330,9 +344,12 @@ export default function Guia({
             <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:16 }}>
               {compSel.filter(n => !compFeitos.includes(n)).map((n,i) => {
                 const c = resolverComp(n, cats)
+                const kd = n.startsWith('kit::') ? kits.find(k=>k.id===n.replace('kit::','')) : null
+                const lbl = kd ? kd.name : (c?.label||n)
+                const cr = kd ? '#c8943a' : (c?.cor||'#c8943a')
                 return (
-                  <span key={n} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', background:'rgba('+hexToRgb(c?.cor||'#c8943a')+',0.15)', color:c?.cor||'var(--neo-gold)', border:'1px solid '+(c?.cor||'#c8943a')+'33' }}>
-                    {i+1}. {c?.label||n}
+                  <span key={n} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', background:'rgba('+hexToRgb(cr)+',0.15)', color:cr, border:'1px solid '+cr+'33' }}>
+                    {i+1}. {lbl}
                   </span>
                 )
               })}
@@ -349,7 +366,11 @@ export default function Guia({
 
   // PASSO EXECUCAO
   if (passo === 'execucao' && compActual) {
-    const comp     = resolverComp(compActual, cats)
+    const isKitDirecto = compActual.startsWith('kit::')
+    const kitDirecto = isKitDirecto ? kits.find(k => k.id === compActual.replace('kit::','')) : null
+    const comp = isKitDirecto
+      ? { id:compActual, label:kitDirecto?.name||'Kit', icon:'📦', desc:'', cor:'#c8943a', destino:null, destCat:null }
+      : resolverComp(compActual, cats)
     const kitSel   = kits.find(k => k.id === kitSelId) || null
     const corR     = hexToRgb(comp?.cor || '#c8943a')
     const proximo  = compSel.find(c => c !== compActual && !compFeitos.includes(c))
