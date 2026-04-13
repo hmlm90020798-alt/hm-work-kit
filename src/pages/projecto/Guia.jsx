@@ -105,7 +105,7 @@ export default function Guia({
 
   const progressoPct = compSel.length>0 ? Math.round((compFeitos.length/compSel.length)*100) : 0
 
-  // ── PASSO COMPONENTES ──
+  //  PASSO COMPONENTES 
   if (passo === 'componentes') {
     return (
       <div>
@@ -207,7 +207,7 @@ export default function Guia({
     )
   }
 
-  // ── PASSO EXECUCAO ──
+  //  PASSO EXECUCAO 
   if (passo === 'execucao' && compActual && compObjActual) {
     const comp  = compObjActual
     const corR  = hexToRgb(comp.cor)
@@ -432,7 +432,7 @@ export default function Guia({
     )
   }
 
-  // ── RESUMO ──
+  //  RESUMO 
   if (passo === 'resumo') {
     const tipoActual2 = tipos.find(t => t.id === tipo)
     const totalOrc = orcItems.reduce((s,i) => s + (i.price||0) * (i.qty||1), 0)
