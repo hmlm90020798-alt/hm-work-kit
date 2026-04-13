@@ -111,13 +111,50 @@ export default function Guia({
       <div>
         <PassoHeader numero={2} titulo="O que inclui este projecto?" sub="Selecciona as categorias a tratar"/>
         <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:20 }}>
-          {/* Categorias da Biblioteca (excluindo as que ja existem como especiais) */}
+          {/* ESPECIAIS primeiro: Kit base, Instalacao, Tampos */}
+          {ESPECIAIS.map(comp => {
+            const tipoLbl2 = tipos.find(t => t.id === tipo)?.label || ''
+            const nKits2 = kitsParaComp(comp, kits, tipoLbl2).length
+            const sel   = compSel.includes(comp.label)
+            const feito = compFeitos.includes(comp.label)
+            const corR  = hexToRgb(comp.cor)
+            return (
+              <button key={comp.id} onClick={()=>setCompSel(p=>p.includes(comp.label)?p.filter(x=>x!==comp.label):[...p,comp.label])} className="proj-comp-card"
+                style={{ display:'flex', alignItems:'center', gap:14, background:sel?`rgba(${corR},0.1)`:'var(--neo-bg2)', border:sel?`1px solid ${comp.cor}55`:'1px solid rgba(255,255,255,0.06)', borderLeft:sel?`3px solid ${comp.cor}`:'3px solid transparent', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'14px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
+                <div style={{ width:20, height:20, borderRadius:5, flexShrink:0, border:sel?`2px solid ${comp.cor}`:'2px solid rgba(255,255,255,0.15)', background:sel?comp.cor:'transparent', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#0f0d08', fontWeight:700 }}>
+                  {sel&&'v'}
+                </div>
+                <span style={{ fontSize:18, flexShrink:0 }}>{comp.icon}</span>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:sel?comp.cor:'var(--neo-text)' }}>{comp.label}</div>
+                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'var(--neo-text2)', marginTop:2 }}>
+                    {comp.kitBase && nKits2>0 ? `${nKits2} kit${nKits2!==1?'s':''} disponivel${nKits2!==1?'s':''}` : comp.desc}
+                  </div>
+                </div>
+                {feito && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:'rgba(200,169,110,0.12)', color:'var(--neo-gold)', border:'1px solid rgba(200,169,110,0.3)', flexShrink:0 }}>feito</span>}
+                {!feito && comp.kitBase && nKits2>0 && (
+                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:`rgba(${corR},0.15)`, color:comp.cor, border:`1px solid ${comp.cor}33`, flexShrink:0 }}>
+                    {nKits2} kit{nKits2!==1?'s':''}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+
+          {/* Separador */}
+          <div style={{ display:'flex', alignItems:'center', gap:10, margin:'4px 0' }}>
+            <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.06)' }}/>
+            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:'#4a4a42', flexShrink:0 }}>Categorias</span>
+            <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.06)' }}/>
+          </div>
+
+          {/* Categorias da Biblioteca */}
           {cats.filter(cat => !CATS_IGNORADAS.includes(cat.name) && !CATS_IGNORADAS.includes(cat.id)).map(cat => {
-            const nome = cat.name
+            const nome  = cat.name
             const sel   = compSel.includes(nome)
             const feito = compFeitos.includes(nome)
-            const tipoLbl = tipos.find(t => t.id === tipo)?.label || ''
-            const nKits = kitsParaComp({ destCat: nome, sempreCalculadora: false }, kits, tipoLbl).length
+            const tipoLbl3 = tipos.find(t => t.id === tipo)?.label || ''
+            const nKits = kitsParaComp({ destCat: nome, sempreCalculadora: false }, kits, tipoLbl3).length
             const cor   = cat.cor || '#c8943a'
             const corR  = hexToRgb(cor)
             return (
@@ -135,9 +172,7 @@ export default function Guia({
                     </div>
                   )}
                 </div>
-                {feito && (
-                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:'rgba(200,169,110,0.12)', color:'var(--neo-gold)', border:'1px solid rgba(200,169,110,0.3)', flexShrink:0 }}>feito</span>
-                )}
+                {feito && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:'rgba(200,169,110,0.12)', color:'var(--neo-gold)', border:'1px solid rgba(200,169,110,0.3)', flexShrink:0 }}>feito</span>}
                 {!feito && nKits > 0 && (
                   <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:`rgba(${corR},0.15)`, color:cor, border:`1px solid ${cor}33`, flexShrink:0 }}>
                     {nKits} kit{nKits!==1?'s':''}
@@ -146,37 +181,6 @@ export default function Guia({
               </button>
             )
           })}
-
-          {/* Separador especiais */}
-          <div style={{ display:'flex', alignItems:'center', gap:10, margin:'4px 0' }}>
-            <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.06)' }}/>
-            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:'#4a4a42', flexShrink:0 }}>Servicos</span>
-            <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.06)' }}/>
-          </div>
-
-          {/* Especiais (Instalacao + Tampos) */}
-          {ESPECIAIS.map(comp => {
-            const sel   = compSel.includes(comp.label)
-            const feito = compFeitos.includes(comp.label)
-            const corR  = hexToRgb(comp.cor)
-            return (
-              <button key={comp.id} onClick={()=>setCompSel(p=>p.includes(comp.label)?p.filter(x=>x!==comp.label):[...p,comp.label])} className="proj-comp-card"
-                style={{ display:'flex', alignItems:'center', gap:14, background:sel?`rgba(${corR},0.1)`:'var(--neo-bg2)', border:sel?`1px solid ${comp.cor}55`:'1px solid rgba(255,255,255,0.06)', borderLeft:sel?`3px solid ${comp.cor}`:'3px solid transparent', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'14px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
-                <div style={{ width:20, height:20, borderRadius:5, flexShrink:0, border:sel?`2px solid ${comp.cor}`:'2px solid rgba(255,255,255,0.15)', background:sel?comp.cor:'transparent', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#0f0d08', fontWeight:700 }}>
-                  {sel&&'v'}
-                </div>
-                <span style={{ fontSize:18, flexShrink:0 }}>{comp.icon}</span>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:sel?comp.cor:'var(--neo-text)' }}>{comp.label}</div>
-                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'var(--neo-text2)', marginTop:2 }}>{comp.desc}</div>
-                </div>
-                {feito && (
-                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:'rgba(200,169,110,0.12)', color:'var(--neo-gold)', border:'1px solid rgba(200,169,110,0.3)', flexShrink:0 }}>feito</span>
-                )}
-              </button>
-            )
-          })}
-        </div>
 
         {compSel.length > 0 && (
           <div style={{ marginTop:20 }}>

@@ -230,7 +230,7 @@ export default function Projecto({ showToast, onNavegar }) {
             cats={cats}
             onEditarComp={(n) => { proj.setCompActual(n); proj.setPasso('execucao') }}
             onAdicionarCategoria={() => {
-              proj.setCompSel(prev => [...new Set([...proj.compFeitos, ...prev])])
+              proj.setCompSel([])
               proj.setPasso('componentes')
             }}
             onVerOrcamento={() => onNavegar?.('orcamentos')}
