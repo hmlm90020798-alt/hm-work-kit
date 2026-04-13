@@ -127,7 +127,7 @@ function Shell() {
 
   if (!user) return <Login />
 
-  const goTo = (id) => { setPage(id); setMenuOpen(false) }
+  const goTo = (id) => { setPage(id); setMenuOpen(false); if (id !== 'biblioteca') setBibCatFiltro(null) }
 
   const navegarDeProjecto = (destino, catFiltro = null) => {
     setBibCatFiltro(catFiltro)
@@ -371,7 +371,7 @@ function Shell() {
         )}
 
         {page === 'projecto'   && <Projecto   showToast={showToast} onNavegar={navegarDeProjecto} />}
-        {page === 'biblioteca' && <Biblioteca showToast={showToast} {...copyProps} catFiltroInicial={bibCatFiltro} onCatFiltroUsado={()=>setBibCatFiltro(null)} activoProjId={activoProjId} />}
+        {page === 'biblioteca' && <Biblioteca showToast={showToast} {...copyProps} catFiltroInicial={bibCatFiltro} activoProjId={activoProjId} />}
         {page === 'modelos'    && <Modelos    showToast={showToast} {...copyProps} userId={user.uid} />}
         {page === 'orcamentos' && <Orcamentos showToast={showToast} {...copyProps} onOpenTampo={(c)=>{ setTampoParaAbrir(c); setPage('tampos') }} onAbrirProposta={() => <Proposta showToast={showToast} />} activoProjId={activoProjId} />}
         {page === 'tampos'     && <Tampos     showToast={showToast} {...copyProps} abrirCalculo={tampoParaAbrir} onAbrirCalculoDone={()=>setTampoParaAbrir(null)} activoProjId={activoProjId} />}

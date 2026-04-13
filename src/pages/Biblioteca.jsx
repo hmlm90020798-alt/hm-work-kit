@@ -27,7 +27,7 @@ function sortArts(arts, sort) {
   })
 }
 
-export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCopied, catFiltroInicial, onCatFiltroUsado , activoProjId }) {
+export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCopied, catFiltroInicial, activoProjId }) {
   const [cats, setCats]           = useState([])
   const [arts, setArts]           = useState([])
   const [activeCat, setActiveCat] = useState(catFiltroInicial || 'Todos')
@@ -38,7 +38,6 @@ export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCop
     if (catFiltroInicial) {
       setActiveCat(catFiltroInicial)
       setActiveSub('')
-      onCatFiltroUsado?.()
     }
   }, [catFiltroInicial])
   const [search, setSearch]       = useState('')
