@@ -11,23 +11,23 @@ const TIPOS_DEFAULT = [
   { id:'cozinha',    label:'Cozinha',       icon:'🍳', cor:'#c8943a', activo:true  },
   { id:'banho',      label:'Casa de Banho', icon:'🚿', cor:'#4a8fa8', activo:true  },
   { id:'closet',     label:'Closet',        icon:'👕', cor:'#8a9e6e', activo:true  },
-  { id:'suite',      label:'Suite',         icon:'🛏', cor:'#b07acc', activo:false },
-  { id:'escritorio', label:'Escritorio',    icon:'💼', cor:'#7a9e9a', activo:false },
+  { id:'suite',      label:'Suíte',         icon:'🛏', cor:'#b07acc', activo:false },
+  { id:'escritorio', label:'Escritório',    icon:'💼', cor:'#7a9e9a', activo:false },
   { id:'outro',      label:'Outro',         icon:'*',  cor:'#7a7a72', activo:true  },
 ]
 
 const COMPONENTES = [
   { id:'base',       label:'Kit base',         icon:'📦', desc:'Artigos essenciais do projecto',  cor:'#c8943a',
     match:(n,c,t)=>{ const nl=n.toLowerCase(),cl=(c||'').toLowerCase(),tl=(t||'').toLowerCase(); return nl.includes('base')||(cl&&cl.includes(tl)) }, destino:null },
-  { id:'eletro',     label:'Eletrodomesticos', icon:'⚡', desc:'Electrodomesticos encastraveis',   cor:'#8a9e6e',
-    match:(n)=>n.toLowerCase().includes('eletro')||n.toLowerCase().includes('electro'), destino:'biblioteca', destCat:'Eletrodomesticos' },
-  { id:'acessorios', label:'Acessorios',        icon:'🔩', desc:'Puxadores, calhas e outros',       cor:'#b07acc',
-    match:(n)=>n.toLowerCase().includes('acess'), destino:'biblioteca', destCat:'Acessorios' },
+  { id:'eletro',     label:'Eletrodomésticos', icon:'⚡', desc:'Electrodomésticos encastráveis',   cor:'#8a9e6e',
+    match:(n)=>n.toLowerCase().includes('eletro')||n.toLowerCase().includes('electro'), destino:'biblioteca', destCat:'Eletrodomésticos' },
+  { id:'acessorios', label:'Acessórios',        icon:'🔩', desc:'Puxadores, calhas e outros',       cor:'#b07acc',
+    match:(n)=>n.toLowerCase().includes('acess'), destino:'biblioteca', destCat:'Acessórios' },
   { id:'ferragens',  label:'Ferragens',          icon:'🔧', desc:'Ferragens de cozinha e montagem',  cor:'#7a9e9a',
     match:(n)=>n.toLowerCase().includes('ferragem')||n.toLowerCase().includes('ferrag'), destino:'biblioteca', destCat:'Ferragens' },
-  { id:'iluminacao', label:'Iluminacao',         icon:'💡', desc:'Iluminacao embutida e decorativa', cor:'#d4b87a',
-    match:(n)=>n.toLowerCase().includes('ilumina')||n.toLowerCase().includes('luz'), destino:'biblioteca', destCat:'Iluminacao' },
-  { id:'instalacao', label:'Instalacao',         icon:'🛠', desc:'Servicos de montagem',             cor:'#9a7acc',
+  { id:'iluminacao', label:'Iluminação',         icon:'💡', desc:'Iluminação embutida e decorativa', cor:'#d4b87a',
+    match:(n)=>n.toLowerCase().includes('ilumina')||n.toLowerCase().includes('luz'), destino:'biblioteca', destCat:'Iluminação' },
+  { id:'instalacao', label:'Instalação',         icon:'🛠', desc:'Serviços de montagem',             cor:'#9a7acc',
     match:(n)=>n.toLowerCase().includes('instala')||n.toLowerCase().includes('montagem'), destino:'maodeobra', destCat:null },
   { id:'tampos',     label:'Tampos',             icon:'⬛', desc:'Calculadora ANIGRACO',             cor:'#4a8fa8',
     match:(n)=>n.toLowerCase().includes('tampo'), destino:'tampos', destCat:null, sempreCalculadora:true },
@@ -287,7 +287,7 @@ export default function Projecto({ showToast, onNavegar }) {
       const kit = kits.find(k => k.id === kitSelId)
       if (kit) return orcItems.some(i => i.origem === kit.name)
     }
-    if (comp.destCat) return orcItems.some(i => i.cat===comp.destCat||i.origem===comp.destCat)
+    if (comp.destCat) return orcItems.some(i => i.cat===comp.destCat||i.origem===comp.destCat||i.cat?.toLowerCase()===comp.destCat?.toLowerCase()||i.origem?.toLowerCase()===comp.destCat?.toLowerCase())
     if (comp.destino === 'maodeobra') return orcItems.some(i => i.origem === 'Mao de Obra')
     return false
   }, [orcItems, kits, kitSelId])
