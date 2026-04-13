@@ -6,9 +6,10 @@ import { MAO_DE_OBRA } from '../data/maoDeObra'
 
 const MO_SECCOES = [...new Set(MAO_DE_OBRA.map(s=>s.seccao))].sort()
 
-const CONTEXTOS = ['Cozinha','Casa de Banho','Quarto','Escritório','Parceiro','Outro']
+const CONTEXTOS_DEFAULT = ['Cozinha','Casa de Banho','Quarto','Escritório','Parceiro','Outro']
 
 export default function Modelos({ showToast, copiedRefs, markCopied, userId }) {
+  const [contextos, setContextos] = useState(CONTEXTOS_DEFAULT)
   const [modelos, setModelos] = useState([])
   const [artigos, setArtigos] = useState([])
   const [detailId, setDetailId] = useState(null)  // só guardamos o ID
@@ -40,7 +41,12 @@ export default function Modelos({ showToast, copiedRefs, markCopied, userId }) {
     // Carregar preferência de ordenação da lista de kits
     if (userId) {
       getDoc(doc(db,'preferencias',userId)).then(snap => {
-        if (snap.exists() && snap.data().kitSort) setKitSort(snap.data().kitSort)
+        if (snap.exists()) {
+          if (snap.data().kitSort) setKitSort(snap.data().kitSort)
+          if (Array.isArray(snap.data().projTipos)) {
+            setContextos(snap.data().projTipos.filter(t=>t.activo).map(t=>t.label))
+          }
+        }
       }).catch(()=>{})
     }
     return () => { u1(); u2() }
@@ -422,7 +428,7 @@ export default function Modelos({ showToast, copiedRefs, markCopied, userId }) {
         </div>
       </div>
 
-      <ModeloFormModal open={modal} editId={editId} form={form} setForm={setForm} onSave={saveModelo} onClose={()=>{setModal(false);setEditId(null)}} cats={cats}/>
+      <ModeloFormModal open={modal} editId={editId} form={form} setForm={setForm} onSave={saveModelo} onClose={()=>{setModal(false);setEditId(null)}} cats={cats} contextos={contextos}/>
       </>
     )
   }
@@ -498,7 +504,7 @@ export default function Modelos({ showToast, copiedRefs, markCopied, userId }) {
         ))}
       </div>
     </div>
-    <ModeloFormModal open={modal} editId={editId} form={form} setForm={setForm} onSave={saveModelo} onClose={()=>{setModal(false);setEditId(null)}} cats={cats}/>
+    <ModeloFormModal open={modal} editId={editId} form={form} setForm={setForm} onSave={saveModelo} onClose={()=>{setModal(false);setEditId(null)}} cats={cats} contextos={contextos}/>
     </>
   )
 }
@@ -630,7 +636,7 @@ function OrcBtn({items,onAdd}){
 }
 
 // ── ModeloFormModal ───────────────────────────────────────────────────────────
-function ModeloFormModal({open,editId,form,setForm,onSave,onClose,cats=[]}){
+function ModeloFormModal({open,editId,form,setForm,onSave,onClose,cats=[],contextos=[]}){
   const I={width:'100%',background:'var(--neo-bg)',border:'none',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-in-sm)',padding:'10px 14px',fontFamily:"'Barlow'",fontSize:14,fontWeight:300,color:'var(--neo-text)',outline:'none',transition:'box-shadow .2s'}
   const L={fontFamily:"'Barlow Condensed'",fontSize:9,fontWeight:600,letterSpacing:'0.2em',textTransform:'uppercase',color:'var(--neo-text2)',display:'block',marginBottom:8}
   return(
@@ -649,7 +655,7 @@ function ModeloFormModal({open,editId,form,setForm,onSave,onClose,cats=[]}){
         <div className="frow">
           <label style={L}>Contexto</label>
           <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}}>
-            {CONTEXTOS.map(c=>(
+            {contextos.map(c=>(
               <button key={c} onClick={()=>setForm(f=>({...f,contexto:c}))}
                 style={{padding:'5px 12px',borderRadius:'var(--neo-radius-pill)',border:'none',
                   background:form.contexto===c?'linear-gradient(145deg,#d4b87a,#b8924a)':'var(--neo-bg)',
