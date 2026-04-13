@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { db } from '../../firebase'
 import { collection, onSnapshot } from 'firebase/firestore'
 import { addToOrcamento } from '../../hooks/useOrcamento'
-import { COMPONENTES, f2, hexToRgb, kitsParaComp, temItensParaComp } from './constantes'
+import { ESPECIAIS, f2, hexToRgb, resolverComp, kitsParaComp, temItensParaComp } from './constantes'
 import { PassoHeader, CompCard, KitItemRow } from './ui'
 
 export default function Guia({
@@ -14,6 +14,7 @@ export default function Guia({
   kitSelId, setKitSelId,
   kitItems, setKitItems,
   orcItems,
+  cats,
   showToast, onNavegar,
   onVoltarDetalhe,
 }) {
@@ -30,32 +31,28 @@ export default function Guia({
     return () => { u1(); u2() }
   }, [])
 
+  // Resolver o componente actual (pode ser categoria ou especial)
+  const compObjActual = compActual ? resolverComp(compActual, cats) : null
+
   useEffect(() => {
-    if (!compActual || !kits.length) return
-    const comp = COMPONENTES.find(c => c.id === compActual)
-    if (!comp) return
-    const tipoLabel = tipos.find(t => t.id === tipo)?.label || ''
-    const enc = kitsParaComp(comp, kits, tipoLabel)
+    if (!compObjActual || !kits.length) return
+    const enc = kitsParaComp(compObjActual, kits)
     setKitsEncontrados(enc)
     if (enc.length === 1 && !kitSelId) {
       setKitSelId(enc[0].id)
       setKitItems((enc[0].items||[]).map(i=>({...i,incluido:true})))
     }
-  }, [compActual, kits, tipo, tipos])
+  }, [compActual, kits, cats])
 
-  const tipoActual    = tipos.find(t => t.id === tipo)
-  const compObjActual = COMPONENTES.find(c => c.id === compActual)
-  const kitSel        = kits.find(k => k.id === kitSelId) || null
-  const compPorFazer  = compSel.filter(c => !compFeitos.includes(c))
+  const kitSel       = kits.find(k => k.id === kitSelId) || null
+  const compPorFazer = compSel.filter(c => !compFeitos.includes(c))
 
   const artsSub   = subst ? artigos.filter(a=>a.cat===subst.cat&&subst.sub&&a.sub===subst.sub).sort((a,b)=>(a.ref||'').localeCompare(b.ref||'')) : []
   const artsResto = subst ? artigos.filter(a=>a.cat===subst.cat&&!(subst.sub&&a.sub===subst.sub)).sort((a,b)=>(a.ref||'').localeCompare(b.ref||'')) : []
   const artsCat   = subst ? [...artsSub, ...artsResto] : []
 
-  const toggleComp = (id) => setCompSel(p => p.includes(id)?p.filter(x=>x!==id):[...p,id])
-
-  const iniciarComp = (compId) => {
-    setCompActual(compId); setKitSelId(null); setKitItems([]); setPasso('execucao')
+  const iniciarComp = (nome) => {
+    setCompActual(nome); setKitSelId(null); setKitItems([]); setPasso('execucao')
   }
 
   const avancarDeComponentes = () => {
@@ -65,8 +62,8 @@ export default function Guia({
     iniciarComp(porFazer[0])
   }
 
-  const marcarFeitoEAvancar = (comp) => {
-    const novos = [...compFeitos, comp]
+  const marcarFeitoEAvancar = (nome) => {
+    const novos = [...compFeitos, nome]
     setCompFeitos(novos)
     const rest = compSel.filter(c => !novos.includes(c))
     if (!rest.length) { setPasso('resumo') }
@@ -107,58 +104,89 @@ export default function Guia({
 
   const progressoPct = compSel.length>0 ? Math.round((compFeitos.length/compSel.length)*100) : 0
 
-  // ── COMPONENTES ──
+  // ── PASSO COMPONENTES ──
   if (passo === 'componentes') {
-    if (!tipoActual) return null
     return (
       <div>
-        <PassoHeader numero={2} titulo="O que inclui este projecto?" sub="Selecciona tudo o que o cliente pretende"/>
+        <PassoHeader numero={2} titulo="O que inclui este projecto?" sub="Selecciona as categorias a tratar"/>
         <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:20 }}>
-          {COMPONENTES.map(comp => {
-            const sel = compSel.includes(comp.id)
-            const corR = hexToRgb(comp.cor)
-            const nKits = kitsParaComp(comp, kits, tipoActual.label).length
-            const feito = compFeitos.includes(comp.id)
+          {/* Categorias da Biblioteca */}
+          {cats.map(cat => {
+            const nome = cat.name
+            const sel   = compSel.includes(nome)
+            const feito = compFeitos.includes(nome)
+            const nKits = kitsParaComp({ destCat: nome, sempreCalculadora: false }, kits).length
+            const cor   = cat.cor || '#c8943a'
+            const corR  = hexToRgb(cor)
             return (
-              <button key={comp.id} onClick={()=>toggleComp(comp.id)} className="proj-comp-card"
-                style={{ display:'flex', alignItems:'center', gap:14, background:sel?`rgba(${corR},0.1)`:'var(--neo-bg2)', border:sel?`1px solid ${comp.cor}55`:'1px solid rgba(255,255,255,0.06)', borderLeft:sel?`3px solid ${comp.cor}`:'3px solid transparent', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'14px 16px', cursor:'pointer', textAlign:'left', width:'100%', position:'relative' }}>
-                <div style={{ width:20, height:20, borderRadius:5, flexShrink:0, border:sel?`2px solid ${comp.cor}`:'2px solid rgba(255,255,255,0.15)', background:sel?comp.cor:'transparent', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#0f0d08', fontWeight:700 }}>
+              <button key={cat.id} onClick={()=>setCompSel(p=>p.includes(nome)?p.filter(x=>x!==nome):[...p,nome])} className="proj-comp-card"
+                style={{ display:'flex', alignItems:'center', gap:14, background:sel?`rgba(${corR},0.1)`:'var(--neo-bg2)', border:sel?`1px solid ${cor}55`:'1px solid rgba(255,255,255,0.06)', borderLeft:sel?`3px solid ${cor}`:'3px solid transparent', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'14px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
+                <div style={{ width:20, height:20, borderRadius:5, flexShrink:0, border:sel?`2px solid ${cor}`:'2px solid rgba(255,255,255,0.15)', background:sel?cor:'transparent', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#0f0d08', fontWeight:700 }}>
                   {sel&&'v'}
                 </div>
-                <span style={{ fontSize:20, flexShrink:0 }}>{comp.icon}</span>
+                <span style={{ fontSize:18, flexShrink:0 }}>{cat.icon || '📋'}</span>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:sel?comp.cor:'var(--neo-text)' }}>{comp.label}</div>
-                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'var(--neo-text2)', marginTop:2 }}>
-                    {comp.sempreCalculadora ? 'Calculadora ANIGRACO'
-                      : nKits > 0 ? `${nKits} kit${nKits!==1?'s':''} disponivel${nKits!==1?'s':''}`
-                      : comp.desc}
-                  </div>
+                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:sel?cor:'var(--neo-text)' }}>{nome}</div>
+                  {nKits > 0 && (
+                    <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'var(--neo-text2)', marginTop:2 }}>
+                      {nKits} kit{nKits!==1?'s':''} disponivel{nKits!==1?'s':''}
+                    </div>
+                  )}
                 </div>
                 {feito && (
-                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:'rgba(200,169,110,0.12)', color:'var(--neo-gold)', border:'1px solid rgba(200,169,110,0.3)', flexShrink:0 }}>
-                    feito
-                  </span>
+                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:'rgba(200,169,110,0.12)', color:'var(--neo-gold)', border:'1px solid rgba(200,169,110,0.3)', flexShrink:0 }}>feito</span>
                 )}
-                {!feito && nKits > 0 && !comp.sempreCalculadora && (
-                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:`rgba(${corR},0.15)`, color:comp.cor, border:`1px solid ${comp.cor}33`, flexShrink:0 }}>
+                {!feito && nKits > 0 && (
+                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:`rgba(${corR},0.15)`, color:cor, border:`1px solid ${cor}33`, flexShrink:0 }}>
                     {nKits} kit{nKits!==1?'s':''}
                   </span>
                 )}
               </button>
             )
           })}
+
+          {/* Separador especiais */}
+          <div style={{ display:'flex', alignItems:'center', gap:10, margin:'4px 0' }}>
+            <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.06)' }}/>
+            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:'#4a4a42', flexShrink:0 }}>Servicos</span>
+            <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.06)' }}/>
+          </div>
+
+          {/* Especiais (Instalacao + Tampos) */}
+          {ESPECIAIS.map(comp => {
+            const sel   = compSel.includes(comp.label)
+            const feito = compFeitos.includes(comp.label)
+            const corR  = hexToRgb(comp.cor)
+            return (
+              <button key={comp.id} onClick={()=>setCompSel(p=>p.includes(comp.label)?p.filter(x=>x!==comp.label):[...p,comp.label])} className="proj-comp-card"
+                style={{ display:'flex', alignItems:'center', gap:14, background:sel?`rgba(${corR},0.1)`:'var(--neo-bg2)', border:sel?`1px solid ${comp.cor}55`:'1px solid rgba(255,255,255,0.06)', borderLeft:sel?`3px solid ${comp.cor}`:'3px solid transparent', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'14px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
+                <div style={{ width:20, height:20, borderRadius:5, flexShrink:0, border:sel?`2px solid ${comp.cor}`:'2px solid rgba(255,255,255,0.15)', background:sel?comp.cor:'transparent', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#0f0d08', fontWeight:700 }}>
+                  {sel&&'v'}
+                </div>
+                <span style={{ fontSize:18, flexShrink:0 }}>{comp.icon}</span>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:sel?comp.cor:'var(--neo-text)' }}>{comp.label}</div>
+                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'var(--neo-text2)', marginTop:2 }}>{comp.desc}</div>
+                </div>
+                {feito && (
+                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:'rgba(200,169,110,0.12)', color:'var(--neo-gold)', border:'1px solid rgba(200,169,110,0.3)', flexShrink:0 }}>feito</span>
+                )}
+              </button>
+            )
+          })}
         </div>
+
         {compSel.length > 0 && (
           <div style={{ marginTop:20 }}>
             <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
               Vais tratar por esta ordem:
             </div>
             <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:16 }}>
-              {compSel.filter(id => !compFeitos.includes(id)).map((id,i) => {
-                const c = COMPONENTES.find(x=>x.id===id)
+              {compSel.filter(n => !compFeitos.includes(n)).map((n,i) => {
+                const c = resolverComp(n, cats)
                 return (
-                  <span key={id} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', background:`rgba(${hexToRgb(c?.cor||'#c8943a')},0.15)`, color:c?.cor||'var(--neo-gold)', border:`1px solid ${c?.cor||'#c8943a'}33` }}>
-                    {i+1}. {c?.label}
+                  <span key={n} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', background:`rgba(${hexToRgb(c?.cor||'#c8943a')},0.15)`, color:c?.cor||'var(--neo-gold)', border:`1px solid ${c?.cor||'#c8943a'}33` }}>
+                    {i+1}. {c?.label||n}
                   </span>
                 )
               })}
@@ -173,18 +201,18 @@ export default function Guia({
     )
   }
 
-  // ── EXECUCAO ──
+  // ── PASSO EXECUCAO ──
   if (passo === 'execucao' && compActual && compObjActual) {
-    const comp = compObjActual
-    const corR = hexToRgb(comp.cor)
+    const comp  = compObjActual
+    const corR  = hexToRgb(comp.cor)
     const proximo = compSel.find(c=>c!==compActual&&!compFeitos.includes(c))
+    const proxComp = proximo ? resolverComp(proximo, cats) : null
     const temKits = kitsEncontrados.length > 0
 
     return (
       <div>
-        {/* Barra progresso */}
         {compSel.length > 0 && (
-          <div style={{ height:3, background:'var(--neo-bg2)', margin:'0 -16px 20px', flexShrink:0 }}>
+          <div style={{ height:3, background:'var(--neo-bg2)', margin:'0 -16px 20px' }}>
             <div style={{ height:'100%', width:`${progressoPct}%`, background:'linear-gradient(90deg,var(--neo-gold2),var(--neo-gold))', transition:'width .4s ease' }}/>
           </div>
         )}
@@ -192,12 +220,12 @@ export default function Guia({
         <PassoHeader numero={compFeitos.length+1} titulo={comp.label} sub={''} cor={comp.cor} icon={comp.icon}/>
 
         <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:12, marginBottom:24 }}>
-          {compSel.map(id => {
-            const c=COMPONENTES.find(x=>x.id===id)
-            const feito=compFeitos.includes(id); const actual=id===compActual
+          {compSel.map(n => {
+            const c = resolverComp(n, cats)
+            const feito=compFeitos.includes(n); const actual=n===compActual
             return (
-              <span key={id} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', fontWeight:actual?700:400, background:feito?'rgba(200,169,110,0.12)':actual?`rgba(${hexToRgb(c?.cor||'#c8943a')},0.18)`:'var(--neo-bg2)', color:feito?'var(--neo-gold)':actual?(c?.cor||'var(--neo-gold)'):'var(--neo-text2)', border:actual?`1px solid ${c?.cor||'var(--neo-gold)'}44`:'1px solid rgba(255,255,255,0.06)' }}>
-                {feito?'v ':actual?'> ':''}{c?.label||id}
+              <span key={n} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', fontWeight:actual?700:400, background:feito?'rgba(200,169,110,0.12)':actual?`rgba(${hexToRgb(c?.cor||'#c8943a')},0.18)`:'var(--neo-bg2)', color:feito?'var(--neo-gold)':actual?(c?.cor||'var(--neo-gold)'):'var(--neo-text2)', border:actual?`1px solid ${c?.cor||'var(--neo-gold)'}44`:'1px solid rgba(255,255,255,0.06)' }}>
+                {feito?'v ':actual?'> ':''}{c?.label||n}
               </span>
             )
           })}
@@ -212,7 +240,16 @@ export default function Guia({
           </CompCard>
         )}
 
-        {!comp.sempreCalculadora && temKits && (
+        {comp.destino === 'maodeobra' && (
+          <CompCard comp={comp} corR={corR}>
+            <p>Selecciona os servicos de instalacao na Mao de Obra e volta aqui.</p>
+            <button onClick={()=>onNavegar?.('maodeobra', null)} className="neo-btn neo-btn-gold" style={{ height:48, padding:'0 32px', fontSize:11, letterSpacing:'0.12em' }}>
+              Abrir Mao de Obra
+            </button>
+          </CompCard>
+        )}
+
+        {!comp.sempreCalculadora && comp.destino !== 'maodeobra' && temKits && (
           <div>
             {kitsEncontrados.length>1 && !kitSel && (
               <div style={{ marginBottom:16 }}>
@@ -272,24 +309,24 @@ export default function Guia({
           </div>
         )}
 
-        {!comp.sempreCalculadora && !temKits && (
+        {!comp.sempreCalculadora && comp.destino !== 'maodeobra' && !temKits && (
           <CompCard comp={comp} corR={corR}>
-            <p>{comp.destCat ? `Selecciona os artigos de "${comp.destCat}" na Biblioteca e volta aqui.` : 'Selecciona os servicos na Mao de Obra e volta aqui.'}</p>
-            <button onClick={()=>onNavegar?.(comp.destino||'biblioteca', comp.destCat||null)} className="neo-btn neo-btn-gold" style={{ height:48, padding:'0 32px', fontSize:11, letterSpacing:'0.12em' }}>
+            <p>Selecciona os artigos de "{comp.destCat||comp.label}" na Biblioteca e volta aqui.</p>
+            <button onClick={()=>onNavegar?.('biblioteca', comp.destCat||comp.label)} className="neo-btn neo-btn-gold" style={{ height:48, padding:'0 32px', fontSize:11, letterSpacing:'0.12em' }}>
               Abrir {comp.label}
             </button>
           </CompCard>
         )}
 
-        {!comp.sempreCalculadora && (
+        {!comp.sempreCalculadora && comp.destino !== 'maodeobra' && (
           <button onClick={tentarSaltar} className="neo-btn neo-btn-ghost"
             style={{ width:'100%', height:44, fontSize:10, marginTop: temKits&&kitSel ? 0 : 12 }}>
-            {compPorFazer.length===1 ? 'v Concluido - ver resumo' : `v Feito - proximo: ${COMPONENTES.find(c=>c.id===proximo)?.label||''}`}
+            {compPorFazer.length===1 ? 'v Concluido - ver resumo' : `v Feito - proximo: ${proxComp?.label||''}`}
           </button>
         )}
-        {comp.sempreCalculadora && (
+        {(comp.sempreCalculadora || comp.destino === 'maodeobra') && (
           <button onClick={tentarSaltar} className="neo-btn neo-btn-ghost" style={{ width:'100%', height:44, fontSize:10, marginTop:12 }}>
-            {compPorFazer.length===1 ? 'v Tampos calculados - ver resumo' : `v Tampos calculados - proximo: ${COMPONENTES.find(c=>c.id===proximo)?.label||''}`}
+            {compPorFazer.length===1 ? 'v Concluido - ver resumo' : `v Feito - proximo: ${proxComp?.label||''}`}
           </button>
         )}
 
@@ -358,7 +395,6 @@ export default function Guia({
           </div>
         )}
 
-        {/* Modal confirmar saltar */}
         {confirmSaltar && (
           <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setConfirmSaltar(false)}}>
             <div className="neo-modal" style={{ maxWidth:340 }}>
@@ -400,12 +436,12 @@ export default function Guia({
           </div>
         )}
         <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:24 }}>
-          {compFeitos.map(id => {
-            const c = COMPONENTES.find(x=>x.id===id)
+          {compFeitos.map(n => {
+            const c = resolverComp(n, cats)
             return (
-              <div key={id} style={{ display:'flex', alignItems:'center', gap:12, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius-sm)', border:'1px solid rgba(255,255,255,0.06)', borderLeft:`3px solid ${c?.cor||'var(--neo-gold)'}`, padding:'10px 14px' }}>
+              <div key={n} style={{ display:'flex', alignItems:'center', gap:12, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius-sm)', border:'1px solid rgba(255,255,255,0.06)', borderLeft:`3px solid ${c?.cor||'var(--neo-gold)'}`, padding:'10px 14px' }}>
                 <span style={{ fontSize:16 }}>{c?.icon}</span>
-                <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:c?.cor||'var(--neo-gold)' }}>{c?.label}</span>
+                <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:c?.cor||'var(--neo-gold)' }}>{c?.label||n}</span>
                 <span style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-gold)' }}>v</span>
               </div>
             )

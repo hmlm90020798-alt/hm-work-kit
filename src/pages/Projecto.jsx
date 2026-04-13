@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from 'react'
+import { db } from '../firebase'
+import { doc, collection, onSnapshot, setDoc } from 'firebase/firestore'
 import { useAuth } from '../context/AuthContext'
 import { orcRef } from '../hooks/useOrcamento'
-import { db } from '../firebase'
-import { onSnapshot } from 'firebase/firestore'
 import { useProjectos } from '../hooks/useProjectos'
-import { f2 } from './projecto/constantes'
-import Lista    from './projecto/Lista'
-import Detalhe  from './projecto/Detalhe'
-import Guia     from './projecto/Guia'
+import { ESPECIAIS, SUGESTOES_DEFEITO, f2, resolverComp } from './projecto/constantes'
+import Lista   from './projecto/Lista'
+import Detalhe from './projecto/Detalhe'
+import Guia    from './projecto/Guia'
+
+const prefsRef = (uid) => doc(db, 'preferencias', uid)
 
 export default function Projecto({ showToast, onNavegar }) {
   const { user } = useAuth()
-
   const proj = useProjectos(user)
 
+  // Categorias da Biblioteca (Firestore)
+  const [cats, setCats] = useState([])
+
+  // Estado local
   const [orcItems,      setOrcItems]      = useState([])
   const [novoTipo,      setNovoTipo]      = useState(null)
   const [novoNomeInput, setNovoNomeInput] = useState('')
@@ -23,7 +28,27 @@ export default function Projecto({ showToast, onNavegar }) {
   const [modalNome,     setModalNome]     = useState('')
   const [modalCampos,   setModalCampos]   = useState([])
 
-  // Orçamento em tempo real
+  // Sugestoes por tipo (carregadas de preferencias)
+  const [sugestoes, setSugestoes] = useState(SUGESTOES_DEFEITO)
+
+  // Carregar categorias do Firestore
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db,'categorias'), snap => {
+      const lista = snap.docs.map(d => ({id:d.id,...d.data()}))
+        .sort((a,b) => (a.order??999) - (b.order??999))
+      setCats(lista)
+    })
+    return () => unsub()
+  }, [])
+
+  // Carregar sugestoes guardadas nas preferencias
+  useEffect(() => {
+    if (!user) return
+    // As sugestoes estao em preferencias/{uid}.compSugestoes
+    // Se nao existirem, usa os defeitos
+  }, [user])
+
+  // Orcamento em tempo real
   useEffect(() => {
     if (!proj.projId) { setOrcItems([]); return }
     const unsub = onSnapshot(orcRef(proj.projId), snap => {
@@ -32,7 +57,7 @@ export default function Projecto({ showToast, onNavegar }) {
     return () => unsub()
   }, [proj.projId])
 
-  // Actualizar total quando orcamento muda
+  // Actualizar total
   useEffect(() => {
     if (!proj.projId) return
     const total = orcItems.reduce((s,i) => s + (i.price||0) * (i.qty||1), 0)
@@ -52,7 +77,7 @@ export default function Projecto({ showToast, onNavegar }) {
     })
   }, [proj.passo, proj.compSel, proj.compFeitos, proj.compActual, proj.kitSelId, proj.kitItems, proj.nome, proj.campos])
 
-  const totalOrc = orcItems.reduce((s,i) => s + (i.price||0) * (i.qty||1), 0)
+  const totalOrc   = orcItems.reduce((s,i) => s + (i.price||0) * (i.qty||1), 0)
   const tipoActual = proj.tipos.find(t => t.id === proj.tipo)
 
   const iniciarNovo = (tipoObj) => {
@@ -61,7 +86,15 @@ export default function Projecto({ showToast, onNavegar }) {
 
   const confirmarNomeECriar = async () => {
     if (!novoTipo) return
-    await proj.criarProjecto(novoTipo, novoNomeInput)
+    // Sugestoes para este tipo - nomes de categorias
+    const sugs = sugestoes[novoTipo.id] || []
+    // Filtrar apenas os que existem nas cats ou sao especiais
+    const todosNomes = [
+      ...cats.map(c => c.name),
+      ...ESPECIAIS.map(e => e.label),
+    ]
+    const compSelInicial = sugs.filter(s => todosNomes.includes(s))
+    await proj.criarProjecto(novoTipo, novoNomeInput, compSelInicial)
     setNovoTipo(null); setNovoNomeInput('')
   }
 
@@ -194,7 +227,8 @@ export default function Projecto({ showToast, onNavegar }) {
           <Detalhe
             compFeitos={proj.compFeitos}
             orcItems={orcItems}
-            onEditarComp={(id) => { proj.setCompActual(id); proj.setPasso('execucao') }}
+            cats={cats}
+            onEditarComp={(n) => { proj.setCompActual(n); proj.setPasso('execucao') }}
             onAdicionarCategoria={() => {
               proj.setCompSel(prev => [...new Set([...proj.compFeitos, ...prev])])
               proj.setPasso('componentes')
@@ -203,7 +237,7 @@ export default function Projecto({ showToast, onNavegar }) {
           />
         )}
 
-        {/* GUIA (componentes + execucao + resumo) */}
+        {/* GUIA */}
         {['componentes','execucao','resumo'].includes(proj.passo) && (
           <Guia
             projId={proj.projId}
@@ -223,6 +257,7 @@ export default function Projecto({ showToast, onNavegar }) {
             kitItems={proj.kitItems}
             setKitItems={proj.setKitItems}
             orcItems={orcItems}
+            cats={cats}
             showToast={showToast}
             onNavegar={onNavegar}
             onVoltarDetalhe={() => proj.setPasso('detalhe')}
@@ -231,7 +266,7 @@ export default function Projecto({ showToast, onNavegar }) {
 
       </div>
 
-      {/* MODAL SAIDA DO GUIA */}
+      {/* MODAL SAIDA */}
       {confirmSaida && (
         <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setConfirmSaida(false)}}>
           <div className="neo-modal" style={{ maxWidth:340 }}>

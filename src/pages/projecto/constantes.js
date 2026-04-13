@@ -1,26 +1,35 @@
-export const COMPONENTES = [
-  { id:'base',       label:'Kit base',         icon:'📦', desc:'Artigos essenciais do projecto',  cor:'#c8943a',
-    match:(n,c,t)=>{ const nl=n.toLowerCase(),cl=(c||'').toLowerCase(),tl=(t||'').toLowerCase(); return nl.includes('base')||(cl&&cl.includes(tl)) }, destino:null },
-  { id:'eletro',     label:'Eletrodomesticos', icon:'⚡', desc:'Electrodomesticos encastraveis',   cor:'#8a9e6e',
-    match:(n)=>n.toLowerCase().includes('eletro')||n.toLowerCase().includes('electro'), destino:'biblioteca', destCat:'Eletrodomesticos' },
-  { id:'acessorios', label:'Acessorios',        icon:'🔩', desc:'Puxadores, calhas e outros',       cor:'#b07acc',
-    match:(n)=>n.toLowerCase().includes('acess'), destino:'biblioteca', destCat:'Acessorios' },
-  { id:'ferragens',  label:'Ferragens',          icon:'🔧', desc:'Ferragens de cozinha e montagem',  cor:'#7a9e9a',
-    match:(n)=>n.toLowerCase().includes('ferragem')||n.toLowerCase().includes('ferrag'), destino:'biblioteca', destCat:'Ferragens' },
-  { id:'iluminacao', label:'Iluminacao',         icon:'💡', desc:'Iluminacao embutida e decorativa', cor:'#d4b87a',
-    match:(n)=>n.toLowerCase().includes('ilumina')||n.toLowerCase().includes('luz'), destino:'biblioteca', destCat:'Iluminacao' },
-  { id:'instalacao', label:'Instalacao',         icon:'🛠', desc:'Servicos de montagem',             cor:'#9a7acc',
-    match:(n)=>n.toLowerCase().includes('instala')||n.toLowerCase().includes('montagem'), destino:'maodeobra', destCat:null },
-  { id:'tampos',     label:'Tampos',             icon:'⬛', desc:'Calculadora ANIGRACO',             cor:'#4a8fa8',
-    match:(n)=>n.toLowerCase().includes('tampo'), destino:'tampos', destCat:null, sempreCalculadora:true },
+// Componentes especiais - nao sao categorias da Biblioteca
+export const ESPECIAIS = [
+  {
+    id: 'instalacao',
+    label: 'Instalacao',
+    icon: '🛠',
+    desc: 'Servicos de montagem',
+    cor: '#9a7acc',
+    destino: 'maodeobra',
+    destCat: null,
+  },
+  {
+    id: 'tampos',
+    label: 'Tampos',
+    icon: '⬛',
+    desc: 'Calculadora ANIGRACO',
+    cor: '#4a8fa8',
+    destino: 'tampos',
+    destCat: null,
+    sempreCalculadora: true,
+  },
 ]
 
-// Labels reais das categorias no Firestore (com acentos)
-export const DESTCAT_REAL = {
-  'Eletrodomesticos': 'Eletrodomesticos',
-  'Acessorios':       'Acessorios',
-  'Ferragens':        'Ferragens',
-  'Iluminacao':       'Iluminacao',
+// Sugestoes por defeito para cada tipo de projecto (nomes de categorias)
+// Estas sao apenas sugestoes - o utilizador pode alterar em preferencias
+export const SUGESTOES_DEFEITO = {
+  cozinha:    ['Eletrodomesticos', 'Acessorios', 'Ferragens', 'Iluminacao', 'Instalacao', 'Tampos'],
+  banho:      ['Sanitarios', 'Material PRO', 'Pavimento e Revestimento', 'Colas e Tintas', 'Iluminacao', 'Instalacao'],
+  closet:     ['Acessorios', 'Iluminacao', 'Instalacao'],
+  suite:      ['Sanitarios', 'Acessorios', 'Iluminacao', 'Instalacao', 'Tampos'],
+  escritorio: ['Iluminacao', 'Instalacao'],
+  outro:      [],
 }
 
 export function f2(n) { return parseFloat(n||0).toFixed(2) }
@@ -31,14 +40,57 @@ export function hexToRgb(hex) {
   catch { return '56,189,248' }
 }
 
-export function kitsParaComp(comp, kits, tipoLabel) {
-  if (comp.sempreCalculadora) return []
-  return kits.filter(k => comp.match(k.name, k.contexto, tipoLabel))
+// Dado um nome de componente (categoria ou especial), devolve o objecto completo
+// catName: string (ex: 'Eletrodomesticos', 'Instalacao', 'Tampos')
+// cats: array de categorias do Firestore [{id, name, subs, cor?, icon?}]
+export function resolverComp(catName, cats) {
+  // Verificar se e um especial
+  const esp = ESPECIAIS.find(e => e.label === catName || e.id === catName)
+  if (esp) return esp
+  // Procurar nas categorias da Biblioteca
+  const cat = cats.find(c => c.name === catName)
+  if (cat) return {
+    id: cat.id || catName,
+    label: cat.name,
+    icon: cat.icon || '📋',
+    desc: cat.name,
+    cor: cat.cor || '#c8943a',
+    destino: 'biblioteca',
+    destCat: cat.name,
+    sempreCalculadora: false,
+  }
+  // Fallback - nao encontrado
+  return {
+    id: catName,
+    label: catName,
+    icon: '📋',
+    desc: catName,
+    cor: '#7a7a72',
+    destino: 'biblioteca',
+    destCat: catName,
+    sempreCalculadora: false,
+  }
 }
 
+// Kits que correspondem a um componente
+export function kitsParaComp(comp, kits) {
+  if (!comp || comp.sempreCalculadora) return []
+  if (!comp.destCat) return []
+  const cat = comp.destCat.toLowerCase()
+  return kits.filter(k => {
+    const kn = (k.name||'').toLowerCase()
+    const kc = (k.contexto||'').toLowerCase()
+    return kn.includes(cat) || kc.includes(cat) || cat.includes(kn)
+  })
+}
+
+// Verifica se ja existem itens no orcamento para este componente
 export function temItensParaComp(comp, orcItems, kits, kitSelId) {
   if (!comp) return false
   if (comp.sempreCalculadora) return orcItems.some(i => i.origem === 'Tampos')
+  if (comp.destino === 'maodeobra') return orcItems.some(i =>
+    (i.origem||'').toLowerCase().includes('mao') || (i.origem||'').toLowerCase().includes('instalac')
+  )
   if (kitSelId) {
     const kit = kits.find(k => k.id === kitSelId)
     if (kit) return orcItems.some(i => i.origem === kit.name)
@@ -48,9 +100,8 @@ export function temItensParaComp(comp, orcItems, kits, kitSelId) {
     return orcItems.some(i =>
       (i.cat||'').toLowerCase() === cat ||
       (i.origem||'').toLowerCase() === cat ||
-      (i.origem||'').toLowerCase().includes(comp.id)
+      (i.origem||'').toLowerCase().includes(cat.split(' ')[0])
     )
   }
-  if (comp.destino === 'maodeobra') return orcItems.some(i => i.origem === 'Mao de Obra')
   return false
 }

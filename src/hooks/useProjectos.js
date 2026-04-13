@@ -95,17 +95,17 @@ export function useProjectos(user) {
     setPasso('detalhe')
   }
 
-  const criarProjecto = async (tipoObj, nomeCliente) => {
+  const criarProjecto = async (tipoObj, nomeCliente, compSelInicial = []) => {
     const id = gerarProjId()
     const nomeUsar = (nomeCliente||'').trim()
     await setDoc(projListaRef(id), {
       uid: user.uid, projId: id, nome: nomeUsar, tipo: tipoObj.id, campos: {},
-      passo: 'componentes', compSel: [], compFeitos: [], compActual: null,
+      passo: 'componentes', compSel: compSelInicial, compFeitos: [], compActual: null,
       kitSelId: null, kitItems: [], total: 0, ts: Date.now(),
     }).catch(() => {})
     await setDoc(activoRef(user.uid), { projId: id }).catch(() => {})
     setProjId(id); setNome(nomeUsar); setCampos({}); setTipo(tipoObj.id)
-    setCompSel([]); setCompFeitos([]); setCompActual(null); setKitSelId(null); setKitItems([])
+    setCompSel(compSelInicial); setCompFeitos([]); setCompActual(null); setKitSelId(null); setKitItems([])
     setPasso('componentes'); setGuiaCarregado(true)
   }
 
