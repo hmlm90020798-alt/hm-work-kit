@@ -4,7 +4,7 @@ import { doc, collection, onSnapshot, setDoc } from 'firebase/firestore'
 import { useAuth } from '../context/AuthContext'
 import { orcRef } from '../hooks/useOrcamento'
 import { useProjectos } from '../hooks/useProjectos'
-import { ESPECIAIS, SUGESTOES_DEFEITO, f2, resolverComp } from './projecto/constantes'
+import { ESPECIAIS, f2, resolverComp } from './projecto/constantes'
 import Lista   from './projecto/Lista'
 import Detalhe from './projecto/Detalhe'
 import Guia    from './projecto/Guia'
@@ -28,9 +28,6 @@ export default function Projecto({ showToast, onNavegar }) {
   const [modalNome,     setModalNome]     = useState('')
   const [modalCampos,   setModalCampos]   = useState([])
 
-  // Sugestoes por tipo (carregadas de preferencias)
-  const [sugestoes, setSugestoes] = useState(SUGESTOES_DEFEITO)
-
   // Carregar categorias do Firestore
   useEffect(() => {
     const unsub = onSnapshot(collection(db,'categorias'), snap => {
@@ -40,13 +37,6 @@ export default function Projecto({ showToast, onNavegar }) {
     })
     return () => unsub()
   }, [])
-
-  // Carregar sugestoes guardadas nas preferencias
-  useEffect(() => {
-    if (!user) return
-    // As sugestoes estao em preferencias/{uid}.compSugestoes
-    // Se nao existirem, usa os defeitos
-  }, [user])
 
   // Orcamento em tempo real
   useEffect(() => {
@@ -86,15 +76,7 @@ export default function Projecto({ showToast, onNavegar }) {
 
   const confirmarNomeECriar = async () => {
     if (!novoTipo) return
-    // Sugestoes para este tipo - nomes de categorias
-    const sugs = sugestoes[novoTipo.id] || []
-    // Filtrar apenas os que existem nas cats ou sao especiais
-    const todosNomes = [
-      ...cats.map(c => c.name),
-      ...ESPECIAIS.map(e => e.label),
-    ]
-    const compSelInicial = sugs.filter(s => todosNomes.includes(s))
-    await proj.criarProjecto(novoTipo, novoNomeInput, compSelInicial)
+    await proj.criarProjecto(novoTipo, novoNomeInput, [])
     setNovoTipo(null); setNovoNomeInput('')
   }
 

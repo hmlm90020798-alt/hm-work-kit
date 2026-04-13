@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { db } from '../../firebase'
 import { collection, onSnapshot } from 'firebase/firestore'
 import { addToOrcamento } from '../../hooks/useOrcamento'
-import { ESPECIAIS, CATS_IGNORADAS, f2, hexToRgb, resolverComp, kitsParaComp, temItensParaComp } from './constantes'
+import { ESPECIAIS, CATS_IGNORADAS, f2, hexToRgb, resolverComp, kitsParaCategoria, kitsDoTipo, temItensParaComp } from './constantes'
 import { PassoHeader, CompCard, KitItemRow } from './ui'
 
 export default function Guia({
@@ -25,6 +25,10 @@ export default function Guia({
   const [subst,           setSubst]           = useState(null)
   const [confirmSaltar,   setConfirmSaltar]   = useState(false)
 
+  // Dropdown estado
+  const [kitBaseOpen, setKitBaseOpen] = useState(false)
+  const [bibOpen,     setBibOpen]     = useState(false)
+
   useEffect(() => {
     const u1 = onSnapshot(collection(db,'modelos'), s => setKits(s.docs.map(d=>({id:d.id,...d.data()}))))
     const u2 = onSnapshot(collection(db,'artigos'), s => setArtigos(s.docs.map(d=>({id:d.id,...d.data()}))))
@@ -33,10 +37,10 @@ export default function Guia({
 
   useEffect(() => {
     if (!compActual || !kits.length) return
-    const compObj = resolverComp(compActual, cats)
-    if (!compObj) return
+    const comp = resolverComp(compActual, cats)
+    if (!comp) return
     const tipoLabel = tipos.find(t => t.id === tipo)?.label || ''
-    const enc = kitsParaComp(compObj, kits, tipoLabel)
+    const enc = kitsParaCategoria(comp.destCat || compActual, kits, tipoLabel)
     setKitsEncontrados(enc)
     if (enc.length === 1 && !kitSelId) {
       setKitSelId(enc[0].id)
@@ -44,8 +48,13 @@ export default function Guia({
     }
   }, [compActual, kits, cats, tipo])
 
-  function iniciarComp(nome) {
-    setCompActual(nome); setKitSelId(null); setKitItems([]); setPasso('execucao')
+  const tipoLabel     = tipos.find(t => t.id === tipo)?.label || ''
+  const kitsBase      = kitsDoTipo(kits, tipoLabel)
+  const catsFiltradas = cats.filter(cat => !CATS_IGNORADAS.includes(cat.name) && !CATS_IGNORADAS.includes(cat.id))
+
+  function iniciarComp(nomeComp) {
+    setCompActual(nomeComp); setKitSelId(null); setKitItems([]); setPasso('execucao')
+    setKitBaseOpen(false); setBibOpen(false)
   }
 
   function avancarDeComponentes() {
@@ -64,8 +73,8 @@ export default function Guia({
   }
 
   function tentarSaltar() {
-    const compObj = resolverComp(compActual, cats)
-    if (!temItensParaComp(compObj, orcItems, kits, kitSelId)) {
+    const comp = resolverComp(compActual, cats)
+    if (!temItensParaComp(comp, orcItems, kits, kitSelId)) {
       setConfirmSaltar(true)
     } else {
       marcarFeitoEAvancar(compActual)
@@ -97,116 +106,7 @@ export default function Guia({
     showToast('Substituido por '+artigo.ref)
   }
 
-  const progressoPct  = compSel.length > 0 ? Math.round((compFeitos.length/compSel.length)*100) : 0
-  const tipoLabel     = tipos.find(t => t.id === tipo)?.label || ''
-  const catsFiltradas = cats.filter(cat => !CATS_IGNORADAS.includes(cat.name) && !CATS_IGNORADAS.includes(cat.id))
-
-  function renderCompCard(comp, sel, feito, nKits) {
-    const corR = hexToRgb(comp.cor)
-    const toggle = () => setCompSel(p => p.includes(comp.label) ? p.filter(x=>x!==comp.label) : [...p,comp.label])
-    return (
-      <button key={comp.id} onClick={toggle} className="proj-comp-card"
-        style={{ display:'flex', alignItems:'center', gap:14, background:sel?'rgba('+corR+',0.1)':'var(--neo-bg2)', border:sel?'1px solid '+comp.cor+'55':'1px solid rgba(255,255,255,0.06)', borderLeft:sel?'3px solid '+comp.cor:'3px solid transparent', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'14px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
-        <div style={{ width:20, height:20, borderRadius:5, flexShrink:0, border:sel?'2px solid '+comp.cor:'2px solid rgba(255,255,255,0.15)', background:sel?comp.cor:'transparent', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#0f0d08', fontWeight:700 }}>
-          {sel && 'v'}
-        </div>
-        <span style={{ fontSize:18, flexShrink:0 }}>{comp.icon}</span>
-        <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:sel?comp.cor:'var(--neo-text)' }}>{comp.label}</div>
-          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'var(--neo-text2)', marginTop:2 }}>
-            {nKits > 0 ? nKits+' kit'+(nKits!==1?'s':'')+' disponivel'+(nKits!==1?'s':'') : comp.desc}
-          </div>
-        </div>
-        {feito && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:'rgba(200,169,110,0.12)', color:'var(--neo-gold)', border:'1px solid rgba(200,169,110,0.3)', flexShrink:0 }}>feito</span>}
-        {!feito && nKits > 0 && (
-          <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:'rgba('+corR+',0.15)', color:comp.cor, border:'1px solid '+comp.cor+'33', flexShrink:0 }}>
-            {nKits} kit{nKits!==1?'s':''}
-          </span>
-        )}
-      </button>
-    )
-  }
-
-  function renderSubstModal() {
-    if (!subst) return null
-    const artsSub   = artigos.filter(a=>a.cat===subst.cat&&subst.sub&&a.sub===subst.sub).sort((a,b)=>(a.ref||'').localeCompare(b.ref||''))
-    const artsResto = artigos.filter(a=>a.cat===subst.cat&&!(subst.sub&&a.sub===subst.sub)).sort((a,b)=>(a.ref||'').localeCompare(b.ref||''))
-    const artsCat   = [...artsSub, ...artsResto]
-    const precoActual = kitItems[subst.idx]?.price || 0
-    return (
-      <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setSubst(null)}}>
-        <div className="neo-modal" style={{ maxWidth:480 }}>
-          <div className="neo-modal-head">
-            Substituir artigo
-            <button className="neo-modal-close" onClick={()=>setSubst(null)}>X</button>
-          </div>
-          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
-            {subst.sub || subst.cat} - escolhe o artigo substituto
-          </div>
-          {kitItems[subst.idx] && (
-            <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background:'rgba(200,169,110,0.06)', border:'1px solid rgba(200,169,110,0.2)', borderRadius:'var(--neo-radius-sm)', marginBottom:14 }}>
-              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', flexShrink:0 }}>ACTUAL</span>
-              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'var(--neo-gold)', letterSpacing:'0.06em', flexShrink:0 }}>{kitItems[subst.idx].ref}</span>
-              <span style={{ fontSize:12, fontWeight:300, color:'var(--neo-text2)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{kitItems[subst.idx].desc}</span>
-            </div>
-          )}
-          <div className="neo-scroll" style={{ maxHeight:'50vh', overflowY:'auto' }}>
-            {artsCat.length === 0
-              ? <div style={{ padding:'30px 20px', textAlign:'center', fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)' }}>Sem artigos em {subst.sub||subst.cat}</div>
-              : artsCat.map(art => {
-                  const diff = precoActual > 0 ? art.price - precoActual : null
-                  return (
-                    <div key={art.id} className="tampo-ref-row" style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:2 }}>
-                          <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'var(--neo-gold)', letterSpacing:'0.06em', flexShrink:0 }}>{art.ref}</span>
-                          {art.price > 0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, color:'var(--neo-text2)', flexShrink:0 }}>{f2(art.price)} EUR</span>}
-                          {diff!==null && diff!==0 && (
-                            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:700, color:diff>0?'#f87171':'#4ade80', flexShrink:0 }}>
-                              {diff>0?'+':''}{f2(diff)} EUR
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ fontSize:12, fontWeight:300, color:'var(--neo-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{art.desc}</div>
-                      </div>
-                      <button onClick={()=>substituir(art)} className="neo-btn neo-btn-gold" style={{ height:30, padding:'0 14px', fontSize:9, flexShrink:0 }}>
-                        Usar este
-                      </button>
-                    </div>
-                  )
-                })
-            }
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  function renderSaltarModal() {
-    if (!confirmSaltar) return null
-    return (
-      <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setConfirmSaltar(false)}}>
-        <div className="neo-modal" style={{ maxWidth:340 }}>
-          <div className="neo-modal-head">
-            Sem artigos adicionados
-            <button className="neo-modal-close" onClick={()=>setConfirmSaltar(false)}>X</button>
-          </div>
-          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, color:'var(--neo-text2)', letterSpacing:'0.06em', lineHeight:1.9, marginBottom:24 }}>
-            Nao adicionaste nenhum artigo para este componente.<br/>
-            <span style={{ fontSize:10 }}>Queres avancar mesmo assim?</span>
-          </div>
-          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-            <button className="neo-btn neo-btn-ghost" onClick={()=>{ setConfirmSaltar(false); marcarFeitoEAvancar(compActual) }} style={{ width:'100%', height:44, fontSize:10 }}>
-              Sim, avancar sem adicionar
-            </button>
-            <button className="neo-btn neo-btn-gold" onClick={()=>setConfirmSaltar(false)} style={{ width:'100%', height:44, fontSize:10 }}>
-              Voltar e adicionar
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  const progressoPct = compSel.length > 0 ? Math.round((compFeitos.length/compSel.length)*100) : 0
 
   function renderPills() {
     return (
@@ -226,7 +126,6 @@ export default function Guia({
   }
 
   function renderKitSection(comp, kitSel) {
-    const corR = hexToRgb(comp.cor)
     if (kitsEncontrados.length > 1 && !kitSel) {
       return (
         <div style={{ marginBottom:16 }}>
@@ -289,33 +188,138 @@ export default function Guia({
     return null
   }
 
-  // RENDER COMPONENTES
+  // ECRÃ SELECCAO
   if (passo === 'componentes') {
     return (
       <div>
-        <PassoHeader numero={2} titulo="O que inclui este projecto?" sub="Selecciona as categorias a tratar"/>
-        <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:20 }}>
+        <PassoHeader numero={2} titulo="O que inclui este projecto?" sub="Selecciona o que pretendes adicionar"/>
 
-          {ESPECIAIS.map(comp => {
-            const nKits = kitsParaComp(comp, kits, tipoLabel).length
-            const sel   = compSel.includes(comp.label)
-            const feito = compFeitos.includes(comp.label)
-            return renderCompCard(comp, sel, feito, nKits)
-          })}
+        <div style={{ display:'flex', flexDirection:'column', gap:10, marginTop:20 }}>
 
-          <div style={{ display:'flex', alignItems:'center', gap:10, margin:'4px 0' }}>
-            <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.06)' }}/>
-            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:'#4a4a42', flexShrink:0 }}>Categorias</span>
-            <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.06)' }}/>
+          {/* KIT BASE - dropdown com kits do tipo */}
+          <div style={{ position:'relative' }}>
+            <button onClick={()=>{ setKitBaseOpen(o=>!o); setBibOpen(false) }}
+              style={{ display:'flex', alignItems:'center', gap:14, background:'rgba(200,148,58,0.1)', border:'1px solid #c8943a55', borderLeft:'3px solid #c8943a', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'16px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
+              <span style={{ fontSize:22, flexShrink:0 }}>📦</span>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'#c8943a' }}>Kit Base</div>
+                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'var(--neo-text2)', marginTop:2 }}>
+                  {kitsBase.length > 0 ? kitsBase.length+' kit'+(kitsBase.length!==1?'s':'')+' disponiveis para '+tipoLabel : 'Sem kits para '+tipoLabel}
+                </div>
+              </div>
+              <span style={{ fontSize:11, color:'#c8943a', transform:kitBaseOpen?'rotate(180deg)':'rotate(0deg)', transition:'transform .2s' }}>v</span>
+            </button>
+            {kitBaseOpen && kitsBase.length > 0 && (
+              <div style={{ background:'var(--neo-bg2)', border:'1px solid rgba(200,148,58,0.2)', borderTop:'none', borderRadius:'0 0 var(--neo-radius) var(--neo-radius)', overflow:'hidden' }}>
+                {kitsBase.map(kit => {
+                  const nIt = (kit.items||[]).length
+                  const tot = (kit.items||[]).reduce((s,i)=>s+(i.price||0)*(i.qty||1),0)
+                  const jaFeito = compFeitos.includes(kit.name)
+                  return (
+                    <button key={kit.id} onClick={()=>{ iniciarComp(kit.name); setCompSel(p=>[...p, kit.name]) }}
+                      style={{ display:'flex', alignItems:'center', gap:12, width:'100%', background:'transparent', border:'none', borderBottom:'1px solid rgba(255,255,255,0.05)', padding:'12px 16px', cursor:'pointer', textAlign:'left' }}>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--neo-text)' }}>{kit.name}</div>
+                        <div style={{ display:'flex', gap:10, marginTop:2 }}>
+                          <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)' }}>{nIt} artigo{nIt!==1?'s':''}</span>
+                          {tot > 0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:600, color:'var(--neo-gold)' }}>{f2(tot)} EUR</span>}
+                        </div>
+                      </div>
+                      {jaFeito && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:'rgba(200,169,110,0.12)', color:'var(--neo-gold)', border:'1px solid rgba(200,169,110,0.3)', flexShrink:0 }}>adicionado</span>}
+                      <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'#c8943a', letterSpacing:'0.1em', flexShrink:0 }}>Usar</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            {kitBaseOpen && kitsBase.length === 0 && (
+              <div style={{ background:'var(--neo-bg2)', border:'1px solid rgba(255,255,255,0.06)', borderTop:'none', borderRadius:'0 0 var(--neo-radius) var(--neo-radius)', padding:'14px 16px', fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)' }}>
+                Sem kits para {tipoLabel}. Cria um kit em "Kits" com o contexto "{tipoLabel}".
+              </div>
+            )}
           </div>
 
-          {catsFiltradas.map(cat => {
-            const nKits = kitsParaComp({ destCat: cat.name, sempreCalculadora: false }, kits, tipoLabel).length
-            const comp  = { id:cat.id||cat.name, label:cat.name, icon:cat.icon||'📋', desc:cat.name, cor:cat.cor||'#c8943a' }
-            const sel   = compSel.includes(cat.name)
-            const feito = compFeitos.includes(cat.name)
-            return renderCompCard(comp, sel, feito, nKits)
+          {/* INSTALACAO */}
+          {ESPECIAIS.filter(e => e.id === 'instalacao').map(comp => {
+            const sel   = compSel.includes(comp.label)
+            const feito = compFeitos.includes(comp.label)
+            const corR  = hexToRgb(comp.cor)
+            return (
+              <button key={comp.id}
+                onClick={()=>{ setCompSel(p=>p.includes(comp.label)?p.filter(x=>x!==comp.label):[...p,comp.label]) }}
+                className="proj-comp-card"
+                style={{ display:'flex', alignItems:'center', gap:14, background:sel?'rgba('+corR+',0.1)':'var(--neo-bg2)', border:sel?'1px solid '+comp.cor+'55':'1px solid rgba(255,255,255,0.06)', borderLeft:sel?'3px solid '+comp.cor:'3px solid transparent', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'14px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
+                <div style={{ width:20, height:20, borderRadius:5, flexShrink:0, border:sel?'2px solid '+comp.cor:'2px solid rgba(255,255,255,0.15)', background:sel?comp.cor:'transparent', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#0f0d08', fontWeight:700 }}>
+                  {sel && 'v'}
+                </div>
+                <span style={{ fontSize:18, flexShrink:0 }}>{comp.icon}</span>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:sel?comp.cor:'var(--neo-text)' }}>{comp.label}</div>
+                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'var(--neo-text2)', marginTop:2 }}>{comp.desc}</div>
+                </div>
+                {feito && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:'rgba(200,169,110,0.12)', color:'var(--neo-gold)', border:'1px solid rgba(200,169,110,0.3)', flexShrink:0 }}>feito</span>}
+              </button>
+            )
           })}
+
+          {/* TAMPOS */}
+          {ESPECIAIS.filter(e => e.id === 'tampos').map(comp => {
+            const sel   = compSel.includes(comp.label)
+            const feito = compFeitos.includes(comp.label)
+            const corR  = hexToRgb(comp.cor)
+            return (
+              <button key={comp.id}
+                onClick={()=>{ setCompSel(p=>p.includes(comp.label)?p.filter(x=>x!==comp.label):[...p,comp.label]) }}
+                className="proj-comp-card"
+                style={{ display:'flex', alignItems:'center', gap:14, background:sel?'rgba('+corR+',0.1)':'var(--neo-bg2)', border:sel?'1px solid '+comp.cor+'55':'1px solid rgba(255,255,255,0.06)', borderLeft:sel?'3px solid '+comp.cor:'3px solid transparent', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'14px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
+                <div style={{ width:20, height:20, borderRadius:5, flexShrink:0, border:sel?'2px solid '+comp.cor:'2px solid rgba(255,255,255,0.15)', background:sel?comp.cor:'transparent', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#0f0d08', fontWeight:700 }}>
+                  {sel && 'v'}
+                </div>
+                <span style={{ fontSize:18, flexShrink:0 }}>{comp.icon}</span>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:sel?comp.cor:'var(--neo-text)' }}>{comp.label}</div>
+                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'var(--neo-text2)', marginTop:2 }}>{comp.desc}</div>
+                </div>
+                {feito && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:'rgba(200,169,110,0.12)', color:'var(--neo-gold)', border:'1px solid rgba(200,169,110,0.3)', flexShrink:0 }}>feito</span>}
+              </button>
+            )
+          })}
+
+          {/* BIBLIOTECA - dropdown com categorias */}
+          <div style={{ position:'relative' }}>
+            <button onClick={()=>{ setBibOpen(o=>!o); setKitBaseOpen(false) }}
+              style={{ display:'flex', alignItems:'center', gap:14, background:bibOpen?'rgba(56,189,248,0.08)':'var(--neo-bg2)', border:'1px solid rgba(255,255,255,0.1)', borderLeft:'3px solid rgba(56,189,248,0.6)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'16px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
+              <span style={{ fontSize:22, flexShrink:0 }}>📚</span>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--neo-text)' }}>Biblioteca</div>
+                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'var(--neo-text2)', marginTop:2 }}>
+                  Selecciona uma categoria para adicionar
+                </div>
+              </div>
+              <span style={{ fontSize:11, color:'var(--neo-text2)', transform:bibOpen?'rotate(180deg)':'rotate(0deg)', transition:'transform .2s' }}>v</span>
+            </button>
+            {bibOpen && (
+              <div style={{ background:'var(--neo-bg2)', border:'1px solid rgba(255,255,255,0.08)', borderTop:'none', borderRadius:'0 0 var(--neo-radius) var(--neo-radius)', overflow:'hidden', maxHeight:320, overflowY:'auto' }}>
+                {catsFiltradas.map(cat => {
+                  const nKits = kitsParaCategoria(cat.name, kits, tipoLabel).length
+                  const jaFeito = compFeitos.includes(cat.name)
+                  const jaSel   = compSel.includes(cat.name)
+                  return (
+                    <button key={cat.id} onClick={()=>{ setCompSel(p=>p.includes(cat.name)?p:([...p,cat.name])); setBibOpen(false) }}
+                      style={{ display:'flex', alignItems:'center', gap:12, width:'100%', background:jaSel?'rgba(255,255,255,0.04)':'transparent', border:'none', borderBottom:'1px solid rgba(255,255,255,0.05)', padding:'11px 16px', cursor:'pointer', textAlign:'left' }}>
+                      <span style={{ fontSize:16, flexShrink:0 }}>{cat.icon || '📋'}</span>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:jaSel?'var(--neo-gold)':'var(--neo-text)' }}>{cat.name}</div>
+                        {nKits > 0 && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, color:'var(--neo-text2)', marginTop:1 }}>{nKits} kit{nKits!==1?'s':''}</div>}
+                      </div>
+                      {jaFeito && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:'rgba(200,169,110,0.12)', color:'var(--neo-gold)', border:'1px solid rgba(200,169,110,0.3)', flexShrink:0 }}>feito</span>}
+                      {jaSel && !jaFeito && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:'rgba(200,169,110,0.08)', color:'var(--neo-gold)', flexShrink:0 }}>v</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {compSel.length > 0 && (
@@ -343,14 +347,14 @@ export default function Guia({
     )
   }
 
-  // RENDER EXECUCAO
+  // PASSO EXECUCAO
   if (passo === 'execucao' && compActual) {
-    const comp      = resolverComp(compActual, cats)
-    const kitSel    = kits.find(k => k.id === kitSelId) || null
-    const corR      = hexToRgb(comp?.cor || '#c8943a')
-    const proximo   = compSel.find(c => c !== compActual && !compFeitos.includes(c))
+    const comp     = resolverComp(compActual, cats)
+    const kitSel   = kits.find(k => k.id === kitSelId) || null
+    const corR     = hexToRgb(comp?.cor || '#c8943a')
+    const proximo  = compSel.find(c => c !== compActual && !compFeitos.includes(c))
     const proxLabel = proximo ? (resolverComp(proximo, cats)?.label || proximo) : ''
-    const temKits   = kitsEncontrados.length > 0
+    const temKits  = kitsEncontrados.length > 0
     const compPorFazer = compSel.filter(c => !compFeitos.includes(c))
 
     if (!comp) return null
@@ -389,15 +393,10 @@ export default function Guia({
 
         {!comp.sempreCalculadora && comp.destino !== 'maodeobra' && !temKits && (
           <CompCard comp={comp} corR={corR}>
-            {comp.kitBase
-              ? <p>Nao existem kits para este tipo de projecto. Cria um kit em "Kits" com o contexto "{tipoLabel}".</p>
-              : <p>Selecciona os artigos de "{comp.destCat||comp.label}" na Biblioteca e volta aqui.</p>
-            }
-            {!comp.kitBase && (
-              <button onClick={()=>onNavegar?.('biblioteca', comp.destCat||comp.label)} className="neo-btn neo-btn-gold" style={{ height:48, padding:'0 32px', fontSize:11, letterSpacing:'0.12em' }}>
-                Abrir {comp.label}
-              </button>
-            )}
+            <p>Selecciona os artigos de "{comp.destCat||comp.label}" na Biblioteca e volta aqui.</p>
+            <button onClick={()=>onNavegar?.('biblioteca', comp.destCat||comp.label)} className="neo-btn neo-btn-gold" style={{ height:48, padding:'0 32px', fontSize:11, letterSpacing:'0.12em' }}>
+              Abrir {comp.label}
+            </button>
           </CompCard>
         )}
 
@@ -413,13 +412,81 @@ export default function Guia({
           </button>
         )}
 
-        {renderSubstModal()}
-        {renderSaltarModal()}
+        {subst && (
+          <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setSubst(null)}}>
+            <div className="neo-modal" style={{ maxWidth:480 }}>
+              <div className="neo-modal-head">
+                Substituir artigo
+                <button className="neo-modal-close" onClick={()=>setSubst(null)}>X</button>
+              </div>
+              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
+                {subst.sub || subst.cat} - escolhe o artigo substituto
+              </div>
+              {kitItems[subst.idx] && (
+                <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background:'rgba(200,169,110,0.06)', border:'1px solid rgba(200,169,110,0.2)', borderRadius:'var(--neo-radius-sm)', marginBottom:14 }}>
+                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', flexShrink:0 }}>ACTUAL</span>
+                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'var(--neo-gold)', letterSpacing:'0.06em', flexShrink:0 }}>{kitItems[subst.idx].ref}</span>
+                  <span style={{ fontSize:12, fontWeight:300, color:'var(--neo-text2)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{kitItems[subst.idx].desc}</span>
+                </div>
+              )}
+              <div className="neo-scroll" style={{ maxHeight:'50vh', overflowY:'auto' }}>
+                {(() => {
+                  const artsSub   = artigos.filter(a=>a.cat===subst.cat&&subst.sub&&a.sub===subst.sub).sort((a,b)=>(a.ref||'').localeCompare(b.ref||''))
+                  const artsResto = artigos.filter(a=>a.cat===subst.cat&&!(subst.sub&&a.sub===subst.sub)).sort((a,b)=>(a.ref||'').localeCompare(b.ref||''))
+                  const artsCat   = [...artsSub, ...artsResto]
+                  const precoActual = kitItems[subst.idx]?.price || 0
+                  if (artsCat.length === 0) return <div style={{ padding:'30px 20px', textAlign:'center', fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)' }}>Sem artigos em {subst.sub||subst.cat}</div>
+                  return artsCat.map(art => {
+                    const diff = precoActual > 0 ? art.price - precoActual : null
+                    return (
+                      <div key={art.id} className="tampo-ref-row" style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:2 }}>
+                            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'var(--neo-gold)', letterSpacing:'0.06em', flexShrink:0 }}>{art.ref}</span>
+                            {art.price > 0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, color:'var(--neo-text2)', flexShrink:0 }}>{f2(art.price)} EUR</span>}
+                            {diff!==null && diff!==0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:700, color:diff>0?'#f87171':'#4ade80', flexShrink:0 }}>{diff>0?'+':''}{f2(diff)} EUR</span>}
+                          </div>
+                          <div style={{ fontSize:12, fontWeight:300, color:'var(--neo-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{art.desc}</div>
+                        </div>
+                        <button onClick={()=>substituir(art)} className="neo-btn neo-btn-gold" style={{ height:30, padding:'0 14px', fontSize:9, flexShrink:0 }}>
+                          Usar este
+                        </button>
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {confirmSaltar && (
+          <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setConfirmSaltar(false)}}>
+            <div className="neo-modal" style={{ maxWidth:340 }}>
+              <div className="neo-modal-head">
+                Sem artigos adicionados
+                <button className="neo-modal-close" onClick={()=>setConfirmSaltar(false)}>X</button>
+              </div>
+              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, color:'var(--neo-text2)', letterSpacing:'0.06em', lineHeight:1.9, marginBottom:24 }}>
+                Nao adicionaste nenhum artigo para este componente.<br/>
+                <span style={{ fontSize:10 }}>Queres avancar mesmo assim?</span>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                <button className="neo-btn neo-btn-ghost" onClick={()=>{ setConfirmSaltar(false); marcarFeitoEAvancar(compActual) }} style={{ width:'100%', height:44, fontSize:10 }}>
+                  Sim, avancar sem adicionar
+                </button>
+                <button className="neo-btn neo-btn-gold" onClick={()=>setConfirmSaltar(false)} style={{ width:'100%', height:44, fontSize:10 }}>
+                  Voltar e adicionar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
 
-  // RENDER RESUMO
+  // PASSO RESUMO
   if (passo === 'resumo') {
     const tipoActual2 = tipos.find(t => t.id === tipo)
     const totalOrc    = orcItems.reduce((s,i) => s + (i.price||0) * (i.qty||1), 0)
