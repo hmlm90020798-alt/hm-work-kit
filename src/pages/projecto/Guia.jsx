@@ -36,13 +36,14 @@ export default function Guia({
 
   useEffect(() => {
     if (!compObjActual || !kits.length) return
-    const enc = kitsParaComp(compObjActual, kits)
+    const tipoLabel = tipos.find(t => t.id === tipo)?.label || ''
+    const enc = kitsParaComp(compObjActual, kits, tipoLabel)
     setKitsEncontrados(enc)
     if (enc.length === 1 && !kitSelId) {
       setKitSelId(enc[0].id)
       setKitItems((enc[0].items||[]).map(i=>({...i,incluido:true})))
     }
-  }, [compActual, kits, cats])
+  }, [compActual, kits, cats, tipo])
 
   const kitSel       = kits.find(k => k.id === kitSelId) || null
   const compPorFazer = compSel.filter(c => !compFeitos.includes(c))
@@ -115,7 +116,8 @@ export default function Guia({
             const nome = cat.name
             const sel   = compSel.includes(nome)
             const feito = compFeitos.includes(nome)
-            const nKits = kitsParaComp({ destCat: nome, sempreCalculadora: false }, kits).length
+            const tipoLbl = tipos.find(t => t.id === tipo)?.label || ''
+            const nKits = kitsParaComp({ destCat: nome, sempreCalculadora: false }, kits, tipoLbl).length
             const cor   = cat.cor || '#c8943a'
             const corR  = hexToRgb(cor)
             return (

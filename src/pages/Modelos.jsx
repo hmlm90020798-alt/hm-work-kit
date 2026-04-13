@@ -14,7 +14,7 @@ export default function Modelos({ showToast, copiedRefs, markCopied, userId }) {
   const [detailId, setDetailId] = useState(null)  // só guardamos o ID
   const [modal,    setModal]    = useState(false)
   const [editId,   setEditId]   = useState(null)
-  const [form,     setForm]     = useState({ name:'', contexto:'', notas:'' })
+  const [form,     setForm]     = useState({ name:'', contexto:'', notas:'', categoria:'' })
   const [artSearch, setArtSearch] = useState('')
   const [artModal,  setArtModal]  = useState(false)
   // Ordenação da lista de kits — persistida no Firestore
@@ -67,7 +67,7 @@ export default function Modelos({ showToast, copiedRefs, markCopied, userId }) {
   // ── CRUD modelo ──────────────────────────────────────────────────────────
   const saveModelo = async () => {
     if (!form.name.trim()) { showToast('Nome obrigatório'); return }
-    const data = { name:form.name.trim(), contexto:form.contexto.trim(), notas:form.notas.trim() }
+    const data = { name:form.name.trim(), contexto:form.contexto.trim(), notas:form.notas.trim(), categoria:form.categoria.trim() }
     try {
       if (editId) {
         const prev = modelos.find(m=>m.id===editId)
@@ -93,7 +93,7 @@ export default function Modelos({ showToast, copiedRefs, markCopied, userId }) {
 
   const openEdit = (m) => {
     setEditId(m.id)
-    setForm({name:m.name, contexto:m.contexto||'', notas:m.notas||''})
+    setForm({name:m.name, contexto:m.contexto||'', notas:m.notas||'', categoria:m.categoria||''})
     setModal(true)
   }
 
@@ -240,6 +240,7 @@ export default function Modelos({ showToast, copiedRefs, markCopied, userId }) {
           <div style={{display:'flex',alignItems:'baseline',gap:12,marginBottom:2}}>
             <span style={{fontFamily:"'Barlow Condensed'",fontSize:20,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',color:'var(--neo-text)'}}>{modelo.name}</span>
             {modelo.contexto&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--neo-gold2)'}}>{modelo.contexto}</span>}
+            {modelo.categoria&&<span style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--neo-text2)',background:'rgba(255,255,255,0.05)',padding:'1px 7px',borderRadius:'var(--neo-radius-pill)'}}>cat: {modelo.categoria}</span>}
           </div>
           {modelo.notas&&<div style={{fontSize:12,fontWeight:300,color:'var(--neo-text2)',marginTop:4,lineHeight:1.5}}>{modelo.notas}</div>}
           <div style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-text2)',marginTop:6,letterSpacing:'0.1em'}}>
@@ -659,6 +660,13 @@ function ModeloFormModal({open,editId,form,setForm,onSave,onClose}){
           <label style={L}>Notas</label>
           <textarea value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))}
             placeholder="Descrição, parceiro, observações…" style={{...I,resize:'vertical',minHeight:60}}/>
+        </div>
+        <div className="frow">
+          <label style={L}>Categoria da Biblioteca (opcional)</label>
+          <div style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:'var(--neo-text2)',letterSpacing:'0.08em',marginBottom:8}}>Liga este kit a uma categoria - aparece automaticamente no guia de projectos</div>
+          <input value={form.categoria} onChange={e=>setForm(f=>({...f,categoria:e.target.value}))}
+            placeholder="ex: Eletrodomesticos, Sanitarios, Ferragens…"
+            style={{...I,fontFamily:"'Barlow Condensed'",fontSize:13,letterSpacing:'0.06em'}}/>
         </div>
         <div className="modal-actions">
           <button className="neo-btn neo-btn-ghost" onClick={onClose}>Cancelar</button>

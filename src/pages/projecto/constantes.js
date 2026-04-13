@@ -73,14 +73,25 @@ export function resolverComp(catName, cats) {
 }
 
 // Kits que correspondem a um componente
-export function kitsParaComp(comp, kits) {
+// Prioridade: 1) campo categoria do kit bate com destCat
+//             2) fallback: nome ou contexto do kit contém o nome da categoria
+export function kitsParaComp(comp, kits, tipoLabel) {
   if (!comp || comp.sempreCalculadora) return []
   if (!comp.destCat) return []
   const cat = comp.destCat.toLowerCase()
+  const tipo = (tipoLabel||'').toLowerCase()
   return kits.filter(k => {
+    // 1. Correspondencia directa pelo campo categoria (novo campo)
+    if (k.categoria) {
+      return (k.categoria||'').toLowerCase() === cat
+    }
+    // 2. Fallback: nome do kit contém a categoria
     const kn = (k.name||'').toLowerCase()
+    if (kn.includes(cat)) return true
+    // 3. Fallback: contexto do kit bate com tipo de projecto E nome do kit menciona categoria
     const kc = (k.contexto||'').toLowerCase()
-    return kn.includes(cat) || kc.includes(cat) || cat.includes(kn)
+    if (kc.includes(tipo) && cat.split(' ').some(w => w.length > 3 && kn.includes(w))) return true
+    return false
   })
 }
 
