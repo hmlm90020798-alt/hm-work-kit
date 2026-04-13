@@ -1,6 +1,16 @@
 // Componentes especiais - nao sao categorias da Biblioteca
 export const ESPECIAIS = [
   {
+    id: 'base',
+    label: 'Kit base',
+    icon: '📦',
+    desc: 'Artigos essenciais do projecto',
+    cor: '#c8943a',
+    destino: null,
+    destCat: null,
+    kitBase: true,  // kits ligados pelo contexto = tipo do projecto
+  },
+  {
     id: 'instalacao',
     label: 'Instalacao',
     icon: '🛠',
@@ -20,6 +30,10 @@ export const ESPECIAIS = [
     sempreCalculadora: true,
   },
 ]
+
+// Categorias da Biblioteca que NAO devem aparecer na lista do guia
+// (ja estao representadas pelos especiais)
+export const CATS_IGNORADAS = ['Tampos', 'tampos']
 
 // Sugestoes por defeito para cada tipo de projecto (nomes de categorias)
 // Estas sao apenas sugestoes - o utilizador pode alterar em preferencias
@@ -73,24 +87,31 @@ export function resolverComp(catName, cats) {
 }
 
 // Kits que correspondem a um componente
-// Prioridade: 1) campo categoria do kit bate com destCat
-//             2) fallback: nome ou contexto do kit contém o nome da categoria
+// Kit base: kits cujo contexto bate com o tipo do projecto
+// Outros: campo categoria do kit bate com destCat, ou fallback por nome
 export function kitsParaComp(comp, kits, tipoLabel) {
   if (!comp || comp.sempreCalculadora) return []
+  const tipo = (tipoLabel||'').toLowerCase()
+
+  // Kit base - usa contexto do kit para bater com tipo do projecto
+  if (comp.kitBase) {
+    return kits.filter(k => {
+      const kc = (k.contexto||'').toLowerCase()
+      return kc === tipo || tipo.includes(kc) || kc.includes(tipo)
+    })
+  }
+
   if (!comp.destCat) return []
   const cat = comp.destCat.toLowerCase()
-  const tipo = (tipoLabel||'').toLowerCase()
+
   return kits.filter(k => {
-    // 1. Correspondencia directa pelo campo categoria (novo campo)
+    // 1. Campo categoria do kit (ligacao directa)
     if (k.categoria) {
       return (k.categoria||'').toLowerCase() === cat
     }
     // 2. Fallback: nome do kit contém a categoria
     const kn = (k.name||'').toLowerCase()
     if (kn.includes(cat)) return true
-    // 3. Fallback: contexto do kit bate com tipo de projecto E nome do kit menciona categoria
-    const kc = (k.contexto||'').toLowerCase()
-    if (kc.includes(tipo) && cat.split(' ').some(w => w.length > 3 && kn.includes(w))) return true
     return false
   })
 }
@@ -99,6 +120,7 @@ export function kitsParaComp(comp, kits, tipoLabel) {
 export function temItensParaComp(comp, orcItems, kits, kitSelId) {
   if (!comp) return false
   if (comp.sempreCalculadora) return orcItems.some(i => i.origem === 'Tampos')
+  if (comp.kitBase) return orcItems.some(i => i.origem && !['Tampos','Mao de Obra'].includes(i.origem))
   if (comp.destino === 'maodeobra') return orcItems.some(i =>
     (i.origem||'').toLowerCase().includes('mao') || (i.origem||'').toLowerCase().includes('instalac')
   )

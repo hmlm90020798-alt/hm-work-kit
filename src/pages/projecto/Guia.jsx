@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { db } from '../../firebase'
 import { collection, onSnapshot } from 'firebase/firestore'
 import { addToOrcamento } from '../../hooks/useOrcamento'
-import { ESPECIAIS, f2, hexToRgb, resolverComp, kitsParaComp, temItensParaComp } from './constantes'
+import { ESPECIAIS, CATS_IGNORADAS, f2, hexToRgb, resolverComp, kitsParaComp, temItensParaComp } from './constantes'
 import { PassoHeader, CompCard, KitItemRow } from './ui'
 
 export default function Guia({
@@ -111,8 +111,8 @@ export default function Guia({
       <div>
         <PassoHeader numero={2} titulo="O que inclui este projecto?" sub="Selecciona as categorias a tratar"/>
         <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:20 }}>
-          {/* Categorias da Biblioteca */}
-          {cats.map(cat => {
+          {/* Categorias da Biblioteca (excluindo as que ja existem como especiais) */}
+          {cats.filter(cat => !CATS_IGNORADAS.includes(cat.name) && !CATS_IGNORADAS.includes(cat.id)).map(cat => {
             const nome = cat.name
             const sel   = compSel.includes(nome)
             const feito = compFeitos.includes(nome)
@@ -313,10 +313,15 @@ export default function Guia({
 
         {!comp.sempreCalculadora && comp.destino !== 'maodeobra' && !temKits && (
           <CompCard comp={comp} corR={corR}>
-            <p>Selecciona os artigos de "{comp.destCat||comp.label}" na Biblioteca e volta aqui.</p>
-            <button onClick={()=>onNavegar?.('biblioteca', comp.destCat||comp.label)} className="neo-btn neo-btn-gold" style={{ height:48, padding:'0 32px', fontSize:11, letterSpacing:'0.12em' }}>
-              Abrir {comp.label}
-            </button>
+            {comp.kitBase
+              ? <p>Nao existem kits para este tipo de projecto. Cria um kit em "Kits" com o contexto "{tipos.find(t=>t.id===tipo)?.label||''}".</p>
+              : <p>Selecciona os artigos de "{comp.destCat||comp.label}" na Biblioteca e volta aqui.</p>
+            }
+            {!comp.kitBase && (
+              <button onClick={()=>onNavegar?.('biblioteca', comp.destCat||comp.label)} className="neo-btn neo-btn-gold" style={{ height:48, padding:'0 32px', fontSize:11, letterSpacing:'0.12em' }}>
+                Abrir {comp.label}
+              </button>
+            )}
           </CompCard>
         )}
 
