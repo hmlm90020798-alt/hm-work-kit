@@ -207,8 +207,8 @@ export default function Guia({
     )
   }
 
-  //  PASSO EXECUCAO 
-  if (passo === 'execucao' && compActual && compObjActual) {
+  //  PASSO EXECUCAO
+  if (passo === 'execucao' && compActual && compObjActual) { return (() => {
     const comp  = compObjActual
     const corR  = hexToRgb(comp.cor)
     const proximo = compSel.find(c=>c!==compActual&&!compFeitos.includes(c))
@@ -430,10 +430,11 @@ export default function Guia({
         )}
       </div>
     )
+  })()
   }
 
   //  RESUMO 
-  if (passo === 'resumo') {
+  if (passo === 'resumo') { return (() => {
     const tipoActual2 = tipos.find(t => t.id === tipo)
     const totalOrc = orcItems.reduce((s,i) => s + (i.price||0) * (i.qty||1), 0)
     return (
@@ -468,6 +469,7 @@ export default function Guia({
         </div>
       </div>
     )
+  })()
   }
 
   return null
