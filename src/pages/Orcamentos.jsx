@@ -84,6 +84,13 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
     catch { showToast('Erro ao remover item') }
   }
 
+  const removeGrupo = async (origem) => {
+    if (!activoProjId) return
+    const newItems = items.filter(i => i.origem !== origem)
+    try { await setDoc(makeOrcRef(activoProjId), {...orc, items:newItems}); showToast(origem+' removido') }
+    catch { showToast('Erro ao remover categoria') }
+  }
+
   // Substituir artigo no orçamento
   const substituir = async (itemIdx, artNovo) => {
     if (!activoProjId) return
@@ -286,6 +293,16 @@ export default function Orcamentos({ showToast, onOpenTampo, copiedRefs, markCop
                           onMouseOver={e=>e.currentTarget.style.opacity='1'}
                           onMouseOut={e=>e.currentTarget.style.opacity='.6'}
                         >⎘</button>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation()
+                            if (window.confirm('Remover todos os artigos de "'+origem+'"?')) removeGrupo(origem)
+                          }}
+                          title="Remover categoria"
+                          style={{ background:'transparent', border:'none', cursor:'pointer', padding:'2px 6px', borderRadius:'var(--neo-radius-pill)', color:'var(--neo-text2)', fontSize:11, lineHeight:1, opacity:0.5, transition:'opacity .15s' }}
+                          onMouseOver={e=>e.currentTarget.style.opacity='1'}
+                          onMouseOut={e=>e.currentTarget.style.opacity='.5'}
+                        >✕</button>
                       </div>
                     )}
                     <span style={{ fontSize:10, color:'var(--neo-text2)', marginLeft:gtotal>0?0:0, transform:isCol?'rotate(-90deg)':'rotate(0deg)', transition:'transform .2s', display:'inline-block' }}>▾</span>
