@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { db } from './firebase'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore'
 import Biblioteca from './pages/Biblioteca'
 import Modelos from './pages/Modelos'
 import Orcamentos from './pages/Orcamentos'
@@ -11,12 +11,13 @@ import IA from './pages/IA'
 import KC from './pages/KC'
 import Proposta from './pages/Proposta'
 import Projecto from './pages/Projecto'
+import Bundles from './pages/Bundles'
 import Login from './pages/Login'
 import Toast from './components/Toast'
 import { useToast } from './hooks/useToast'
 
 const PAGES = [
-  { id:'projecto',   label:'Novo Projecto', sub:'Guia passo a passo'        },
+  { id:'projecto',   label:'Projectos',     sub:'Guia passo a passo'        },
   { id:'biblioteca', label:'Biblioteca',    sub:'Artigos e referências'      },
   { id:'modelos',    label:'Kits',          sub:'Templates de projecto'      },
   { id:'orcamentos', label:'Orçamentos',    sub:'Cálculo de material'        },
@@ -25,29 +26,39 @@ const PAGES = [
   { id:'ia',         label:'IA',            sub:'Assistente de orçamentação' },
   { id:'kc',         label:'KC',            sub:'Cozinhas Centralizadas'     },
   { id:'proposta',   label:'Proposta',      sub:'Decomposição do orçamento'  },
+  { id:'bundles',    label:'Bundles',       sub:'Artigo → complementos'      },
 ]
 
-const DEFAULT_ORDER = PAGES.map(p => p.id)
-const prefsRef = (uid) => doc(db, 'preferencias', uid)
+const DEFAULT_ORDER     = PAGES.map(p => p.id)
+const prefsRef          = (uid) => doc(db, 'preferencias', uid)
+const activoRef         = (uid) => doc(db, 'projecto_ativo', uid)
+
+const TIPO_LABELS = {
+  cozinha:'🍳 Cozinha', banho:'🚿 Casa de Banho', closet:'👕 Closet',
+  suite:'🛏 Suíte', escritorio:'💼 Escritório', outro:'✦ Outro',
+}
 
 function Shell() {
   const { user, loading, logout } = useAuth()
-  const [page, setPage]             = useState('projecto')   // abre no guia
-  const [menuOpen, setMenuOpen]     = useState(true)
-  const [editMenu, setEditMenu]     = useState(false)
-  const [menuOrder, setMenuOrder]   = useState(DEFAULT_ORDER)
+  const [page, setPage]               = useState('projecto')
+  const [menuOpen, setMenuOpen]       = useState(true)
+  const [editMenu, setEditMenu]       = useState(false)
+  const [menuOrder, setMenuOrder]     = useState(DEFAULT_ORDER)
   const [prefsLoaded, setPrefsLoaded] = useState(false)
   const [tampoParaAbrir, setTampoParaAbrir] = useState(null)
-  // filtro de categoria para quando o Projecto navega para a Biblioteca
-  const [bibCatFiltro, setBibCatFiltro] = useState(null)
+  const [bibCatFiltro, setBibCatFiltro]     = useState(null)
+
+  // Banner — projecto activo em tempo real
+  const [projectoActivo, setProjectoActivo] = useState(null) // dados completos do projecto
+  const [activoProjId,   setActivoProjId]   = useState(null) // projId actualmente aberto
+
   const { msg, visible, showToast } = useToast()
 
-  // Estado global de referências copiadas
   const [copiedRefs, setCopiedRefs] = useState(new Set())
   const markCopied  = (ref) => setCopiedRefs(prev => new Set([...prev, ref]))
   const clearCopied = () => setCopiedRefs(new Set())
 
-  // Carregar preferências do Firestore
+  // Preferências (menuOrder) do Firestore
   useEffect(() => {
     if (!user) return
     getDoc(prefsRef(user.uid)).then(snap => {
@@ -76,6 +87,25 @@ function Shell() {
     })
   }, [user])
 
+  // Ouvir qual o projId activo
+  useEffect(() => {
+    if (!user) return
+    const unsub = onSnapshot(activoRef(user.uid), snap => {
+      const id = snap.exists() ? snap.data().projId : null
+      setActivoProjId(id || null)
+    })
+    return () => unsub()
+  }, [user])
+
+  // Ouvir os dados do projecto activo (para o banner)
+  useEffect(() => {
+    if (!activoProjId) { setProjectoActivo(null); return }
+    const unsub = onSnapshot(doc(db, 'projectos', activoProjId), snap => {
+      setProjectoActivo(snap.exists() ? snap.data() : null)
+    })
+    return () => unsub()
+  }, [activoProjId])
+
   const orderedPages = menuOrder.map(id => PAGES.find(p => p.id === id)).filter(Boolean)
 
   const moveMenuItem = (idx, dir) => {
@@ -99,9 +129,8 @@ function Shell() {
 
   if (!user) return <Login />
 
-  const goTo = (id) => { setPage(id); setMenuOpen(false) }
+  const goTo = (id) => { setPage(id); setMenuOpen(false); if (id !== 'biblioteca') setBibCatFiltro(null) }
 
-  // Navegação a partir do Projecto — permite passar filtro de categoria
   const navegarDeProjecto = (destino, catFiltro = null) => {
     setBibCatFiltro(catFiltro)
     setPage(destino)
@@ -110,11 +139,14 @@ function Shell() {
 
   const copyProps = { copiedRefs, markCopied, clearCopied }
 
-  // Cor de destaque por página — "Novo Projecto" tem cor especial
-  const corPagina = (id) => {
-    if (id === 'projecto') return '#e8cc8a'
-    return '#f0ede8'
-  }
+  // Banner: há projecto activo com passo além de "tipo" e com total > 0
+  const mostrarBanner = page !== 'projecto'
+    && projectoActivo
+    && projectoActivo.projId
+
+  const tipoLabel = projectoActivo?.tipo
+    ? (TIPO_LABELS[projectoActivo.tipo] || projectoActivo.tipo)
+    : null
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden', background:'#0a0a09' }}>
@@ -122,9 +154,9 @@ function Shell() {
       {/* HEADER */}
       <header style={{
         display:'flex', alignItems:'center', justifyContent:'space-between',
-        padding:'0 20px', height:52,
-        background:'#0a0a09', flexShrink:0, position:'relative', zIndex:10,
-        boxShadow: menuOpen ? 'none' : '0 1px 0 rgba(255,255,255,0.04)'
+        padding:'0 20px', height:52, background:'#0a0a09', flexShrink:0,
+        position:'relative', zIndex:10,
+        boxShadow: menuOpen ? 'none' : '0 1px 0 rgba(255,255,255,0.04)',
       }}>
         <button onClick={() => setMenuOpen(o=>!o)} style={{ background:'transparent', border:'none', cursor:'pointer', padding:'6px', display:'flex', flexDirection:'column', gap:5 }}>
           <span style={{ display:'block', width:22, height:1, background:'rgba(255,255,255,0.4)', transition:'all .25s', transform: menuOpen ? 'rotate(45deg) translateY(3px)' : 'none' }}/>
@@ -161,9 +193,7 @@ function Shell() {
           <div style={{ height:1, background:'linear-gradient(90deg, transparent 0%, rgba(200,169,110,0.3) 50%, transparent 100%)', flexShrink:0 }}/>
 
           <nav style={{ flex:1, overflowY:'auto', padding:'16px 20px' }}>
-            {/* Layout fixo em cartões — ignora menuOrder em modo normal, usa-o só no editMenu */}
             {editMenu ? (
-              /* MODO EDIÇÃO — lista linear para reordenar */
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                 {orderedPages.map((p, i) => (
                   <div key={p.id} style={{ display:'flex', alignItems:'center', gap:10,
@@ -183,106 +213,102 @@ function Shell() {
                 ))}
               </div>
             ) : (
-              /* MODO NORMAL — grid de cartões */
-              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
 
-                {/* Hero — Novo Projecto */}
+                {/* Hero — Projectos */}
                 {(() => {
                   const p = PAGES.find(x => x.id === 'projecto')
                   const isActive = page === 'projecto'
                   return (
                     <button key="projecto" onClick={() => goTo('projecto')}
-                      className="proj-kit-card"
-                      style={{
-                        width:'100%', background:'#0f0f0e', border:`1px solid ${isActive ? '#c8a96e' : 'rgba(255,255,255,0.07)'}`,
-                        borderRadius:6, padding:'16px 20px', cursor:'pointer', textAlign:'left',
-                        display:'flex', alignItems:'center', justifyContent:'space-between',
-                        transition:'all .15s',
-                      }}>
-                      <div>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:24, fontWeight:700,
-                          letterSpacing:'0.07em', textTransform:'uppercase',
-                          color: isActive ? '#e8cc8a' : '#c8a96e', lineHeight:1, marginBottom:4 }}>
-                          <span style={{
-                            display:'inline-block', width:7, height:7, borderRadius:'50%',
-                            background:'#e8cc8a', boxShadow:'0 0 8px rgba(232,204,138,0.6)',
-                            marginRight:9, verticalAlign:'middle', position:'relative', top:-1,
-                          }}/>
-                          {p.label}
+                      className="menu-card-hero"
+                      style={{ width:'100%', background:'#0f0f0e',
+                        border:`1px solid ${isActive ? 'rgba(200,169,110,.4)' : 'rgba(255,255,255,0.07)'}`,
+                        borderRadius:6, cursor:'pointer', textAlign:'left', overflow:'hidden', padding:0 }}>
+                      <div style={{ height:3, background:'linear-gradient(90deg,#c8a96e,#8a6e3a)' }}/>
+                      <div style={{ padding:'14px 18px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                        <div>
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:24, fontWeight:700,
+                            letterSpacing:'0.07em', textTransform:'uppercase', color:'#c8a96e', lineHeight:1 }}>
+                            <span style={{ display:'inline-block', width:7, height:7, borderRadius:'50%',
+                              background:'#e8cc8a', boxShadow:'0 0 8px rgba(232,204,138,0.6)',
+                              marginRight:9, verticalAlign:'middle', position:'relative', top:-1,
+                              animation:'pulse-gold 2s ease-in-out infinite' }}/>
+                            {p.label}
+                          </div>
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.18em',
+                            textTransform:'uppercase', color:'#7a7a72', marginTop:5 }}>{p.sub}</div>
                         </div>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.16em',
-                          textTransform:'uppercase', color: isActive ? '#b8943a' : '#4a4a42' }}>{p.sub}</div>
+                        <span style={{ fontFamily:"'Barlow Condensed'", fontSize:14, color:'#6a5a2a' }}>→</span>
                       </div>
-                      <span style={{ fontFamily:"'Barlow Condensed'", fontSize:14,
-                        color: isActive ? '#b8943a' : '#2a2a27', transition:'color .2s' }}>→</span>
                     </button>
                   )
                 })()}
 
                 {/* Linha 1 — Biblioteca, Kits, Tampos */}
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
                   {['biblioteca','modelos','tampos'].map(id => {
                     const p = PAGES.find(x => x.id === id)
                     const isActive = page === id
                     return (
-                      <button key={id} onClick={() => goTo(id)}
-                        className="proj-kit-card"
-                        style={{
-                          background:'#0f0f0e', border:`1px solid ${isActive ? '#38bdf8' : 'rgba(255,255,255,0.07)'}`,
-                          borderRadius:6, padding:'12px 14px', cursor:'pointer', textAlign:'left',
-                          transition:'all .15s',
-                        }}>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
-                          letterSpacing:'0.06em', textTransform:'uppercase',
-                          color: isActive ? '#38bdf8' : '#f0ede8', lineHeight:1, marginBottom:3 }}>{p.label}</div>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em',
-                          textTransform:'uppercase', color: isActive ? '#1a8ab8' : '#3a3a35' }}>{p.sub}</div>
+                      <button key={id} onClick={() => goTo(id)} className="menu-card"
+                        style={{ background:'#0f0f0e',
+                          border:`1px solid ${isActive ? 'rgba(56,189,248,.35)' : 'rgba(255,255,255,0.07)'}`,
+                          borderRadius:6, cursor:'pointer', textAlign:'left', overflow:'hidden', padding:0 }}>
+                        <div style={{ height:2, background: isActive ? '#38bdf8' : '#1e5a72' }}/>
+                        <div style={{ padding:'10px 12px' }}>
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
+                            letterSpacing:'0.06em', textTransform:'uppercase',
+                            color: isActive ? '#38bdf8' : '#e8e4dc', lineHeight:1, marginBottom:4 }}>{p.label}</div>
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em',
+                            textTransform:'uppercase', color:'#6a6760' }}>{p.sub}</div>
+                        </div>
                       </button>
                     )
                   })}
                 </div>
 
                 {/* Linha 2 — Mão de Obra, IA, KC */}
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
                   {['maodeobra','ia','kc'].map(id => {
                     const p = PAGES.find(x => x.id === id)
                     const isActive = page === id
                     return (
-                      <button key={id} onClick={() => goTo(id)}
-                        className="proj-kit-card"
-                        style={{
-                          background:'#0f0f0e', border:`1px solid ${isActive ? '#38bdf8' : 'rgba(255,255,255,0.07)'}`,
-                          borderRadius:6, padding:'12px 14px', cursor:'pointer', textAlign:'left',
-                          transition:'all .15s',
-                        }}>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
-                          letterSpacing:'0.06em', textTransform:'uppercase',
-                          color: isActive ? '#38bdf8' : '#f0ede8', lineHeight:1, marginBottom:3 }}>{p.label}</div>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em',
-                          textTransform:'uppercase', color: isActive ? '#1a8ab8' : '#3a3a35' }}>{p.sub}</div>
+                      <button key={id} onClick={() => goTo(id)} className="menu-card"
+                        style={{ background:'#0f0f0e',
+                          border:`1px solid ${isActive ? 'rgba(56,189,248,.35)' : 'rgba(255,255,255,0.07)'}`,
+                          borderRadius:6, cursor:'pointer', textAlign:'left', overflow:'hidden', padding:0 }}>
+                        <div style={{ height:2, background: isActive ? '#38bdf8' : '#1e5a72' }}/>
+                        <div style={{ padding:'10px 12px' }}>
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
+                            letterSpacing:'0.06em', textTransform:'uppercase',
+                            color: isActive ? '#38bdf8' : '#e8e4dc', lineHeight:1, marginBottom:4 }}>{p.label}</div>
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em',
+                            textTransform:'uppercase', color:'#6a6760' }}>{p.sub}</div>
+                        </div>
                       </button>
                     )
                   })}
                 </div>
 
                 {/* Linha 3 — Orçamentos + Proposta */}
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
                   {['orcamentos','proposta'].map(id => {
                     const p = PAGES.find(x => x.id === id)
                     const isActive = page === id
                     return (
-                      <button key={id} onClick={() => goTo(id)}
-                        className="proj-kit-card"
-                        style={{
-                          background:'#0f0f0e', border:`1px solid ${isActive ? '#c8a96e' : 'rgba(255,255,255,0.07)'}`,
-                          borderRadius:6, padding:'12px 14px', cursor:'pointer', textAlign:'left',
-                          transition:'all .15s',
-                        }}>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
-                          letterSpacing:'0.06em', textTransform:'uppercase',
-                          color: isActive ? '#c8a96e' : '#f0ede8', lineHeight:1, marginBottom:3 }}>{p.label}</div>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em',
-                          textTransform:'uppercase', color: isActive ? '#8a6e3a' : '#3a3a35' }}>{p.sub}</div>
+                      <button key={id} onClick={() => goTo(id)} className="menu-card-gold"
+                        style={{ background:'#0f0f0e',
+                          border:`1px solid ${isActive ? 'rgba(200,169,110,.35)' : 'rgba(200,169,110,.1)'}`,
+                          borderRadius:6, cursor:'pointer', textAlign:'left', overflow:'hidden', padding:0 }}>
+                        <div style={{ height:2, background: isActive ? '#c8a96e' : '#5a3e14' }}/>
+                        <div style={{ padding:'10px 12px' }}>
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700,
+                            letterSpacing:'0.06em', textTransform:'uppercase',
+                            color:'#c8a96e', lineHeight:1, marginBottom:4 }}>{p.label}</div>
+                          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em',
+                            textTransform:'uppercase', color:'#6a6760' }}>{p.sub}</div>
+                        </div>
                       </button>
                     )
                   })}
@@ -312,51 +338,49 @@ function Shell() {
       {/* PÁGINA */}
       <main style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
 
-        {/* Banner "← Voltar ao Projecto" — visível em todas as páginas excepto no próprio Projecto */}
-        {page !== 'projecto' && (() => {
-          const estado = (() => { try { return JSON.parse(localStorage.getItem('hm_proj_estado')) } catch { return null } })()
-          const temProjecto = estado && estado.passo && estado.passo !== 'tipo'
-          if (!temProjecto) return null
-          const tipoLabel = estado.tipo
-            ? (['cozinha','banho','closet','suite','escritorio','outro'].includes(estado.tipo)
-                ? {cozinha:'🍳 Cozinha',banho:'🚿 Casa de Banho',closet:'👕 Closet',suite:'🛏 Suíte',escritorio:'💼 Escritório',outro:'✦ Outro'}[estado.tipo]
-                : estado.tipo)
-            : null
-          return (
-            <button onClick={() => goTo('projecto')} style={{
-              display:'flex', alignItems:'center', gap:10,
-              padding:'8px 16px', background:'rgba(200,169,110,0.07)',
-              border:'none', borderBottom:'1px solid rgba(200,169,110,0.15)',
-              cursor:'pointer', width:'100%', textAlign:'left',
-              flexShrink:0, transition:'background .15s',
-            }}
-            onMouseOver={e=>e.currentTarget.style.background='rgba(200,169,110,0.12)'}
-            onMouseOut={e=>e.currentTarget.style.background='rgba(200,169,110,0.07)'}>
-              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-gold)', letterSpacing:'0.1em' }}>←</span>
-              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:600, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-gold)' }}>
-                Voltar ao Projecto
+        {/* Banner "← Voltar ao Projecto" */}
+        {mostrarBanner && (
+          <button onClick={() => goTo('projecto')} style={{
+            display:'flex', alignItems:'center', gap:10,
+            padding:'8px 16px', background:'rgba(200,169,110,0.07)',
+            border:'none', borderBottom:'1px solid rgba(200,169,110,0.15)',
+            cursor:'pointer', width:'100%', textAlign:'left',
+            flexShrink:0, transition:'background .15s',
+          }}
+          onMouseOver={e=>e.currentTarget.style.background='rgba(200,169,110,0.12)'}
+          onMouseOut={e=>e.currentTarget.style.background='rgba(200,169,110,0.07)'}>
+            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-gold)', letterSpacing:'0.1em' }}>←</span>
+            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:600, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-gold)' }}>
+              Voltar ao Projecto
+            </span>
+            {tipoLabel && (
+              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'rgba(200,169,110,0.6)', marginLeft:4 }}>
+                — {tipoLabel}
               </span>
-              {tipoLabel && (
-                <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'rgba(200,169,110,0.6)', marginLeft:4 }}>
-                  — {tipoLabel}
-                </span>
-              )}
-              <span style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', color:'rgba(200,169,110,0.5)', textTransform:'uppercase' }}>
-                em curso
+            )}
+            {projectoActivo?.nome && (
+              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.08em', color:'rgba(200,169,110,0.5)', marginLeft:2 }}>
+                · {projectoActivo.nome}
               </span>
-            </button>
-          )
-        })()}
+            )}
+            {projectoActivo?.total > 0 && (
+              <span style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:700, color:'rgba(200,169,110,0.8)', letterSpacing:'0.08em' }}>
+                {parseFloat(projectoActivo.total).toFixed(2)} €
+              </span>
+            )}
+          </button>
+        )}
 
         {page === 'projecto'   && <Projecto   showToast={showToast} onNavegar={navegarDeProjecto} />}
-        {page === 'biblioteca' && <Biblioteca showToast={showToast} {...copyProps} catFiltroInicial={bibCatFiltro} onCatFiltroUsado={()=>setBibCatFiltro(null)} />}
-        {page === 'modelos'    && <Modelos    showToast={showToast} {...copyProps} />}
-        {page === 'orcamentos' && <Orcamentos showToast={showToast} {...copyProps} onOpenTampo={(c)=>{ setTampoParaAbrir(c); setPage('tampos') }} />}
-        {page === 'tampos'     && <Tampos     showToast={showToast} {...copyProps} abrirCalculo={tampoParaAbrir} onAbrirCalculoDone={()=>setTampoParaAbrir(null)} />}
-        {page === 'maodeobra'  && <MaoDeObra  showToast={showToast} {...copyProps} userId={user.uid} />}
-        {page === 'ia'         && <IA         showToast={showToast} {...copyProps} />}
+        {page === 'biblioteca' && <Biblioteca showToast={showToast} {...copyProps} catFiltroInicial={bibCatFiltro} activoProjId={activoProjId} />}
+        {page === 'modelos'    && <Modelos    showToast={showToast} {...copyProps} userId={user.uid} />}
+        {page === 'orcamentos' && <Orcamentos showToast={showToast} {...copyProps} onOpenTampo={(c)=>{ setTampoParaAbrir(c); setPage('tampos') }} onAbrirProposta={() => <Proposta showToast={showToast} />} activoProjId={activoProjId} />}
+        {page === 'tampos'     && <Tampos     showToast={showToast} {...copyProps} abrirCalculo={tampoParaAbrir} onAbrirCalculoDone={()=>setTampoParaAbrir(null)} activoProjId={activoProjId} />}
+        {page === 'maodeobra'  && <MaoDeObra  showToast={showToast} {...copyProps} userId={user.uid} activoProjId={activoProjId} />}
+        {page === 'ia'         && <IA         showToast={showToast} {...copyProps} activoProjId={activoProjId} />}
         {page === 'kc'         && <KC         showToast={showToast} {...copyProps} />}
-        {page === 'proposta'   && <Proposta   showToast={showToast} />}
+        {page === 'proposta'   && <Proposta   showToast={showToast} activoProjId={activoProjId} />}
+        {page === 'bundles'    && <Bundles    showToast={showToast} />}
       </main>
 
       <Toast msg={msg} visible={visible} />
