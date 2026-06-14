@@ -291,9 +291,9 @@ function Shell() {
                   })}
                 </div>
 
-                {/* Linha 3 — Orçamentos + Proposta */}
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
-                  {['orcamentos','proposta'].map(id => {
+                {/* Linha 3 — Orçamentos + Proposta + Bundles */}
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
+                  {['orcamentos','proposta','bundles'].map(id => {
                     const p = PAGES.find(x => x.id === id)
                     const isActive = page === id
                     return (
