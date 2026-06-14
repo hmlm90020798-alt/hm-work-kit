@@ -474,8 +474,8 @@ export default function Projecto({ showToast, onNavegar }) {
                                 {proj.nome && tObj && (
                                   <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.08em', color:'var(--neo-text2)' }}>{tObj.icon} {tObj.label}</span>
                                 )}
-                                { && (
-                                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'1px 7px', borderRadius:'var(--neo-radius-pill)', background:'rgba(200,169,110,0.1)', color:'var(--neo-gold)', border:'1px solid rgba(200,169,110,0.2)' }}>{}</span>
+                                {guiaEmCurso && (
+                                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'1px 7px', borderRadius:'var(--neo-radius-pill)', background:'rgba(200,169,110,0.1)', color:'var(--neo-gold)', border:'1px solid rgba(200,169,110,0.2)' }}>Em curso</span>
                                 )}
                               </div>
                             </div>
