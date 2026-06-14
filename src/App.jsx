@@ -11,6 +11,7 @@ import IA from './pages/IA'
 import KC from './pages/KC'
 import Proposta from './pages/Proposta'
 import Projecto from './pages/Projecto'
+import Bundles from './pages/Bundles'
 import Login from './pages/Login'
 import Toast from './components/Toast'
 import { useToast } from './hooks/useToast'
@@ -25,6 +26,7 @@ const PAGES = [
   { id:'ia',         label:'IA',            sub:'Assistente de orçamentação' },
   { id:'kc',         label:'KC',            sub:'Cozinhas Centralizadas'     },
   { id:'proposta',   label:'Proposta',      sub:'Decomposição do orçamento'  },
+  { id:'bundles',    label:'Bundles',       sub:'Artigo → complementos'      },
 ]
 
 const DEFAULT_ORDER     = PAGES.map(p => p.id)
@@ -378,6 +380,7 @@ function Shell() {
         {page === 'ia'         && <IA         showToast={showToast} {...copyProps} activoProjId={activoProjId} />}
         {page === 'kc'         && <KC         showToast={showToast} {...copyProps} />}
         {page === 'proposta'   && <Proposta   showToast={showToast} activoProjId={activoProjId} />}
+        {page === 'bundles'    && <Bundles    showToast={showToast} />}
       </main>
 
       <Toast msg={msg} visible={visible} />

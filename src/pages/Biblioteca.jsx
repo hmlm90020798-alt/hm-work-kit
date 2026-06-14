@@ -4,6 +4,8 @@ import { collection, doc, onSnapshot, setDoc, deleteDoc, addDoc, updateDoc } fro
 import '../styles/biblioteca.css'
 import ImportModal from '../components/ImportModal'
 import { addToOrcamento } from '../hooks/useOrcamento'
+import { getBundlesMap } from '../hooks/useBundles'
+import BundlePanel from '../components/BundlePanel'
 
 const SORT_OPTS = [
   { value:'ref',      label:'Referência' },
@@ -53,6 +55,7 @@ export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCop
   const [importModal, setImportModal] = useState(false)
   const [editId, setEditId]       = useState(null)
   const [form, setForm] = useState({ ref:'', desc:'', cat:'', sub:'', price:'', supplier:'', link:'', notes:'', notaIA:'' })
+  const [bundlePanel, setBundlePanel] = useState(null) // { artPrincipal, bundles }
 
   useEffect(() => {
     const u1 = onSnapshot(collection(db,'categorias'), snap => {
@@ -172,6 +175,45 @@ export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCop
 
   const L = { fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:600, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--neo-text2)', display:'block', marginBottom:8 }
   const I = { width:'100%', background:'var(--neo-bg)', border:'none', borderRadius:'var(--neo-radius-sm)', boxShadow:'var(--neo-shadow-in-sm)', padding:'10px 14px', fontFamily:"'Barlow'", fontSize:13, fontWeight:300, color:'var(--neo-text)', outline:'none', transition:'box-shadow .2s' }
+
+  const handleAddOrcBundle = async (art) => {
+    const item = {
+      ref: art.ref, desc: art.desc,
+      cat: art.cat, sub: art.sub || '',
+      price: art.price || 0,
+      supplier: art.supplier || '',
+      link: art.link || '',
+      origem: (art.cat && art.cat !== 'Tampos' && art.cat !== 'Mão de Obra')
+        ? art.cat
+        : ('Bib — ' + (art.cat || 'Biblioteca')),
+    }
+    try {
+      const bundlesMap = await getBundlesMap()
+      const bundles = bundlesMap.get(art.ref) || []
+      if (bundles.length > 0) {
+        setBundlePanel({ artPrincipal: item, bundles })
+      } else {
+        addToOrcamento(activoProjId, item, showToast)
+      }
+    } catch {
+      addToOrcamento(activoProjId, item, showToast)
+    }
+  }
+
+  const handleBundleConfirm = async (itens) => {
+    setBundlePanel(null)
+    for (const item of itens) {
+      await addToOrcamento(activoProjId, {
+        ...item,
+        origem: item.fromBundle
+          ? 'Bundle'
+          : ((item.cat && item.cat !== 'Tampos' && item.cat !== 'Mão de Obra')
+              ? item.cat
+              : ('Bib — ' + (item.cat || 'Biblioteca'))),
+      }, showToast)
+    }
+    showToast(`✓ ${itens.length} artigo${itens.length !== 1 ? 's' : ''} adicionado${itens.length !== 1 ? 's' : ''}`)
+  }
   const sortLabel = SORT_OPTS.find(o=>o.value===sort)?.label || 'Ordenar'
 
   return (
@@ -314,7 +356,7 @@ export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCop
             showToast={showToast}
             wasCopied={copiedRefs.has(a.ref)}
             onCopied={markCopied}
-            onAddOrc={() => addToOrcamento(activoProjId, { ref:a.ref, desc:a.desc, cat:a.cat, sub:a.sub||'', price:a.price||0, supplier:a.supplier||'', link:a.link||'', origem: (a.cat && a.cat !== 'Tampos' && a.cat !== 'Mão de Obra') ? a.cat : ('Bib — ' + (a.cat || 'Biblioteca')) }, showToast)}/>
+            onAddOrc={() => handleAddOrcBundle(a)}/>
         ))}
       </div>
     </div>
@@ -370,6 +412,15 @@ export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCop
 
     <CatModal open={catModal} cats={cats} arts={arts} onClose={()=>setCatModal(false)} onSave={saveCat} showToast={showToast}/>
     <ImportModal open={importModal} onClose={() => setImportModal(false)} mode="biblioteca" showToast={showToast} />
+    {bundlePanel && (
+      <BundlePanel
+        open={!!bundlePanel}
+        artPrincipal={bundlePanel.artPrincipal}
+        bundles={bundlePanel.bundles}
+        onConfirm={handleBundleConfirm}
+        onClose={() => setBundlePanel(null)}
+      />
+    )}
     </>
   )
 }
