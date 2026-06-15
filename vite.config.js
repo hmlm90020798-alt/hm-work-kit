@@ -28,7 +28,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com',
             handler: 'CacheFirst',
             options: { cacheName: 'google-fonts-cache' }
           }
