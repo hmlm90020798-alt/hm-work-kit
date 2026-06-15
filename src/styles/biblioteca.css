@@ -433,3 +433,63 @@
   height: 32px;
   padding: 0 36px 0 14px;
 }
+
+/* ── Chips de categorias ─────────────────────────────────────────────────── */
+.bib-chips-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  background: var(--neo-bg);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  scrollbar-width: none;
+}
+.bib-chips-bar::-webkit-scrollbar { display: none; }
+
+.bib-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: transparent;
+  cursor: pointer;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all .15s;
+}
+.bib-chip:hover {
+  border-color: rgba(255,255,255,0.16);
+  color: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.03);
+}
+.bib-chip.active {
+  background: rgba(200,169,110,0.12);
+  border-color: rgba(200,169,110,0.35);
+  color: var(--neo-gold);
+}
+.bib-chip-count {
+  font-size: 9px;
+  font-weight: 400;
+  opacity: 0.5;
+  letter-spacing: 0.04em;
+}
+.bib-chip.active .bib-chip-count { opacity: 0.7; }
+.bib-chip-manage {
+  margin-left: auto;
+  flex-shrink: 0;
+  border-color: rgba(255,255,255,0.05);
+  font-size: 13px;
+  padding: 4px 10px;
+  color: rgba(255,255,255,0.2);
+}
+.bib-chip-manage:hover { color: var(--neo-gold); border-color: rgba(200,169,110,0.2); background: transparent; }

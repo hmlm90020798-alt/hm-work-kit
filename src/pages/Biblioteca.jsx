@@ -270,64 +270,61 @@ export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCop
         <button className="bib-add-btn" onClick={openAdd}>+ Artigo</button>
       </div>
 
-      {/* LAYOUT DUAS COLUNAS */}
-      <div className="bib-layout">
+      {/* CHIPS DE CATEGORIAS */}
+      <div className="bib-chips-bar">
+        <button
+          onClick={()=>selectCat('Todos')}
+          className={'bib-chip' + (activeCat==='Todos' ? ' active' : '')}>
+          Todos
+          <span className="bib-chip-count">{arts.length}</span>
+        </button>
+        {catsSorted.map(c => (
+          <button
+            key={c.id}
+            onClick={()=>selectCat(c.name)}
+            className={'bib-chip' + (activeCat===c.name ? ' active' : '')}>
+            {c.icon ? c.icon + ' ' : ''}{c.name}
+            <span className="bib-chip-count">{countFor(c.name)}</span>
+          </button>
+        ))}
+        <button
+          onClick={()=>setCatModal(true)}
+          className="bib-chip bib-chip-manage">
+          ⊕
+        </button>
+      </div>
 
-        {/* COLUNA ESQUERDA — categorias sempre visíveis */}
-        <div className="bib-sidebar">
-          <div style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--neo-text3)',padding:'12px 12px 8px',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
-            {filtered.length} artigo{filtered.length!==1?'s':''}
-          </div>
-          <div style={{flex:1,overflowY:'auto',padding:'8px 8px'}}>
-            {['Todos',...catsSorted.map(c=>c.name)].map(name => (
-              <button key={name} onClick={()=>selectCat(name)}
-                style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',padding:'8px 10px',marginBottom:2,borderRadius:6,border:'1px solid transparent',background:activeCat===name?'rgba(200,169,110,0.09)':'transparent',cursor:'pointer',transition:'all .12s',textAlign:'left',
-                  ...(activeCat===name?{borderColor:'rgba(200,169,110,0.18)'}:{})}}
-                onMouseOver={e=>{if(activeCat!==name){e.currentTarget.style.background='rgba(255,255,255,0.03)'}}}
-                onMouseOut={e=>{if(activeCat!==name){e.currentTarget.style.background='transparent'}}}>
-                <span style={{fontFamily:"'Barlow Condensed'",fontSize:11,fontWeight:activeCat===name?700:400,letterSpacing:'0.06em',textTransform:'uppercase',color:activeCat===name?'var(--neo-gold)':'rgba(255,255,255,0.45)',transition:'color .12s'}}>{name}</span>
-                <span style={{fontFamily:"'Barlow Condensed'",fontSize:9,color:activeCat===name?'rgba(200,169,110,0.6)':'rgba(255,255,255,0.2)'}}>{countFor(name)}</span>
-              </button>
-            ))}
-          </div>
-          <div style={{padding:'8px',borderTop:'1px solid rgba(255,255,255,0.04)',display:'flex',flexDirection:'column',gap:4}}>
-            <button onClick={()=>setCatModal(true)} style={{background:'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--neo-text3)',padding:'6px 10px',textAlign:'left',transition:'color .12s',borderRadius:4}}
-              onMouseOver={e=>e.currentTarget.style.color='var(--neo-gold)'}
-              onMouseOut={e=>e.currentTarget.style.color='var(--neo-text3)'}>
-              ⊕ Gerir categorias
-            </button>
-          </div>
+      {/* SUBCATEGORIAS */}
+      {subs.length>0 && (
+        <div className="bib-subs">
+          <button className={`bib-sub-chip ${activeSub===''?'active':''}`} onClick={()=>setActiveSub('')}>Todas</button>
+          {subs.map(s => (
+            <button key={s} className={`bib-sub-chip ${activeSub===s?'active':''}`} onClick={()=>setActiveSub(s)}>{s}</button>
+          ))}
         </div>
+      )}
 
-        {/* COLUNA DIREITA — subcats + lista */}
-        <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+      {/* LISTA */}
+      <div style={{padding:'4px 16px 6px',flexShrink:0,display:'flex',alignItems:'center',gap:8}}>
+        <span style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--neo-text3)'}}>
+          {filtered.length} artigo{filtered.length!==1?'s':''}
+          {activeCat!=='Todos' ? ' em ' + activeCat : ''}
+        </span>
+      </div>
 
-          {/* Subcategorias */}
-          {subs.length>0 && (
-            <div className="bib-subs">
-              <button className={`bib-sub-chip ${activeSub===''?'active':''}`} onClick={()=>setActiveSub('')}>Todas</button>
-              {subs.map(s => (
-                <button key={s} className={`bib-sub-chip ${activeSub===s?'active':''}`} onClick={()=>setActiveSub(s)}>{s}</button>
-              ))}
-            </div>
-          )}
-
-          {/* Lista */}
-          <div className="neo-scroll" style={{flex:1,overflowY:'auto'}}>
-            {filtered.length===0 && <div className="bib-empty">Nenhum artigo</div>}
-            {filtered.map(a => (
-              <ArtCard key={a.id} art={a}
-                onEdit={openEdit}
-                onDel={delArt}
-                onStar={toggleStar}
-                onToggleKC={toggleKC}
-                showToast={showToast}
-                wasCopied={copiedRefs.has(a.ref)}
-                onCopied={markCopied}
-                onAddOrc={() => handleAddOrcBundle(a)}/>
-            ))}
-          </div>
-        </div>
+      <div className="neo-scroll" style={{flex:1,overflowY:'auto'}}>
+        {filtered.length===0 && <div className="bib-empty">Nenhum artigo</div>}
+        {filtered.map(a => (
+          <ArtCard key={a.id} art={a}
+            onEdit={openEdit}
+            onDel={delArt}
+            onStar={toggleStar}
+            onToggleKC={toggleKC}
+            showToast={showToast}
+            wasCopied={copiedRefs.has(a.ref)}
+            onCopied={markCopied}
+            onAddOrc={() => handleAddOrcBundle(a)}/>
+        ))}
       </div>
     </div>
 
