@@ -32,16 +32,35 @@ function sortArts(arts, sort) {
 export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCopied, catFiltroInicial, activoProjId }) {
   const [cats, setCats]           = useState([])
   const [arts, setArts]           = useState([])
-  const [activeCat, setActiveCat] = useState(catFiltroInicial || 'Todos')
+  const [activeCat, setActiveCat] = useState(catFiltroInicial || null)
   const [activeSub, setActiveSub] = useState('')
+  const [vistaHome, setVistaHome] = useState(!catFiltroInicial) // true = ecrã de cards, false = lista
 
   // Aplicar filtro de categoria vindo do Projecto (navegação contextual)
   useEffect(() => {
     if (catFiltroInicial) {
       setActiveCat(catFiltroInicial)
       setActiveSub('')
+      setVistaHome(false)
     }
   }, [catFiltroInicial])
+
+  const entrarCat = (name) => {
+    setActiveCat(name)
+    setActiveSub('')
+    setSearch('')
+    setVistaHome(false)
+  }
+
+  const voltarHome = () => {
+    setVistaHome(true)
+    setActiveCat(null)
+    setActiveSub('')
+    setSearch('')
+    setSupplierFilter('')
+    setOnlyStars(false)
+    setOnlyKC(false)
+  }
   const [search, setSearch]       = useState('')
   const [sort, setSort]           = useState('ref')
   const [sortOpen, setSortOpen]   = useState(false)
@@ -101,7 +120,7 @@ export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCop
   )].sort()
 
   const baseFiltered = arts.filter(a => {
-    const mc = activeCat === 'Todos' ? true
+    const mc = !activeCat || activeCat === 'Todos' ? true
       : activeSub ? (a.cat === activeCat && a.sub === activeSub)
       : a.cat === activeCat
     const q = search.toLowerCase()
@@ -216,12 +235,142 @@ export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCop
   }
   const sortLabel = SORT_OPTS.find(o=>o.value===sort)?.label || 'Ordenar'
 
+  const CAT_ICONS = {
+    'Eletrodomésticos':'⚡','Acessórios':'🔩','Ferragens':'🔧','Lava-louças':'🚿',
+    'Tampos':'⬛','Iluminação':'💡','Material PRO':'📦','Sanitários':'🚿',
+    'Colas · Tintas · Vernizes':'🎨','Decoração':'✦','Caixilharia':'🪟',
+    'Aquecimento e Conforto':'🔥','Limpeza':'🧹','Pavimento e Revestimento':'🪨',
+  }
+
   return (
     <>
     <div className="bib-screen">
 
       {/* TOPBAR */}
       <div className="bib-topbar-v2">
+        {!vistaHome && (
+          <button onClick={voltarHome} style={{flexShrink:0,background:'transparent',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:6,color:'rgba(255,255,255,0.35)',fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.1em',textTransform:'uppercase',padding:'0 4px',transition:'color .15s'}}
+            onMouseOver={e=>e.currentTarget.style.color='#c8a96e'}
+            onMouseOut={e=>e.currentTarget.style.color='rgba(255,255,255,0.35)'}>
+            ← Biblioteca
+          </button>
+        )}
+
+        <div style={{position:'relative',flex:1}}>
+          <input className="bib-search" value={search} onChange={e=>{setSearch(e.target.value);if(vistaHome&&e.target.value)setVistaHome(false)}} placeholder={vistaHome ? "Pesquisar em toda a biblioteca..." : "Pesquisar artigo, referência…"}/>
+          {search
+            ? <button onClick={()=>setSearch('')} style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',background:'transparent',border:'none',cursor:'pointer',color:'var(--neo-text2)',fontSize:13,lineHeight:1}}>✕</button>
+            : <span style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',color:'var(--neo-text2)',fontSize:14,pointerEvents:'none'}}>⌕</span>
+          }
+        </div>
+
+        {!vistaHome && <>
+          <button onClick={()=>setOnlyStars(o=>!o)} title="Só estrelas" style={{flexShrink:0,background:onlyStars?'linear-gradient(145deg,#d4b87a,#b8924a)':'var(--neo-bg2)',border:'none',borderRadius:'var(--neo-radius-pill)',width:32,height:32,cursor:'pointer',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:onlyStars?'var(--neo-shadow-in-sm),var(--neo-glow-gold)':'var(--neo-shadow-out-sm)',color:onlyStars?'#1a1610':'var(--neo-text2)',transition:'all .2s'}}>★</button>
+          <button onClick={()=>setOnlyKC(o=>!o)} title="Só artigos KC" style={{flexShrink:0,background:onlyKC?'linear-gradient(145deg,#6ec6e8,#3a7a9e)':'var(--neo-bg2)',border:'none',borderRadius:'var(--neo-radius-pill)',padding:'0 10px',height:32,cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:700,letterSpacing:'0.14em',boxShadow:onlyKC?'var(--neo-shadow-in-sm)':'var(--neo-shadow-out-sm)',color:onlyKC?'#0f1e26':'var(--neo-text2)',transition:'all .2s',whiteSpace:'nowrap'}}>KC</button>
+          <div style={{position:'relative',flexShrink:0}}>
+            <button onClick={()=>{setSupplierOpen(o=>!o);setSortOpen(false)}} style={{background:supplierFilter?'linear-gradient(145deg,#d4b87a,#b8924a)':'var(--neo-bg2)',border:'none',borderRadius:'var(--neo-radius-pill)',padding:'0 12px',height:32,cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:supplierFilter?'#1a1610':'var(--neo-text2)',boxShadow:supplierFilter?'var(--neo-shadow-in-sm),var(--neo-glow-gold)':'var(--neo-shadow-out-sm)',display:'flex',alignItems:'center',gap:5,whiteSpace:'nowrap',transition:'all .2s'}}>
+              {supplierFilter ? <>{supplierFilter} <span onClick={e=>{e.stopPropagation();setSupplierFilter('');setSupplierOpen(false)}} style={{opacity:.7}}>✕</span></> : 'Marca'}
+            </button>
+            {supplierOpen&&suppliersAvailable.length>0&&(
+              <div className="neo-dropdown" style={{position:'absolute',top:'calc(100% + 6px)',right:0,background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out)',zIndex:50,minWidth:150,overflow:'hidden'}}>
+                <button onClick={()=>{setSupplierFilter('');setSupplierOpen(false)}} style={{display:'block',width:'100%',padding:'9px 14px',background:!supplierFilter?'var(--neo-bg)':'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.1em',textTransform:'uppercase',color:!supplierFilter?'var(--neo-gold)':'var(--neo-text2)',textAlign:'left'}}>Todas</button>
+                {suppliersAvailable.map(s=>(
+                  <button key={s} onClick={()=>{setSupplierFilter(s);setSupplierOpen(false)}} style={{display:'block',width:'100%',padding:'9px 14px',background:supplierFilter===s?'var(--neo-bg)':'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.1em',textTransform:'uppercase',color:supplierFilter===s?'var(--neo-gold)':'var(--neo-text2)',textAlign:'left',transition:'background .12s'}}>{s}</button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div style={{position:'relative',flexShrink:0}}>
+            <button onClick={()=>{setSortOpen(o=>!o);setSupplierOpen(false)}} style={{background:'var(--neo-bg2)',border:'none',borderRadius:'var(--neo-radius-pill)',width:32,height:32,cursor:'pointer',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'var(--neo-shadow-out-sm)',color:'var(--neo-text2)'}}>⇅</button>
+            {sortOpen&&(
+              <div className="neo-dropdown" style={{position:'absolute',top:'calc(100% + 6px)',right:0,background:'var(--neo-bg2)',borderRadius:'var(--neo-radius-sm)',boxShadow:'var(--neo-shadow-out)',zIndex:50,minWidth:140,overflow:'hidden'}}>
+                {SORT_OPTS.filter(o=>o.value!=='star').map(o=>(
+                  <button key={o.value} onClick={()=>{setSort(o.value);setSortOpen(false)}} style={{display:'block',width:'100%',padding:'10px 14px',background:sort===o.value?'var(--neo-bg)':'transparent',border:'none',cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,letterSpacing:'0.1em',textTransform:'uppercase',color:sort===o.value?'var(--neo-gold)':'var(--neo-text2)',textAlign:'left',transition:'background .12s'}}>{o.label}</button>
+                ))}
+              </div>
+            )}
+          </div>
+        </>}
+
+        {copiedRefs.size > 0 && (
+          <button onClick={clearCopied} style={{flexShrink:0,background:'rgba(200,169,110,0.12)',border:'1px solid rgba(200,169,110,0.3)',borderRadius:'var(--neo-radius-pill)',padding:'0 10px',height:32,cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--neo-gold)',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:5}}>
+            ✓ {copiedRefs.size} <span style={{opacity:.6,fontWeight:400}}>limpar</span>
+          </button>
+        )}
+
+        <button onClick={() => setImportModal(true)} style={{flexShrink:0,background:'transparent',border:'1px solid rgba(200,169,110,0.2)',borderRadius:'var(--neo-radius-pill)',padding:'0 12px',height:32,cursor:'pointer',fontFamily:"'Barlow Condensed'",fontSize:10,fontWeight:600,letterSpacing:'0.12em',textTransform:'uppercase',color:'var(--neo-gold)',whiteSpace:'nowrap'}}>↑ Import</button>
+        <button className="bib-add-btn" onClick={openAdd}>+ Artigo</button>
+      </div>
+
+      {/* ECRÃ HOME — cards de categorias */}
+      {vistaHome && !search && (
+        <div className="neo-scroll" style={{flex:1,overflowY:'auto',padding:'24px 20px'}}>
+          <div style={{fontFamily:"'Barlow Condensed'",fontSize:9,fontWeight:600,letterSpacing:'0.22em',textTransform:'uppercase',color:'rgba(255,255,255,0.2)',marginBottom:16}}>
+            Biblioteca · {arts.length} artigos
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:10}}>
+            {/* Card Todos */}
+            <button onClick={()=>entrarCat('Todos')} className="bib-cat-home-card bib-cat-home-todos">
+              <span style={{fontSize:22,marginBottom:10,display:'block'}}>◈</span>
+              <div className="bib-cat-home-name">Todos</div>
+              <div className="bib-cat-home-count">{arts.length} artigos</div>
+              <span className="bib-cat-home-arrow">→</span>
+            </button>
+            {/* Cards por categoria */}
+            {catsSorted.map(c => (
+              <button key={c.id} onClick={()=>entrarCat(c.name)} className="bib-cat-home-card">
+                <span style={{fontSize:22,marginBottom:10,display:'block'}}>{c.icon || CAT_ICONS[c.name] || '📦'}</span>
+                <div className="bib-cat-home-name" style={{color:c.cor||'#e8e4dc'}}>{c.name}</div>
+                <div className="bib-cat-home-count">{countFor(c.name)} artigos</div>
+                <span className="bib-cat-home-arrow">→</span>
+              </button>
+            ))}
+            {/* Card gerir */}
+            <button onClick={()=>setCatModal(true)} className="bib-cat-home-card bib-cat-home-manage">
+              <span style={{fontSize:22,marginBottom:10,display:'block',opacity:0.3}}>⊕</span>
+              <div className="bib-cat-home-name" style={{color:'rgba(255,255,255,0.25)'}}>Gerir categorias</div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ECRÃ LISTA */}
+      {(!vistaHome || search) && (
+        <>
+          {/* Subcategorias */}
+          {subs.length>0 && (
+            <div className="bib-subs">
+              <button className={`bib-sub-chip ${activeSub===''?'active':''}`} onClick={()=>setActiveSub('')}>Todas</button>
+              {subs.map(s => (
+                <button key={s} className={`bib-sub-chip ${activeSub===s?'active':''}`} onClick={()=>setActiveSub(s)}>{s}</button>
+              ))}
+            </div>
+          )}
+
+          <div style={{padding:'6px 18px',flexShrink:0}}>
+            <span style={{fontFamily:"'Barlow Condensed'",fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'rgba(255,255,255,0.2)'}}>
+              {filtered.length} artigo{filtered.length!==1?'s':''}
+              {activeCat && activeCat!=='Todos' ? ' em ' + activeCat : ''}
+            </span>
+          </div>
+
+          <div className="neo-scroll" style={{flex:1,overflowY:'auto'}}>
+            {filtered.length===0 && <div className="bib-empty">Nenhum artigo</div>}
+            {filtered.map(a => (
+              <ArtCard key={a.id} art={a}
+                onEdit={openEdit}
+                onDel={delArt}
+                onStar={toggleStar}
+                onToggleKC={toggleKC}
+                showToast={showToast}
+                wasCopied={copiedRefs.has(a.ref)}
+                onCopied={markCopied}
+                onAddOrc={() => handleAddOrcBundle(a)}/>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
         <div style={{position:'relative',flex:1}}>
           <input className="bib-search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Pesquisar artigo, referência…"/>
           {search

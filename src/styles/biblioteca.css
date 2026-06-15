@@ -493,3 +493,66 @@
   color: rgba(255,255,255,0.2);
 }
 .bib-chip-manage:hover { color: var(--neo-gold); border-color: rgba(200,169,110,0.2); background: transparent; }
+
+/* ── Cards Home de Categorias ────────────────────────────────────────────── */
+.bib-cat-home-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 18px 16px 16px;
+  background: #111110;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .18s;
+  position: relative;
+  overflow: hidden;
+  text-align: left;
+}
+.bib-cat-home-card:hover {
+  border-color: rgba(200,148,58,0.28);
+  background: #161614;
+}
+.bib-cat-home-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #e8e4dc;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+.bib-cat-home-count {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px;
+  color: rgba(255,255,255,0.25);
+  letter-spacing: 0.06em;
+}
+.bib-cat-home-arrow {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  font-size: 14px;
+  color: rgba(255,255,255,0.1);
+  transition: all .18s;
+}
+.bib-cat-home-card:hover .bib-cat-home-arrow {
+  color: #c8943a;
+  transform: translateX(3px);
+}
+.bib-cat-home-todos {
+  background: rgba(200,148,58,0.07);
+  border-color: rgba(200,148,58,0.18);
+}
+.bib-cat-home-todos .bib-cat-home-name { color: #c8a96e; }
+.bib-cat-home-todos .bib-cat-home-count { color: rgba(200,148,58,0.45); }
+.bib-cat-home-todos:hover { background: rgba(200,148,58,0.11); border-color: rgba(200,148,58,0.32); }
+.bib-cat-home-manage {
+  border-style: dashed;
+  border-color: rgba(255,255,255,0.05);
+}
+.bib-cat-home-manage:hover {
+  border-color: rgba(200,148,58,0.15);
+  background: rgba(200,148,58,0.03);
+}
