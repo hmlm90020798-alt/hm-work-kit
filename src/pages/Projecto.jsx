@@ -367,7 +367,7 @@ export default function Projecto({ showToast, onNavegar }) {
       if (kitSelId && !temItensNoOrc(compActual)) { setConfirmSaltar(true); return }
       setPasso('componentes')
     }
-    else if (passo==='resumo') setPasso('execucao')
+    else if (passo==='resumo') setPasso('componentes')
   }
 
   const progressoPct = compSel.length>0 ? Math.round((compFeitos.length/compSel.length)*100) : 0
@@ -779,14 +779,19 @@ export default function Projecto({ showToast, onNavegar }) {
                 <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, color:'var(--neo-text2)', letterSpacing:'0.1em', marginTop:6 }}>{orcItems.length} item{orcItems.length!==1?'s':''} no orçamento</div>
               </div>
             )}
-            <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:24 }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:16 }}>
               {compFeitos.map(id => {
                 const c = COMPONENTES.find(x=>x.id===id)
                 return (
                   <div key={id} style={{ display:'flex', alignItems:'center', gap:12, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius-sm)', border:'1px solid rgba(255,255,255,0.06)', borderLeft:`3px solid ${c?.cor||'var(--neo-gold)'}`, padding:'10px 14px' }}>
                     <span style={{ fontSize:16 }}>{c?.icon}</span>
                     <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:c?.cor||'var(--neo-gold)' }}>{c?.label}</span>
-                    <span style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-gold)', letterSpacing:'0.1em' }}>✓</span>
+                    <button onClick={() => iniciarComp(id)}
+                      style={{ marginLeft:'auto', background:'transparent', border:'1px solid rgba(255,255,255,0.1)', borderRadius:4, padding:'4px 10px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', transition:'all .15s' }}
+                      onMouseOver={e=>{e.currentTarget.style.borderColor='rgba(200,169,110,0.4)';e.currentTarget.style.color='var(--neo-gold)'}}
+                      onMouseOut={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.1)';e.currentTarget.style.color='var(--neo-text2)'}}>
+                      ✎ Editar
+                    </button>
                   </div>
                 )
               })}
@@ -796,9 +801,13 @@ export default function Projecto({ showToast, onNavegar }) {
                 style={{ width:'100%', height:48, fontSize:11 }}>
                 Ver orçamento completo 
               </button>
-              <button onClick={fecharProjecto} className="neo-btn neo-btn-ghost"
+              <button onClick={() => setPasso('componentes')} className="neo-btn neo-btn-ghost"
                 style={{ width:'100%', height:44, fontSize:10 }}>
-                 Voltar à lista de projectos
+                ← Alterar componentes do projecto
+              </button>
+              <button onClick={fecharProjecto} className="neo-btn neo-btn-ghost"
+                style={{ width:'100%', height:44, fontSize:10, opacity:0.6 }}>
+                Voltar à lista de projectos
               </button>
             </div>
           </div>
