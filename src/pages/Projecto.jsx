@@ -408,6 +408,14 @@ export default function Projecto({ showToast, onNavegar }) {
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 16px', height:52, flexShrink:0, background:'var(--neo-bg)', boxShadow:'0 2px 8px rgba(0,0,0,0.4)' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           {passo !== 'tipo' && (
+            <button onClick={fecharProjecto}
+              title="Voltar à lista de projectos"
+              style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--neo-text2)', fontSize:11, padding:'4px 8px', lineHeight:1, fontFamily:"'Barlow Condensed'", letterSpacing:'0.1em', display:'flex', alignItems:'center', gap:4 }}>
+              <span style={{ fontSize:14 }}>←</span>
+              <span style={{ textTransform:'uppercase', fontSize:9, letterSpacing:'0.14em' }}>Projectos</span>
+            </button>
+          )}
+          {passo !== 'tipo' && (
             <button onClick={voltarPasso} style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--neo-text2)', fontSize:18, padding:'4px 6px', lineHeight:1 }}></button>
           )}
           <div>
