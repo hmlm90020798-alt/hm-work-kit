@@ -372,8 +372,6 @@ export default function Biblioteca({ showToast, copiedRefs, markCopied, clearCop
       )}
     </div>
 
-    </div>
-
     {/* MODAL ARTIGO */}
     <div className={`neo-overlay ${artModal?'open':''}`}>
       <div className="neo-modal">
