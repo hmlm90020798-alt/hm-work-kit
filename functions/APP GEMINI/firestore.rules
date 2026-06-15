@@ -1,0 +1,54 @@
+rules_version = '2';
+// ════════════════════════════════════════════════
+// firestore.rules · Work Kit · hm-work-kit
+//
+// DEPLOY:
+//   Na pasta do Work Kit (com .firebaserc → hm-work-kit):
+//     firebase deploy --only firestore:rules
+//
+// NUNCA fazer deploy sem a flag --only firestore:rules
+// para não sobrescrever as rules de outros projectos.
+// ════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Função auxiliar ──────────────────────────
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    // ── Estado persistente de todos os módulos ───
+    // mo_orc, mo_ordem  → Mão de Obra (orçamento + ordem drag-and-drop)
+    // eletros_orc        → Eletros (orçamento)
+    // tampos_calc        → Tampos (calculadora)
+    match /wk_estado/{docId} {
+      allow read, write: if autenticado();
+    }
+
+    // ── Overrides de catálogos ───────────────────
+    // Permitem editar preços/artigos sem tocar no código
+    match /wk_materiais_overrides/{ref} {
+      allow read, write: if autenticado();
+    }
+
+    match /wk_eletros_overrides/{ref} {
+      allow read, write: if autenticado();
+    }
+
+    match /wk_tampos_overrides/{ref} {
+      allow read, write: if autenticado();
+    }
+
+    // ── Configurações (chaves API, preferências) ─
+    // Guardar aqui a chave Groq em vez de no código:
+    //   wk_configuracoes/apiKeys → { groq: "gsk_..." }
+    match /wk_configuracoes/{docId} {
+      allow read, write: if autenticado();
+    }
+
+    // ── Segurança por omissão ─────────────────────
+    // Qualquer coleção não listada acima é bloqueada.
+    // NÃO adicionar match /{document=**} — anularia as regras acima.
+  }
+}

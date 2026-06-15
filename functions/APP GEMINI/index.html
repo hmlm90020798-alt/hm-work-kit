@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Work Kit — Ferramentas de projecto de Hélder Melo">
+<meta name="theme-color" content="#1a0f0a">
+<title>Work Kit · Hélder Melo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="view-login" class="view">
+  <div class="login-bg"></div>
+  <div class="login-box">
+    <div class="login-marca">
+      <div class="login-marca-app"><span class="relevo">Work</span> <span class="brasa">Kit</span></div>
+      <div class="login-marca-sub">Hélder Melo · Ferramentas de Projecto</div>
+    </div>
+    <div class="login-card">
+      <div class="login-label">Email</div>
+      <input type="email" id="login-email" class="login-input" placeholder="email@exemplo.pt"
+             autocomplete="username"
+             onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+      <div class="login-label">Palavra-passe</div>
+      <input type="password" id="login-pass" class="login-input" placeholder="••••••••"
+             autocomplete="current-password"
+             onkeydown="if(event.key==='Enter')window.doLogin()">
+      <button class="login-btn" onclick="window.doLogin()">Entrar</button>
+      <div class="login-error" id="login-error" role="alert"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP PRINCIPAL ══ -->
+<div id="view-app" class="view">
+
+  <!-- Header fixo -->
+  <header class="app-header">
+    <div class="app-header-left">
+      <div class="app-logo"><span class="relevo">Work</span> <span class="brasa">Kit</span></div>
+      <div class="app-logo-sub">Hélder Melo</div>
+    </div>
+    <nav class="app-nav" id="app-nav" role="navigation" aria-label="Módulos">
+      <button class="nav-tab active" data-tab="tampos" onclick="window.switchTab('tampos',this)"
+              title="Tampos e pedra (Alt+1)">
+        🪨 Tampos
+      </button>
+      <button class="nav-tab" data-tab="eletros" onclick="window.switchTab('eletros',this)"
+              title="Electrodomésticos (Alt+2)">
+        ⚡ Eletros
+      </button>
+      <button class="nav-tab" data-tab="materiais" onclick="window.switchTab('materiais',this)"
+              title="Materiais de remodelação (Alt+3)">
+        📦 Materiais
+      </button>
+      <button class="nav-tab" data-tab="maoobra" onclick="window.switchTab('maoobra',this)"
+              title="Mão de Obra (Alt+4)">
+        🔨 Mão de Obra
+      </button>
+      <button class="nav-tab" data-tab="ia" onclick="window.switchTab('ia',this)"
+              title="Assistente IA (Alt+5)">
+        ✦ IA
+      </button>
+    </nav>
+    <div class="app-header-right">
+      <span class="app-sync" id="app-sync" aria-live="polite"></span>
+      <button class="app-logout" onclick="window.doLogout()">Sair</button>
+    </div>
+  </header>
+
+  <!-- Conteúdo das tabs -->
+  <main class="app-body" role="main">
+
+    <!-- ── TAB: TAMPOS ── -->
+    <div class="tab-content active" id="tab-tampos" role="tabpanel">
+      <div id="tampo-header"></div>
+      <div id="tampo-body"></div>
+    </div>
+
+    <!-- ── TAB: ELETROS ── -->
+    <div class="tab-content" id="tab-eletros" role="tabpanel">
+      <div id="eletro-header"></div>
+      <div id="eletro-body"></div>
+    </div>
+
+    <!-- ── TAB: MATERIAIS ── -->
+    <div class="tab-content" id="tab-materiais" role="tabpanel">
+      <div id="mat-header"></div>
+      <div id="mat-grid"></div>
+    </div>
+
+    <!-- ── TAB: IA ── -->
+    <div class="tab-content" id="tab-ia" role="tabpanel">
+      <div id="ia-header"></div>
+      <div id="ia-body"></div>
+    </div>
+
+    <!-- ── TAB: MÃO DE OBRA ── -->
+    <div class="tab-content" id="tab-maoobra" role="tabpanel">
+      <div class="mo-lembrete">
+        <span>⚠️</span>
+        <div>
+          <span class="mo-lembrete-label">LEMBRETE INTERNO</span>
+          <span class="mo-lembrete-cod">49014163</span>
+          <span class="mo-lembrete-desc">— Pedido de Produto para Instalação · Obrigatório em todos os pedidos com instalação</span>
+        </div>
+        <button class="mo-lembrete-copiar" onclick="window.copiarTexto('49014163',this)">⎘ Copiar</button>
+      </div>
+      <div class="page-header page-header-flex" style="margin-top:16px">
+        <div>
+          <div class="page-titulo">Mão de Obra</div>
+          <div class="page-sub">Serviços, preços e códigos LM</div>
+        </div>
+        <button class="btn-pri" id="btn-mo-orc" onclick="window.moTogglePainel()">
+          🔨 Orçamento <span id="badge-mo" style="display:none" class="badge-pill"></span>
+        </button>
+      </div>
+      <div class="mo-cats" id="mo-cats"></div>
+      <div class="mo-lista" id="mo-lista"></div>
+      <!-- Painel de orçamento MO -->
+      <div class="painel-lateral" id="mo-painel" style="display:none">
+        <div class="painel-header">
+          <div class="painel-titulo">Orçamento Mão de Obra</div>
+          <button class="painel-fechar" onclick="window.moTogglePainel()" aria-label="Fechar painel">×</button>
+        </div>
+        <div class="painel-body" id="mo-painel-body"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══ MODAL DE CONFIRMAÇÃO ══ -->
+<div id="modal-confirm" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-confirm-msg">
+  <div class="modal-box">
+    <div class="modal-icon">⚠️</div>
+    <div id="modal-confirm-msg" class="modal-msg"></div>
+    <div class="modal-btns">
+      <button id="modal-confirm-cancel" class="modal-btn-cancel">Cancelar</button>
+      <button id="modal-confirm-ok" class="modal-btn-ok">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST ══ -->
+<div class="wk-toast" id="wk-toast" role="status" aria-live="polite"></div>
+
+<script type="module" src="main.js"></script>
+
+<!-- Atalhos de teclado globais -->
+<script>
+document.addEventListener('keydown', e => {
+  if (!e.altKey) return;
+  const tabs = ['tampos','eletros','materiais','maoobra','ia'];
+  const idx = parseInt(e.key) - 1;
+  if (idx >= 0 && idx < tabs.length && document.getElementById('view-app')?.classList.contains('active')) {
+    e.preventDefault();
+    const btn = document.querySelector(`[data-tab="${tabs[idx]}"]`);
+    if (btn) window.switchTab(tabs[idx], btn);
+  }
+});
+</script>
+</body>
+</html>

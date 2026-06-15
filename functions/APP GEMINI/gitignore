@@ -1,0 +1,55 @@
+# ── Logs ─────────────────────────────────────────
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+firebase-debug.log*
+firebase-debug.*.log*
+
+# ── Firebase ──────────────────────────────────────
+.firebase/
+# .firebaserc   ← manter versionado para deploy consistente
+
+# ── Código morto / ficheiros removidos ───────────
+# assistente.js foi substituído por ia.js — NÃO reintroduzir
+assistente.js
+
+# ── Chaves e segredos — NUNCA versionar ──────────
+# As chaves de API (Groq, etc.) devem ir para:
+#   → Firestore: coleção wk_configuracoes / doc apiKeys
+#   → Variáveis de ambiente se usares CI/CD
+.env
+.env.local
+.env.*.local
+secrets.js
+*secrets*
+*apikey*
+
+# ── Runtime ───────────────────────────────────────
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# ── Build / dependências ──────────────────────────
+node_modules/
+lib-cov
+coverage
+.nyc_output
+.grunt
+bower_components
+build/Release
+.lock-wscript
+.npm
+.eslintcache
+.node_repl_history
+*.tgz
+.yarn-integrity
+.dataconnect
+
+# ── IDEs e OS ─────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+.idea/
