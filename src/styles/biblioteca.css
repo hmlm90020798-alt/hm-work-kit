@@ -393,3 +393,43 @@
   .neo-modal  { padding: 20px 14px 28px !important; }
   .frow.half  { grid-template-columns: 1fr !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYOUT V2 — duas colunas (categorias fixas + lista)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.bib-topbar-v2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  height: 48px;
+  background: var(--neo-bg);
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  position: relative;
+  z-index: 3;
+}
+
+.bib-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.bib-sidebar {
+  width: 168px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--neo-bg);
+  border-right: 1px solid rgba(255,255,255,0.05);
+  overflow: hidden;
+}
+
+/* Ajuste da search na nova topbar */
+.bib-topbar-v2 .bib-search {
+  border-radius: var(--neo-radius-pill);
+  height: 32px;
+  padding: 0 36px 0 14px;
+}
