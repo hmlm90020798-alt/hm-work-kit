@@ -212,7 +212,7 @@ export default function Bundles({ showToast }) {
 
   // ── Eliminar bundle ────────────────────────────────────────────
   const eliminar = async (b) => {
-    if (!confirm(`Eliminar bundle de "${b.triggerDesc}"?`)) return
+    if (!confirm('Eliminar bundle de "' + b.triggerDesc + '"?')) return
     try {
       await deleteBundle(b.id)
       showToast('Bundle eliminado')
@@ -524,7 +524,7 @@ export default function Bundles({ showToast }) {
                       >
                         <div style={{
                           width: 14, height: 14, borderRadius: 3, flexShrink: 0,
-                          border: `1.5px solid ${c.obrigatorio ? '#c8a96e' : 'rgba(255,255,255,0.2)'}`,
+                          border: '1.5px solid ' + (c.obrigatorio ? '#c8a96e' : 'rgba(255,255,255,0.2)'),
                           background: c.obrigatorio ? '#c8a96e' : 'transparent',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           transition: 'all .15s',
