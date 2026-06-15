@@ -37,6 +37,100 @@ const COMP_VAZIO = {
   cat: '', sub: '', supplier: '', link: '',
 }
 
+// ── Componente de pesquisa com autocomplete ───────────────────────
+function ArtSearch({ artigos, value, desc, onSelect, placeholder = 'Pesquisar ref ou nome…' }) {
+  const [q, setQ]           = useState(value || '')
+  const [open, setOpen]     = useState(false)
+  const [focused, setFocused] = useState(false)
+
+  // Sincronizar quando o valor externo muda (ex: limpar form)
+  useEffect(() => { setQ(value || '') }, [value])
+
+  const sugestoes = q.trim().length < 1 ? [] : artigos.filter(a => {
+    const t = q.toLowerCase()
+    return a.ref?.toLowerCase().includes(t) || a.desc?.toLowerCase().includes(t)
+  }).slice(0, 8)
+
+  const seleccionar = (art) => {
+    setQ(art.ref)
+    setOpen(false)
+    onSelect(art)
+  }
+
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      <input
+        value={q}
+        onChange={e => { setQ(e.target.value); setOpen(true) }}
+        onFocus={() => { setFocused(true); setOpen(true) }}
+        onBlur={() => { setFocused(false); setTimeout(() => setOpen(false), 150) }}
+        placeholder={placeholder}
+        style={{
+          ...I,
+          fontFamily: "'Barlow Condensed'", letterSpacing: '0.08em', fontSize: 13,
+          borderColor: focused ? 'rgba(200,169,110,0.4)' : 'rgba(255,255,255,0.08)',
+        }}
+      />
+      {/* Descrição seleccionada */}
+      {desc && (
+        <div style={{
+          fontFamily: "'Barlow Condensed'", fontSize: 10, letterSpacing: '0.06em',
+          color: '#c8943a', marginTop: 4,
+        }}>{desc}</div>
+      )}
+      {/* Dropdown de sugestões */}
+      {open && sugestoes.length > 0 && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+          background: '#1a1a18', border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 6, zIndex: 500, overflow: 'hidden',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+        }}>
+          {sugestoes.map(a => (
+            <button
+              key={a.id}
+              onMouseDown={() => seleccionar(a)}
+              style={{
+                width: '100%', textAlign: 'left', padding: '9px 12px',
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                borderBottom: '1px solid rgba(255,255,255,0.04)',
+                transition: 'background .1s',
+              }}
+              onMouseOver={e => e.currentTarget.style.background = 'rgba(200,169,110,0.08)'}
+              onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{
+                  fontFamily: "'Barlow Condensed'", fontSize: 12, fontWeight: 700,
+                  letterSpacing: '0.1em', color: '#c8943a', flexShrink: 0,
+                }}>{a.ref}</span>
+                <span style={{
+                  fontFamily: "'Barlow Condensed'", fontSize: 11,
+                  color: '#9a9690', flex: 1, minWidth: 0,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>{a.desc}</span>
+                {a.price > 0 && (
+                  <span style={{
+                    fontFamily: "'Barlow Condensed'", fontSize: 10,
+                    color: '#4a4a48', flexShrink: 0,
+                  }}>{parseFloat(a.price).toFixed(2)} €</span>
+                )}
+              </div>
+              {a.cat && (
+                <div style={{
+                  fontFamily: "'Barlow Condensed'", fontSize: 9,
+                  letterSpacing: '0.1em', color: '#4a4a48',
+                  marginTop: 2, paddingLeft: 0,
+                }}>{a.cat}{a.sub ? ' · ' + a.sub : ''}</div>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Bundles({ showToast }) {
   const [bundles,   setBundles]   = useState([])
   const [artigos,   setArtigos]   = useState([])
@@ -137,29 +231,6 @@ export default function Bundles({ showToast }) {
     ...f,
     complementos: f.complementos.filter((_, i) => i !== idx),
   }))
-
-  // ── Autocompletar trigger a partir de artigos ──────────────────
-  const autoFillTrigger = (ref) => {
-    const art = artigos.find(a => a.ref === ref.trim())
-    if (art) setForm(f => ({ ...f, triggerRef: ref.trim(), triggerDesc: art.desc || '' }))
-    else setForm(f => ({ ...f, triggerRef: ref }))
-  }
-
-  // ── Autocompletar complemento ──────────────────────────────────
-  const autoFillComp = (idx, ref) => {
-    const art = artigos.find(a => a.ref === ref.trim())
-    if (art) {
-      updateComp(idx, 'ref',      art.ref)
-      updateComp(idx, 'desc',     art.desc || '')
-      updateComp(idx, 'price',    art.price || '')
-      updateComp(idx, 'cat',      art.cat   || '')
-      updateComp(idx, 'sub',      art.sub   || '')
-      updateComp(idx, 'supplier', art.supplier || '')
-      updateComp(idx, 'link',     art.link  || '')
-    } else {
-      updateComp(idx, 'ref', ref)
-    }
-  }
 
   // ── Filtrar lista ──────────────────────────────────────────────
   const filtrados = bundles.filter(b => {
@@ -375,25 +446,15 @@ export default function Bundles({ showToast }) {
                 }}>
                   Artigo gatilho — ao adicionar este artigo ao orçamento…
                 </div>
-                <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-                  <div style={{ flex: '0 0 140px' }}>
-                    <label style={F}>Referência LM</label>
-                    <input
-                      value={form.triggerRef}
-                      onChange={e => autoFillTrigger(e.target.value)}
-                      placeholder="ex: 96652314"
-                      style={{ ...I, fontFamily: "'Barlow Condensed'", letterSpacing: '0.1em', fontSize: 14 }}
-                    />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={F}>Descrição</label>
-                    <input
-                      value={form.triggerDesc}
-                      onChange={e => setForm(f => ({ ...f, triggerDesc: e.target.value }))}
-                      placeholder="ex: Lava-louça inox 60cm"
-                      style={I}
-                    />
-                  </div>
+                <div style={{ marginBottom: 10 }}>
+                  <label style={F}>Pesquisar artigo da Biblioteca</label>
+                  <ArtSearch
+                    artigos={artigos}
+                    value={form.triggerRef}
+                    desc={form.triggerDesc && form.triggerRef ? form.triggerDesc : ''}
+                    placeholder="Ref ou nome do artigo gatilho…"
+                    onSelect={art => setForm(f => ({ ...f, triggerRef: art.ref, triggerDesc: art.desc || '' }))}
+                  />
                 </div>
                 <div>
                   <label style={F}>Nota interna (opcional)</label>
@@ -416,82 +477,75 @@ export default function Bundles({ showToast }) {
               </div>
 
               {form.complementos.map((c, idx) => (
-                <div key={idx} style={{
-                  padding: '12px 14px', borderRadius: 8, marginBottom: 8,
-                  background: '#0f0f0e',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                }}>
-                  <div style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
-                    <div style={{ flex: '0 0 130px' }}>
-                      <label style={F}>Ref LM</label>
-                      <input
+                <div key={idx} style={{ padding: '12px 14px', borderRadius: 8, marginBottom: 8,
+                  background: '#0f0f0e', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div style={{ marginBottom: 8 }}>
+                      <label style={F}>Pesquisar artigo complemento</label>
+                      <ArtSearch
+                        artigos={artigos}
                         value={c.ref}
-                        onChange={e => autoFillComp(idx, e.target.value)}
-                        placeholder="ex: 84407520"
-                        style={{ ...I, fontFamily: "'Barlow Condensed'", letterSpacing: '0.1em', fontSize: 13 }}
+                        desc={c.desc && c.ref ? c.desc : ''}
+                        placeholder="Ref ou nome do complemento…"
+                        onSelect={art => {
+                          updateComp(idx, 'ref',      art.ref)
+                          updateComp(idx, 'desc',     art.desc     || '')
+                          updateComp(idx, 'price',    art.price    || '')
+                          updateComp(idx, 'cat',      art.cat      || '')
+                          updateComp(idx, 'sub',      art.sub      || '')
+                          updateComp(idx, 'supplier', art.supplier || '')
+                          updateComp(idx, 'link',     art.link     || '')
+                        }}
                       />
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <label style={F}>Descrição</label>
-                      <input
-                        value={c.desc}
-                        onChange={e => updateComp(idx, 'desc', e.target.value)}
-                        placeholder="ex: Tubo extensível sifão RM"
-                        style={I}
-                      />
-                    </div>
-                    <button
-                      onClick={() => removeComp(idx)}
-                      style={{
-                        alignSelf: 'flex-end', marginBottom: 0,
-                        background: 'transparent', border: 'none',
-                        cursor: 'pointer', color: '#4a3a3a',
-                        fontSize: 16, padding: '8px 4px', lineHeight: 1,
-                      }}
-                    >✕</button>
-                  </div>
 
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <div style={{ flex: '0 0 80px' }}>
-                      <label style={F}>Preço €</label>
-                      <input
-                        type="number" min="0" step="0.01"
-                        value={c.price}
-                        onChange={e => updateComp(idx, 'price', e.target.value)}
-                        placeholder="0.00"
-                        style={{ ...I, fontSize: 12 }}
-                      />
-                    </div>
-                    <div style={{ flex: '0 0 60px' }}>
-                      <label style={F}>Qty</label>
-                      <input
-                        type="number" min="1" step="1"
-                        value={c.qty}
-                        onChange={e => updateComp(idx, 'qty', e.target.value)}
-                        style={{ ...I, fontSize: 12 }}
-                      />
-                    </div>
-                    {/* Pré-seleccionado */}
-                    <div
-                      style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 18 }}
-                      onClick={() => updateComp(idx, 'obrigatorio', !c.obrigatorio)}
-                    >
-                      <div style={{
-                        width: 14, height: 14, borderRadius: 3, flexShrink: 0,
-                        border: `1.5px solid ${c.obrigatorio ? '#c8a96e' : 'rgba(255,255,255,0.2)'}`,
-                        background: c.obrigatorio ? '#c8a96e' : 'transparent',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        transition: 'all .15s',
-                      }}>
-                        {c.obrigatorio && <span style={{ color: '#0a0a09', fontSize: 8, fontWeight: 900 }}>✓</span>}
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <div style={{ flex: '0 0 80px' }}>
+                        <label style={F}>Preço €</label>
+                        <input
+                          type="number" min="0" step="0.01"
+                          value={c.price}
+                          onChange={e => updateComp(idx, 'price', e.target.value)}
+                          placeholder="0.00"
+                          style={{ ...I, fontSize: 12 }}
+                        />
                       </div>
-                      <span style={{
-                        fontFamily: "'Barlow Condensed'", fontSize: 9,
-                        letterSpacing: '0.12em', textTransform: 'uppercase',
-                        color: c.obrigatorio ? 'rgba(200,169,110,0.7)' : '#4a4a48',
-                      }}>pré-seleccionado</span>
+                      <div style={{ flex: '0 0 60px' }}>
+                        <label style={F}>Qty</label>
+                        <input
+                          type="number" min="1" step="1"
+                          value={c.qty}
+                          onChange={e => updateComp(idx, 'qty', e.target.value)}
+                          style={{ ...I, fontSize: 12 }}
+                        />
+                      </div>
+                      <div
+                        style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 18 }}
+                        onClick={() => updateComp(idx, 'obrigatorio', !c.obrigatorio)}
+                      >
+                        <div style={{
+                          width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                          border: `1.5px solid ${c.obrigatorio ? '#c8a96e' : 'rgba(255,255,255,0.2)'}`,
+                          background: c.obrigatorio ? '#c8a96e' : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          transition: 'all .15s',
+                        }}>
+                          {c.obrigatorio && <span style={{ color: '#0a0a09', fontSize: 8, fontWeight: 900 }}>✓</span>}
+                        </div>
+                        <span style={{
+                          fontFamily: "'Barlow Condensed'", fontSize: 9,
+                          letterSpacing: '0.12em', textTransform: 'uppercase',
+                          color: c.obrigatorio ? 'rgba(200,169,110,0.7)' : '#4a4a48',
+                        }}>pré-seleccionado</span>
+                      </div>
+                      <button
+                        onClick={() => removeComp(idx)}
+                        style={{
+                          marginTop: 18, background: 'transparent', border: 'none',
+                          cursor: 'pointer', color: '#4a3a3a',
+                          fontSize: 16, padding: '8px 4px', lineHeight: 1, flexShrink: 0,
+                        }}
+                      >✕</button>
                     </div>
-                  </div>
                 </div>
               ))}
 
@@ -510,8 +564,7 @@ export default function Bundles({ showToast }) {
                 + Complemento
               </button>
             </div>
-
-            {/* Rodapé modal */}
+          </div>
             <div style={{
               padding: '14px 20px',
               borderTop: '1px solid rgba(255,255,255,0.06)',
