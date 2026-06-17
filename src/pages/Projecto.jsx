@@ -56,7 +56,9 @@ export default function Projecto({ showToast, onNavegar }) {
   const [editInfo,   setEditInfo]   = useState(false)
   const [confirmDel, setConfirmDel] = useState(null)
   const [searchBib,  setSearchBib]  = useState('')
-  const [rightTab,   setRightTab]   = useState('biblioteca') // 'biblioteca' | 'maodeobra'
+  const [rightTab,   setRightTab]   = useState('biblioteca')
+  const [collapsed,  setCollapsed]  = useState({})
+  const [catBib,     setCatBib]     = useState('Todos')
   const [moData,     setMoData]     = useState([])
   const [moSearch,   setMoSearch]   = useState('')
   const [altModal,   setAltModal]   = useState(null) // { idx } — adicionar alternativa
@@ -229,12 +231,12 @@ export default function Projecto({ showToast, onNavegar }) {
   // ── Filtrar artigos direito ─────────────────────────────────────────────
   const artigosFiltrados = React.useMemo(() => {
     const q = searchBib.toLowerCase()
-    if (!q) return artigos.slice(0, 40)
-    return artigos.filter(a =>
-      (a.ref && a.ref.toLowerCase().includes(q)) ||
-      (a.desc && a.desc.toLowerCase().includes(q))
-    ).slice(0, 40)
-  }, [artigos, searchBib])
+    return artigos.filter(a => {
+      const matchCat = catBib === 'Todos' || a.cat === catBib
+      const matchQ = !q || (a.ref && a.ref.toLowerCase().includes(q)) || (a.desc && a.desc.toLowerCase().includes(q))
+      return matchCat && matchQ
+    }).slice(0, 50)
+  }, [artigos, searchBib, catBib])
 
   const moFiltrados = React.useMemo(() => {
     const q = moSearch.toLowerCase()
@@ -252,7 +254,12 @@ export default function Projecto({ showToast, onNavegar }) {
     ).slice(0, 20)
   }, [artigos, altSearch])
 
-  const tipoActual = TIPOS.find(t => t.id === projData?.tipo)
+  const toggleGrupo = (origem) => setCollapsed(p => ({ ...p, [origem]: !p[origem] }))
+
+  const catsBib = React.useMemo(() => {
+    const s = new Set(artigos.map(a => a.cat).filter(Boolean))
+    return ['Todos', ...Array.from(s).sort()]
+  }, [artigos])
 
   // ════════════════════════════════════════════════════════════════════════
   // RENDER
@@ -379,36 +386,43 @@ export default function Projecto({ showToast, onNavegar }) {
       <div style={{ display:'grid', gridTemplateColumns:'186px 1fr 210px', flex:1, overflow:'hidden' }}>
 
         {/* ── PAINEL ESQUERDO — Info ── */}
-        <div style={{ background:'#0f0f0e', borderRight:'1px solid rgba(255,255,255,0.05)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
-          <div style={{ flex:1, overflowY:'auto', padding:'14px 12px', display:'flex', flexDirection:'column', gap:14 }}>
+        <div style={{ background:'#0f0f0e', borderRight:'1px solid rgba(255,255,255,0.07)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+          <div style={{ flex:1, overflowY:'auto' }}>
 
-            <div>
-              <label style={S.label}>Cliente</label>
-              <input value={projData?.nome||''} onChange={e=>setProjData(p=>({...p,nome:e.target.value}))} onBlur={guardarInfo} style={S.input} />
+            {/* Secção Cliente */}
+            <div style={{ padding:'14px 12px 12px' }}>
+              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, fontWeight:700, letterSpacing:'0.22em', textTransform:'uppercase', color:'rgba(255,255,255,0.18)', marginBottom:10 }}>Cliente</div>
+              <div style={{ marginBottom:8 }}>
+                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em', textTransform:'uppercase', color:'rgba(255,255,255,0.22)', marginBottom:3 }}>Nome</div>
+                <input value={projData?.nome||''} onChange={e=>setProjData(p=>({...p,nome:e.target.value}))} onBlur={guardarInfo} style={{ ...S.input, fontSize:13 }} />
+              </div>
+              <div>
+                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.14em', textTransform:'uppercase', color:'rgba(255,255,255,0.22)', marginBottom:3 }}>Referência</div>
+                <input value={projData?.ref||''} onChange={e=>setProjData(p=>({...p,ref:e.target.value}))} onBlur={guardarInfo} placeholder="ex: OS 4521" style={S.input} />
+              </div>
             </div>
 
-            <div>
-              <label style={S.label}>Tipo</label>
+            <div style={{ height:1, background:'rgba(255,255,255,0.06)' }} />
+
+            {/* Secção Tipo */}
+            <div style={{ padding:'12px 12px 10px' }}>
+              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, fontWeight:700, letterSpacing:'0.22em', textTransform:'uppercase', color:'rgba(255,255,255,0.18)', marginBottom:8 }}>Tipo de projecto</div>
               <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
                 {TIPOS.map(t => (
                   <button key={t.id} onClick={async ()=>{ setProjData(p=>({...p,tipo:t.id})); await setDoc(projRef(projId),{tipo:t.id},{merge:true}) }}
-                    style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 10px', borderRadius:5, border:'1px solid ' + (projData?.tipo===t.id ? t.cor+'55' : 'rgba(255,255,255,0.06)'), background: projData?.tipo===t.id ? t.cor+'12' : 'transparent', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.06em', textTransform:'uppercase', color: projData?.tipo===t.id ? t.cor : 'rgba(255,255,255,0.3)', transition:'all .15s', textAlign:'left' }}>
+                    style={{ display:'flex', alignItems:'center', gap:7, padding:'7px 10px', borderRadius:5, border:'1px solid ' + (projData?.tipo===t.id ? t.cor+'55' : 'rgba(255,255,255,0.06)'), background: projData?.tipo===t.id ? t.cor+'12' : 'transparent', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.06em', textTransform:'uppercase', color: projData?.tipo===t.id ? t.cor : 'rgba(255,255,255,0.3)', transition:'all .15s', textAlign:'left' }}>
                     <span style={{ fontSize:14 }}>{t.icon}</span>{t.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div style={{ height:1, background:'rgba(255,255,255,0.05)' }} />
+            <div style={{ height:1, background:'rgba(255,255,255,0.06)' }} />
 
-            <div>
-              <label style={S.label}>Referência</label>
-              <input value={projData?.ref||''} onChange={e=>setProjData(p=>({...p,ref:e.target.value}))} onBlur={guardarInfo} placeholder="ex: OS 4521" style={S.input} />
-            </div>
-
-            <div>
-              <label style={S.label}>Notas</label>
-              <textarea value={projData?.notas||''} onChange={e=>setProjData(p=>({...p,notas:e.target.value}))} onBlur={guardarInfo} placeholder="Notas do projecto, pedidos do cliente…" style={S.textarea} />
+            {/* Secção Notas */}
+            <div style={{ padding:'12px 12px' }}>
+              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, fontWeight:700, letterSpacing:'0.22em', textTransform:'uppercase', color:'rgba(255,255,255,0.18)', marginBottom:8 }}>Notas</div>
+              <textarea value={projData?.notas||''} onChange={e=>setProjData(p=>({...p,notas:e.target.value}))} onBlur={guardarInfo} placeholder="Notas do projecto, pedidos do cliente…" style={{ ...S.textarea, minHeight:80 }} />
             </div>
 
           </div>
@@ -429,37 +443,49 @@ export default function Projecto({ showToast, onNavegar }) {
                 Adiciona artigos da Biblioteca →
               </div>
             )}
-            {grupos.map(grupo => (
-              <div key={grupo.origem} style={{ marginBottom:2 }}>
-                {/* Cabeçalho do grupo */}
-                <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 16px', background:'rgba(255,255,255,0.02)', borderBottom:'1px solid rgba(255,255,255,0.04)', borderLeft:'2px solid ' + grupo.cor }}>
-                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:700, letterSpacing:'0.14em', textTransform:'uppercase', color:grupo.cor, opacity:0.8 }}>{grupo.origem}</div>
-                  <div style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed'", fontSize:9, color:'rgba(255,255,255,0.2)' }}>{fEur(grupo.total)}</div>
+            {grupos.map(grupo => {
+              const isOpen = !collapsed[grupo.origem]
+              return (
+                <div key={grupo.origem} style={{ marginBottom:1 }}>
+                  {/* Cabeçalho do grupo */}
+                  <div onClick={() => toggleGrupo(grupo.origem)}
+                    style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 16px', background:'#111110', borderBottom:'1px solid rgba(255,255,255,0.06)', cursor:'pointer', userSelect:'none', transition:'background .12s' }}
+                    onMouseOver={e=>e.currentTarget.style.background='#151513'}
+                    onMouseOut={e=>e.currentTarget.style.background='#111110'}>
+                    <span style={{ fontSize:9, color:'rgba(255,255,255,0.3)', transition:'transform .2s', display:'inline-block', transform: isOpen ? 'rotate(90deg)' : 'none', flexShrink:0 }}>▶</span>
+                    <div style={{ width:3, height:16, borderRadius:2, background:grupo.cor, flexShrink:0 }} />
+                    <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:grupo.cor, flex:1 }}>{grupo.origem}</div>
+                    <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, color:'rgba(255,255,255,0.2)', background:'rgba(255,255,255,0.05)', borderRadius:99, padding:'1px 6px' }}>{grupo.items.length}</span>
+                    <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:'rgba(255,255,255,0.3)' }}>{fEur(grupo.total)}</div>
+                  </div>
+                  {/* Itens */}
+                  {isOpen && (
+                    <div style={{ background:'#0c0c0b' }}>
+                      {grupo.items.map(item => (
+                        <React.Fragment key={item._idx}>
+                          <OrcItem item={item} idx={item._idx} onRemove={removerItem} onQty={updateQty} onPrice={updatePrice} onAlt={() => { setAltModal(item._idx); setAltSearch('') }} />
+                          {(item.alternativas||[]).map(alt => (
+                            <div key={alt.ref} style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 16px 6px 30px', borderBottom:'1px solid rgba(255,255,255,0.025)', background:'rgba(0,0,0,0.2)' }}>
+                              <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:'rgba(200,148,58,0.4)', width:72, flexShrink:0 }}>{alt.ref}</div>
+                              <div style={{ fontSize:11, fontWeight:300, color:'rgba(255,255,255,0.28)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{alt.desc}</div>
+                              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, color:'rgba(255,255,255,0.2)', width:58, textAlign:'right', flexShrink:0 }}>{fEur(alt.price)}</div>
+                              <button onClick={() => usarAlternativa(item._idx, alt)} style={{ background:'transparent', border:'1px solid rgba(200,148,58,0.2)', borderRadius:3, padding:'2px 8px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(200,148,58,0.5)', flexShrink:0, transition:'all .15s' }}
+                                onMouseOver={e=>{e.currentTarget.style.borderColor='rgba(200,148,58,0.5)';e.currentTarget.style.color='#c8943a'}}
+                                onMouseOut={e=>{e.currentTarget.style.borderColor='rgba(200,148,58,0.2)';e.currentTarget.style.color='rgba(200,148,58,0.5)'}}>
+                                Usar
+                              </button>
+                              <button onClick={() => removerAlternativa(item._idx, alt.ref)} style={{ background:'transparent', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.1)', fontSize:11, padding:'2px 4px', transition:'color .15s' }}
+                                onMouseOver={e=>e.currentTarget.style.color='rgba(255,80,80,0.5)'}
+                                onMouseOut={e=>e.currentTarget.style.color='rgba(255,255,255,0.1)'}>✕</button>
+                            </div>
+                          ))}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {/* Itens do grupo */}
-                {grupo.items.map(item => (
-                  <React.Fragment key={item._idx}>
-                    <OrcItem item={item} idx={item._idx} onRemove={removerItem} onQty={updateQty} onPrice={updatePrice} onAlt={() => { setAltModal(item._idx); setAltSearch('') }} />
-                    {/* Alternativas */}
-                    {(item.alternativas||[]).map(alt => (
-                      <div key={alt.ref} style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 16px 6px 30px', borderBottom:'1px solid rgba(255,255,255,0.02)', background:'rgba(0,0,0,0.15)' }}>
-                        <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:'rgba(200,148,58,0.45)', width:72, flexShrink:0 }}>{alt.ref}</div>
-                        <div style={{ fontSize:11, fontWeight:300, color:'rgba(255,255,255,0.3)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{alt.desc}</div>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, color:'rgba(255,255,255,0.2)', width:58, textAlign:'right', flexShrink:0 }}>{fEur(alt.price)}</div>
-                        <button onClick={() => usarAlternativa(item._idx, alt)} style={{ background:'transparent', border:'1px solid rgba(200,148,58,0.2)', borderRadius:3, padding:'2px 8px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(200,148,58,0.5)', flexShrink:0, transition:'all .15s' }}
-                          onMouseOver={e=>{e.currentTarget.style.borderColor='rgba(200,148,58,0.5)';e.currentTarget.style.color='#c8943a'}}
-                          onMouseOut={e=>{e.currentTarget.style.borderColor='rgba(200,148,58,0.2)';e.currentTarget.style.color='rgba(200,148,58,0.5)'}}>
-                          Usar
-                        </button>
-                        <button onClick={() => removerAlternativa(item._idx, alt.ref)} style={{ background:'transparent', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.1)', fontSize:11, padding:'2px 4px', transition:'color .15s' }}
-                          onMouseOver={e=>e.currentTarget.style.color='rgba(255,80,80,0.5)'}
-                          onMouseOut={e=>e.currentTarget.style.color='rgba(255,255,255,0.1)'}>✕</button>
-                      </div>
-                    ))}
-                  </React.Fragment>
-                ))}
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {/* Footer total */}
@@ -473,38 +499,47 @@ export default function Projecto({ showToast, onNavegar }) {
         </div>
 
         {/* ── DIREITA — Biblioteca rápida ── */}
-        <div style={{ background:'#0f0f0e', borderLeft:'1px solid rgba(255,255,255,0.05)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <div style={{ background:'#0f0f0e', borderLeft:'1px solid rgba(255,255,255,0.07)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
           {/* Tabs */}
-          <div style={{ display:'flex', borderBottom:'1px solid rgba(255,255,255,0.05)', flexShrink:0 }}>
+          <div style={{ display:'flex', borderBottom:'1px solid rgba(255,255,255,0.07)', flexShrink:0 }}>
             {[['biblioteca','Biblioteca'],['maodeobra','Mão Obra']].map(([id,label]) => (
-              <button key={id} onClick={() => setRightTab(id)} style={{ flex:1, padding:'8px 6px', background:'transparent', border:'none', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color: rightTab===id ? '#c8943a' : 'rgba(255,255,255,0.25)', borderBottom: rightTab===id ? '2px solid #c8943a' : '2px solid transparent', transition:'all .15s' }}>
+              <button key={id} onClick={() => setRightTab(id)} style={{ flex:1, padding:'9px 6px', background:'transparent', border:'none', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color: rightTab===id ? '#c8943a' : 'rgba(255,255,255,0.25)', borderBottom: rightTab===id ? '2px solid #c8943a' : '2px solid transparent', transition:'all .15s' }}>
                 {label}
               </button>
             ))}
           </div>
 
-          {/* Search */}
-          <div style={{ padding:'8px 10px', borderBottom:'1px solid rgba(255,255,255,0.05)', flexShrink:0 }}>
+          {/* Search + filtro categoria */}
+          <div style={{ padding:'8px 10px', borderBottom:'1px solid rgba(255,255,255,0.07)', flexShrink:0, display:'flex', flexDirection:'column', gap:6 }}>
             <input
               value={rightTab==='biblioteca' ? searchBib : moSearch}
               onChange={e => rightTab==='biblioteca' ? setSearchBib(e.target.value) : setMoSearch(e.target.value)}
-              placeholder="Pesquisar artigo..."
-              style={{ ...S.input, padding:'6px 10px', fontSize:11 }}
+              placeholder="Pesquisar ref ou nome..."
+              style={{ ...S.input, padding:'7px 10px', fontSize:12, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)' }}
             />
+            {rightTab==='biblioteca' && (
+              <div style={{ display:'flex', gap:4, overflowX:'auto', scrollbarWidth:'none', paddingBottom:1 }}>
+                {catsBib.slice(0, 8).map(cat => (
+                  <button key={cat} onClick={() => setCatBib(cat)} style={{ padding:'3px 8px', borderRadius:99, border:'1px solid ' + (catBib===cat ? 'rgba(200,148,58,0.35)' : 'rgba(255,255,255,0.07)'), background: catBib===cat ? 'rgba(200,148,58,0.1)' : 'transparent', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.08em', textTransform:'uppercase', color: catBib===cat ? '#c8a96e' : 'rgba(255,255,255,0.28)', whiteSpace:'nowrap', flexShrink:0, transition:'all .12s' }}>
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Lista */}
           <div style={{ flex:1, overflowY:'auto' }}>
             {(rightTab==='biblioteca' ? artigosFiltrados : moFiltrados).map(art => (
-              <div key={art.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderBottom:'1px solid rgba(255,255,255,0.03)', cursor:'pointer', transition:'background .1s' }}
+              <div key={art.id} style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 10px', borderBottom:'1px solid rgba(255,255,255,0.04)', cursor:'pointer', transition:'background .1s' }}
                 onMouseOver={e=>e.currentTarget.style.background='rgba(255,255,255,0.03)'}
                 onMouseOut={e=>e.currentTarget.style.background='transparent'}>
                 <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:'#c8943a', width:58, flexShrink:0 }}>{art.ref}</div>
                 <div style={{ fontSize:11, fontWeight:300, color:'rgba(255,255,255,0.6)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{art.desc}</div>
-                <button onClick={() => addArtigo(art)} style={{ background:'transparent', border:'none', cursor:'pointer', color:'rgba(200,148,58,0.4)', fontSize:16, padding:'2px', flexShrink:0, transition:'color .15s', lineHeight:1 }}
-                  onMouseOver={e=>e.currentTarget.style.color='#c8943a'}
-                  onMouseOut={e=>e.currentTarget.style.color='rgba(200,148,58,0.4)'}>+</button>
+                <button onClick={() => addArtigo(art)} style={{ background:'rgba(200,148,58,0.08)', border:'1px solid rgba(200,148,58,0.2)', borderRadius:4, cursor:'pointer', color:'#c8943a', fontSize:14, padding:'1px 6px', flexShrink:0, transition:'all .15s', lineHeight:1 }}
+                  onMouseOver={e=>e.currentTarget.style.background='rgba(200,148,58,0.18)'}
+                  onMouseOut={e=>e.currentTarget.style.background='rgba(200,148,58,0.08)'}>+</button>
               </div>
             ))}
           </div>
