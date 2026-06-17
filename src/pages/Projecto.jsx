@@ -256,6 +256,8 @@ export default function Projecto({ showToast, onNavegar }) {
 
   const toggleGrupo = (origem) => setCollapsed(p => ({ ...p, [origem]: !p[origem] }))
 
+  const tipoActual = TIPOS.find(t => t.id === projData?.tipo)
+
   const catsBib = React.useMemo(() => {
     const s = new Set(artigos.map(a => a.cat).filter(Boolean))
     return ['Todos', ...Array.from(s).sort()]
