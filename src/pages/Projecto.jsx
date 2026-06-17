@@ -1,1047 +1,593 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { db } from '../firebase'
-import {
-  collection, doc, onSnapshot, deleteDoc,
-  getDoc, setDoc, getDocs, query, orderBy
-} from 'firebase/firestore'
+import { collection, doc, onSnapshot, deleteDoc, getDoc, setDoc, getDocs, query, orderBy } from 'firebase/firestore'
 import { useAuth } from '../context/AuthContext'
 import { addToOrcamento, orcRef } from '../hooks/useOrcamento'
 
-// ── Tipos de projecto ─────────────────────────────────────────────────────
-const TIPOS_DEFAULT = [
-  { id:'cozinha',    label:'Cozinha',       icon:'🍳', cor:'#c8943a', activo:true  },
-  { id:'banho',      label:'Casa de Banho', icon:'🚿', cor:'#4a8fa8', activo:true  },
-  { id:'closet',     label:'Closet',        icon:'👕', cor:'#8a9e6e', activo:true  },
-  { id:'suite',      label:'Suíte',         icon:'🛏', cor:'#b07acc', activo:false },
-  { id:'escritorio', label:'Escritório',    icon:'💼', cor:'#7a9e9a', activo:false },
-  { id:'outro',      label:'Outro',         icon:'✦',  cor:'#7a7a72', activo:true  },
+// ── Tipos ─────────────────────────────────────────────────────────────────
+const TIPOS = [
+  { id:'cozinha',    label:'Cozinha',       icon:'🍳', cor:'#c8943a' },
+  { id:'banho',      label:'Casa de Banho', icon:'🚿', cor:'#4a8fa8' },
+  { id:'closet',     label:'Closet',        icon:'👕', cor:'#8a9e6e' },
+  { id:'suite',      label:'Suite',         icon:'🛏', cor:'#b07acc' },
+  { id:'escritorio', label:'Escritorio',    icon:'💼', cor:'#7a9e9a' },
+  { id:'outro',      label:'Outro',         icon:'✦',  cor:'#7a7a72' },
 ]
 
-// ── Componentes ───────────────────────────────────────────────────────────
-const COMPONENTES = [
-  { id:'base',       label:'Kit base',         icon:'📦', desc:'Artigos essenciais do projecto',               cor:'#c8943a',
-    match:(n,c,t)=>{ const nl=n.toLowerCase(),cl=(c||'').toLowerCase(),tl=(t||'').toLowerCase(); return nl.includes('base')||(cl&&cl.includes(tl)) },
-    destino:null },
-  { id:'eletro',     label:'Eletrodomésticos',  icon:'⚡', desc:'Electrodomésticos encastráveis e de superfície', cor:'#8a9e6e',
-    match:(n)=>n.toLowerCase().includes('eletro')||n.toLowerCase().includes('electro'), destino:'biblioteca', destCat:'Eletrodomésticos' },
-  { id:'acessorios', label:'Acessórios',         icon:'🔩', desc:'Puxadores, calhas, dobradiças e outros',        cor:'#b07acc',
-    match:(n)=>n.toLowerCase().includes('acess'), destino:'biblioteca', destCat:'Acessórios' },
-  { id:'ferragens',  label:'Ferragens',           icon:'🔧', desc:'Ferragens de cozinha e montagem',               cor:'#7a9e9a',
-    match:(n)=>n.toLowerCase().includes('ferragem')||n.toLowerCase().includes('ferrag'), destino:'biblioteca', destCat:'Ferragens' },
-  { id:'iluminacao', label:'Iluminação',          icon:'💡', desc:'Iluminação embutida e decorativa',              cor:'#d4b87a',
-    match:(n)=>n.toLowerCase().includes('ilumina')||n.toLowerCase().includes('luz'), destino:'biblioteca', destCat:'Iluminação' },
-  { id:'instalacao', label:'Instalação',          icon:'🛠', desc:'Serviços de montagem e instalação',             cor:'#9a7acc',
-    match:(n)=>n.toLowerCase().includes('instala')||n.toLowerCase().includes('montagem'), destino:'maodeobra', destCat:null },
-  { id:'tampos',     label:'Tampos',              icon:'⬛', desc:'Calculadora ANIGRACO',                          cor:'#4a8fa8',
-    match:(n)=>n.toLowerCase().includes('tampo'), destino:'tampos', destCat:null, sempreCalculadora:true },
-]
-
+const PALETA = ['#c8943a','#8a9e6e','#7a9e9a','#b07acc','#d4b87a','#4a8fa8','#9a6e8a','#6e8a9e','#c07070']
+const COR_FIXA = { 'Tampos':'#4a8fa8', 'Mao de Obra':'#b07acc', 'Bundle':'#8a9e6e' }
+function corOrigem(o, i) { return COR_FIXA[o] || PALETA[i % PALETA.length] }
 function f2(n) { return parseFloat(n||0).toFixed(2) }
-function hexToRgb(hex) {
-  if (!hex||hex.startsWith('var')) return '56,189,248'
-  try { return `${parseInt(hex.slice(1,3),16)},${parseInt(hex.slice(3,5),16)},${parseInt(hex.slice(5,7),16)}` }
-  catch { return '56,189,248' }
+function fEur(n) { return parseFloat(n||0).toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' \u20AC' }
+function gerarId() { return 'proj_' + Date.now() }
+
+const projRef  = (id) => doc(db, 'projectos', id)
+const activoRef = (uid) => doc(db, 'projecto_ativo', uid)
+
+// ── Estilos base ──────────────────────────────────────────────────────────
+const S = {
+  // Inputs
+  input: { width:'100%', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:5, padding:'7px 10px', fontFamily:"'Barlow',sans-serif", fontSize:12, fontWeight:300, color:'#e8e4dc', outline:'none' },
+  textarea: { width:'100%', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:5, padding:'7px 10px', fontFamily:"'Barlow',sans-serif", fontSize:11, fontWeight:300, color:'#e8e4dc', outline:'none', resize:'vertical', lineHeight:1.6, minHeight:70 },
+  label: { fontFamily:"'Barlow Condensed',sans-serif", fontSize:9, fontWeight:600, letterSpacing:'0.16em', textTransform:'uppercase', color:'rgba(255,255,255,0.25)', display:'block', marginBottom:4 },
+  btnGhost: { background:'transparent', border:'1px solid rgba(255,255,255,0.1)', borderRadius:5, padding:'7px 14px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:10, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(255,255,255,0.4)', cursor:'pointer', transition:'all .15s' },
+  btnGold: { background:'linear-gradient(135deg,#c8a96e,#b8924a)', border:'none', borderRadius:5, padding:'7px 16px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:10, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:'#0c0c0b', cursor:'pointer', transition:'all .15s' },
 }
 
-function gerarProjId() { return 'proj_' + Date.now() }
-
-// Refs Firestore
-const projListaRef  = (projId) => doc(db, 'projectos', projId)
-const prefsRef      = (uid)    => doc(db, 'preferencias', uid)
-const activoRef     = (uid)    => doc(db, 'projecto_ativo', uid) // guarda só { projId }
-
-function kitsParaComp(comp, kits, tipoLabel) {
-  if (comp.sempreCalculadora) return []
-  return kits.filter(k => comp.match(k.name, k.contexto, tipoLabel))
-}
-
-const ESTADO_GUIA_VAZIO = { passo:'tipo', compSel:[], compFeitos:[], compActual:null, kitSelId:null, kitItems:[] }
-
-// ─────────────────────────────────────────────────────────────────────────
+// ── Componente principal ──────────────────────────────────────────────────
 export default function Projecto({ showToast, onNavegar }) {
   const { user } = useAuth()
 
-  // Tipos de projecto
-  const [tipos,     setTipos]     = useState(TIPOS_DEFAULT)
-  const [editTipos, setEditTipos] = useState(false)
+  // Lista de projectos
+  const [projectos,  setProjectos]  = useState([])
+  const [carregado,  setCarregado]  = useState(false)
 
-  // Lista de todos os projectos do utilizador
-  const [projectos, setProjectos] = useState([])  // [{projId, nome, tipo, campos, passo, total, ts, ...guia}]
-  const [projCarregado, setProjCarregado] = useState(false)
+  // Projecto aberto
+  const [projId,     setProjId]     = useState(null)
+  const [projData,   setProjData]   = useState(null) // { nome, tipo, ref, notas }
+  const [orc,        setOrc]        = useState(null)
+  const [artigos,    setArtigos]    = useState([])
 
-  // Projecto activo (aberto)
-  const [projId,  setProjId]  = useState(null)
-  const [nome,    setNome]    = useState('')
-  const [campos,  setCampos]  = useState({})
-  const [tipo,    setTipo]    = useState(null)
+  // UI estado
+  const [vista,      setVista]      = useState('lista') // 'lista' | 'workspace'
+  const [novoModal,  setNovoModal]  = useState(false)
+  const [novoNome,   setNovoNome]   = useState('')
+  const [novoTipo,   setNovoTipo]   = useState('cozinha')
+  const [editInfo,   setEditInfo]   = useState(false)
+  const [confirmDel, setConfirmDel] = useState(null)
+  const [searchBib,  setSearchBib]  = useState('')
+  const [rightTab,   setRightTab]   = useState('biblioteca') // 'biblioteca' | 'maodeobra'
+  const [moData,     setMoData]     = useState([])
+  const [moSearch,   setMoSearch]   = useState('')
+  const [altModal,   setAltModal]   = useState(null) // { idx } — adicionar alternativa
+  const [altSearch,  setAltSearch]  = useState('')
 
-  // Estado do guia (passos)
-  const [passo,      setPasso]      = useState('tipo') // 'tipo' = ecrã de lista
-  const [compSel,    setCompSel]    = useState([])
-  const [compFeitos, setCompFeitos] = useState([])
-  const [compActual, setCompActual] = useState(null)
-  const [kitSelId,   setKitSelId]   = useState(null)
-  const [kitItems,   setKitItems]   = useState([])
-
-  // Orçamento do projecto activo
-  const [orcItems, setOrcItems] = useState([])
-
-  // Modais
-  const [modalId,         setModalId]         = useState(false)
-  const [confirmApagar,   setConfirmApagar]    = useState(null)  // projId a apagar
-  const [confirmRecomecar,setConfirmRecomecar] = useState(false)
-  const [confirmSaltar,   setConfirmSaltar]    = useState(false)
-
-  // Dados globais
-  const [kits,    setKits]    = useState([])
-  const [artigos, setArtigos] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [kitsEncontrados, setKitsEncontrados] = useState([])
-  const [subst, setSubst] = useState(null)
-
-  // Modal identidade
-  const [modalNome,   setModalNome]   = useState('')
-  const [modalCampos, setModalCampos] = useState([])
-
-  // Debounce save do guia
-  const saveTimer = useRef(null)
-  const [guiaCarregado, setGuiaCarregado] = useState(false)
-
-  // ── Carregar kits e artigos ───────────────────────────────────────────
+  // ── Carregar lista de projectos ────────────────────────────────────────
   useEffect(() => {
-    const u1 = onSnapshot(collection(db,'modelos'), s => setKits(s.docs.map(d=>({id:d.id,...d.data()}))))
-    const u2 = onSnapshot(collection(db,'artigos'), s => setArtigos(s.docs.map(d=>({id:d.id,...d.data()}))))
-    return () => { u1(); u2() }
+    if (!user) return
+    const q = query(collection(db, 'projectos'), orderBy('ts', 'desc'))
+    return onSnapshot(q, snap => {
+      setProjectos(snap.docs
+        .map(d => ({ projId:d.id, ...d.data() }))
+        .filter(p => p.uid === user.uid)
+      )
+      setCarregado(true)
+    }, () => setCarregado(true))
+  }, [user])
+
+  // ── Carregar artigos da Biblioteca ─────────────────────────────────────
+  useEffect(() => {
+    return onSnapshot(collection(db, 'artigos'), snap => {
+      setArtigos(snap.docs.map(d => ({ id:d.id, ...d.data() })))
+    }, () => {})
   }, [])
 
-  // ── Carregar tipos de projecto ────────────────────────────────────────
+  // ── Carregar Mao de Obra ────────────────────────────────────────────────
   useEffect(() => {
-    if (!user) return
-    getDoc(prefsRef(user.uid)).then(snap => {
-      if (snap.exists() && Array.isArray(snap.data().projTipos)) {
-        setTipos(snap.data().projTipos)
-      }
+    getDocs(collection(db, 'modelos')).then(snap => {
+      // Usar artigos de MO directamente da biblioteca (cat Mao de Obra)
     }).catch(() => {})
-  }, [user])
+  }, [])
 
-  // ── Carregar lista de projectos ───────────────────────────────────────
+  // ── Orçamento em tempo real ─────────────────────────────────────────────
   useEffect(() => {
-    if (!user) return
-    // Ouvir todos os projectos do utilizador
-    const q = collection(db, 'projectos')
-    // Filtramos por uid no campo uid (cada projecto tem campo uid)
-    const unsub = onSnapshot(q, snap => {
-      const lista = snap.docs
-        .map(d => ({ projId: d.id, ...d.data() }))
-        .filter(p => p.uid === user.uid)
-        .sort((a,b) => (b.ts||0) - (a.ts||0))
-      setProjectos(lista)
-      setProjCarregado(true)
-    })
-    return () => unsub()
-  }, [user])
-
-  // ── Carregar projecto activo (qual está aberto) ───────────────────────
-  useEffect(() => {
-    if (!user || !projCarregado) return
-    getDoc(activoRef(user.uid)).then(snap => {
-      if (snap.exists() && snap.data().projId) {
-        const id = snap.data().projId
-        // Carregar estado do guia desse projecto
-        _carregarEstado(id).catch(() => {})
-      }
-    }).catch(() => {})
-  }, [user, projCarregado])
-
-  // ── Orçamento do projecto activo em tempo real ────────────────────────
-  useEffect(() => {
-    if (!projId) { setOrcItems([]); return }
-    const unsub = onSnapshot(orcRef(projId), snap => {
-      setOrcItems(snap.exists() ? (snap.data().items||[]) : [])
-    })
-    return () => unsub()
+    if (!projId) { setOrc(null); return }
+    return onSnapshot(orcRef(projId), snap => {
+      setOrc(snap.exists() ? snap.data() : { items:[] })
+    }, () => {})
   }, [projId])
 
-  // ── Gravar guia no Firestore (debounce) ───────────────────────────────
-  useEffect(() => {
-    if (!user || !guiaCarregado || !projId || passo === 'tipo') return
-    clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => {
-      const totalOrc = _calcTotal(orcItems)
-      setDoc(projListaRef(projId), {
-        uid: user.uid,
-        projId, nome, tipo, campos,
-        passo, compSel, compFeitos, compActual, kitSelId, kitItems,
-        total: totalOrc,
-        ts: Date.now(),
-      }, { merge: true }).catch(() => {})
-    }, 600)
-    return () => clearTimeout(saveTimer.current)
-  }, [passo, compSel, compFeitos, compActual, kitSelId, kitItems, nome, campos, projId, user, guiaCarregado])
-
-  // Actualizar total no documento quando o orçamento muda
-  useEffect(() => {
-    if (!projId || !user) return
-    const t = _calcTotal(orcItems)
-    setDoc(projListaRef(projId), { total: t, ts: Date.now() }, { merge: true }).catch(() => {})
-  }, [orcItems, projId, user])
-
-  // ── Kits para o componente actual ─────────────────────────────────────
-  useEffect(() => {
-    if (!compActual || !kits.length) return
-    const comp = COMPONENTES.find(c => c.id === compActual)
-    if (!comp) return
-    const tipoLabel = tipos.find(t => t.id === tipo)?.label || ''
-    const enc = kitsParaComp(comp, kits, tipoLabel)
-    setKitsEncontrados(enc)
-    if (enc.length === 1 && !kitSelId) {
-      setKitSelId(enc[0].id)
-      setKitItems((enc[0].items||[]).map(i=>({...i,incluido:true})))
+  // ── Abrir projecto ──────────────────────────────────────────────────────
+  const abrirProjeto = async (p) => {
+    setProjId(p.projId)
+    setProjData({ nome:p.nome||'', tipo:p.tipo||'outro', ref:p.ref||'', notas:p.notas||'' })
+    // Marcar como activo
+    if (user) {
+      await setDoc(activoRef(user.uid), { projId:p.projId }).catch(() => {})
     }
-  }, [compActual, kits, tipo, tipos])
-
-  // ── Helpers ───────────────────────────────────────────────────────────
-  function _calcTotal(items) {
-    return items.reduce((s,i) => s + (i.price||0) * (i.qty||1), 0)
+    setVista('workspace')
   }
 
-  const tipoActual    = tipos.find(t => t.id === tipo)
-  const tiposActivos  = tipos.filter(t => t.activo)
-  const totalOrc      = _calcTotal(orcItems)
-  const compObjActual = COMPONENTES.find(c => c.id === compActual)
-  const kitSel        = kits.find(k => k.id === kitSelId) || null
-  const compPorFazer  = compSel.filter(c => !compFeitos.includes(c))
-
-  // Painel substituição - estratificado
-  const artsSub = subst ? artigos.filter(a=>a.cat===subst.cat&&subst.sub&&a.sub===subst.sub).sort((a,b)=>(a.ref||'').localeCompare(b.ref||'')) : []
-  const artsResto = subst ? artigos.filter(a=>a.cat===subst.cat&&!(subst.sub&&a.sub===subst.sub)).sort((a,b)=>(a.ref||'').localeCompare(b.ref||'')) : []
-  const artsCat = subst ? [...artsSub, ...artsResto] : []
-
-  // ── Abrir projecto ────────────────────────────────────────────────────
-  const _carregarEstado = async (id) => {
-    const snap = await getDoc(projListaRef(id))
-    if (!snap.exists()) return
-    const d = snap.data()
-    setProjId(id); setNome(d.nome || ''); setCampos(d.campos || {}); setTipo(d.tipo || null)
-    setPasso(d.passo || 'componentes'); setCompSel(d.compSel || []); setCompFeitos(d.compFeitos || [])
-    setCompActual(d.compActual || null); setKitSelId(d.kitSelId || null); setKitItems(d.kitItems || [])
-    setGuiaCarregado(true)
-    if (user) setDoc(activoRef(user.uid), { projId: id }).catch(() => {})
+  // ── Criar projecto ──────────────────────────────────────────────────────
+  const criarProjeto = async () => {
+    if (!novoNome.trim()) { showToast('Indica o nome do cliente'); return }
+    if (!user) return
+    const id = gerarId()
+    const tipo = TIPOS.find(t => t.id === novoTipo) || TIPOS[0]
+    const data = { uid:user.uid, projId:id, nome:novoNome.trim(), tipo:novoTipo, ref:'', notas:'', total:0, ts:Date.now() }
+    await setDoc(projRef(id), data)
+    setNovoModal(false)
+    setNovoNome('')
+    setNovoTipo('cozinha')
+    abrirProjeto({ projId:id, ...data })
   }
 
-  const _abrirProjecto = async (id) => {
-    try { await _carregarEstado(id); onNavegar?.('orcamentos') }
-    catch (e) { console.error(e) }
+  // ── Guardar info do projecto ────────────────────────────────────────────
+  const guardarInfo = async () => {
+    if (!projId || !projData) return
+    await setDoc(projRef(projId), { ...projectos.find(p=>p.projId===projId), ...projData }, { merge:true }).catch(() => showToast('Erro ao guardar'))
+    setEditInfo(false)
+    showToast('Informação guardada')
   }
 
-  const _retomarGuia = async (id) => {
-    try { await _carregarEstado(id) }
-    catch (e) { console.error(e) }
+  // ── Eliminar projecto ───────────────────────────────────────────────────
+  const eliminarProjeto = async (id) => {
+    await deleteDoc(projRef(id)).catch(() => showToast('Erro ao eliminar'))
+    setConfirmDel(null)
+    if (id === projId) { setProjId(null); setVista('lista') }
   }
 
-  // ── Fechar / sair do projecto activo (volta à lista) ──────────────────
-  const fecharProjecto = () => {
-    // Gravar imediatamente antes de sair
-    if (projId && user) {
-      clearTimeout(saveTimer.current)
-      setDoc(projListaRef(projId), {
-        uid: user.uid, projId, nome, tipo, campos,
-        passo, compSel, compFeitos, compActual, kitSelId, kitItems,
-        total: totalOrc, ts: Date.now(),
-      }, { merge: true }).catch(() => {})
-      // Limpar activo
-      setDoc(activoRef(user.uid), { projId: null }).catch(() => {})
-    }
-    setProjId(null); setNome(''); setCampos({}); setTipo(null)
-    setPasso('tipo'); setCompSel([]); setCompFeitos([])
-    setCompActual(null); setKitSelId(null); setKitItems([])
-    setGuiaCarregado(false)
+  // ── Orçamento: operações ────────────────────────────────────────────────
+  const orcItems = orc?.items || []
+  const total = orcItems.reduce((s, i) => s + (parseFloat(i.price)||0) * (parseFloat(i.qty)||1), 0)
+
+  const removerItem = async (idx) => {
+    if (!projId || !orc) return
+    const items = orcItems.filter((_, i) => i !== idx)
+    await setDoc(orcRef(projId), { ...orc, items }, { merge:false }).catch(() => showToast('Erro'))
   }
 
-  // ── Criar novo projecto ───────────────────────────────────────────────
-  const criarProjecto = async (tipoObj) => {
-    const id = gerarProjId()
-    const doc_data = {
-      uid: user.uid, projId: id,
-      nome: '', tipo: tipoObj.id, campos: {},
-      passo: 'componentes',
-      compSel: [], compFeitos: [], compActual: null, kitSelId: null, kitItems: [],
-      total: 0, ts: Date.now(),
-    }
-    await setDoc(projListaRef(id), doc_data).catch(() => {})
-    await setDoc(activoRef(user.uid), { projId: id }).catch(() => {})
-    setProjId(id); setNome(''); setCampos({}); setTipo(tipoObj.id)
-    setCompSel([]); setCompFeitos([]); setCompActual(null); setKitSelId(null); setKitItems([])
-    setPasso('componentes')
-    setGuiaCarregado(true)
+  const updateQty = async (idx, qty) => {
+    if (!projId || !orc) return
+    const val = parseFloat(qty)
+    if (isNaN(val) || val <= 0) return
+    const items = orcItems.map((i, n) => n===idx ? {...i, qty:val} : i)
+    await setDoc(orcRef(projId), { ...orc, items }).catch(() => {})
   }
 
-  // ── Apagar projecto ───────────────────────────────────────────────────
-  const apagarProjecto = async (id) => {
-    try {
-      // Apagar orçamento
-      await deleteDoc(orcRef(id)).catch(() => {})
-      // Apagar documento principal
-      await deleteDoc(projListaRef(id))
-      // Se era o activo, limpar
-      if (id === projId) {
-        fecharProjecto()
-      }
-      showToast('Projecto apagado')
-    } catch (e) {
-      showToast('Erro ao apagar projecto')
-    }
-    setConfirmApagar(null)
+  const updatePrice = async (idx, price) => {
+    if (!projId || !orc) return
+    const val = parseFloat(price)
+    if (isNaN(val) || val < 0) return
+    const items = orcItems.map((i, n) => n===idx ? {...i, price:val} : i)
+    await setDoc(orcRef(projId), { ...orc, items }).catch(() => {})
   }
 
-  // ── Acções do guia ────────────────────────────────────────────────────
-  const toggleComp = (id) => setCompSel(p => p.includes(id)?p.filter(x=>x!==id):[...p,id])
-
-  const avancarDeComponentes = () => {
-    if (!compSel.length) { showToast('Selecciona pelo menos um componente'); return }
-    iniciarComp(compSel[0])
+  const addArtigo = async (art) => {
+    if (!projId) { showToast('Sem projecto activo'); return }
+    await addToOrcamento(projId, {
+      ref: art.ref, desc: art.desc,
+      cat: art.cat||'', sub: art.sub||'',
+      price: art.price||0, supplier: art.supplier||'',
+      link: art.link||'', origem: art.cat||'Biblioteca',
+    }, showToast)
+    // Actualizar total no projecto
+    const newTotal = orcItems.reduce((s,i) => s+(parseFloat(i.price)||0)*(parseFloat(i.qty)||1), 0) + (parseFloat(art.price)||0)
+    await setDoc(projRef(projId), { total:newTotal }, { merge:true }).catch(() => {})
   }
 
-  const iniciarComp = (compId) => {
-    setCompActual(compId); setKitSelId(null); setKitItems([]); setPasso('execucao')
+  const adicionarAlternativa = async (idx, art) => {
+    if (!projId || !orc) return
+    const items = orcItems.map((item, i) => {
+      if (i !== idx) return item
+      const alts = item.alternativas || []
+      if (alts.find(a => a.ref === art.ref)) return item
+      return { ...item, alternativas: [...alts, { ref:art.ref, desc:art.desc, price:art.price||0 }] }
+    })
+    await setDoc(orcRef(projId), { ...orc, items }).catch(() => showToast('Erro'))
+    setAltModal(null)
+    setAltSearch('')
+    showToast('Alternativa adicionada')
   }
 
-  const escolherKit = (kit) => {
-    setKitSelId(kit.id)
-    setKitItems((kit.items||[]).map(i=>({...i,incluido:true})))
+  const usarAlternativa = async (idx, alt) => {
+    if (!projId || !orc) return
+    const item = orcItems[idx]
+    const antigas = item.alternativas?.filter(a => a.ref !== alt.ref) || []
+    const items = orcItems.map((i, n) => n===idx ? {
+      ...i,
+      ref: alt.ref, desc: alt.desc, price: alt.price,
+      alternativas: [...antigas, { ref:item.ref, desc:item.desc, price:item.price }]
+    } : i)
+    await setDoc(orcRef(projId), { ...orc, items }).catch(() => showToast('Erro'))
+    showToast('Alternativa aplicada')
   }
 
-  const temItensNoOrc = useCallback((compId) => {
-    const comp = COMPONENTES.find(c => c.id === compId)
-    if (!comp) return false
-    if (comp.sempreCalculadora) return orcItems.some(i => i.origem === 'Tampos')
-    if (kitSelId) {
-      const kit = kits.find(k => k.id === kitSelId)
-      if (kit) return orcItems.some(i => i.origem === kit.name)
-    }
-    if (comp.destCat) return orcItems.some(i => i.cat===comp.destCat||i.origem===comp.destCat)
-    if (comp.destino === 'maodeobra') return orcItems.some(i => i.origem === 'Mão de Obra')
-    return false
-  }, [orcItems, kits, kitSelId])
-
-  const confirmarKit = async () => {
-    if (!kitSel) { showToast('Escolhe um kit primeiro'); return }
-    setLoading(true)
-    const para = kitItems.filter(i=>i.incluido)
-    for (const item of para) {
-      await addToOrcamento(projId, {
-        ref:item.ref, desc:item.desc, cat:item.cat||'', sub:item.sub||'',
-        price:item.price||0, supplier:item.supplier||'', link:item.link||'',
-        origem: kitSel.name,
-      }, ()=>{})
-    }
-    setLoading(false)
-    showToast(`"${kitSel.name}" - ${para.length} artigos adicionados`)
-    marcarFeitoEAvancar(compActual)
+  const removerAlternativa = async (idx, altRef) => {
+    if (!projId || !orc) return
+    const items = orcItems.map((item, i) => i!==idx ? item : {
+      ...item, alternativas: (item.alternativas||[]).filter(a => a.ref !== altRef)
+    })
+    await setDoc(orcRef(projId), { ...orc, items }).catch(() => {})
   }
 
-  const marcarFeitoEAvancar = useCallback((comp) => {
-    const novos = [...compFeitos, comp]
-    setCompFeitos(novos)
-    const rest = compSel.filter(c => !novos.includes(c))
-    if (!rest.length) { setPasso('resumo') }
-    else { iniciarComp(rest[0]) }
-  }, [compFeitos, compSel])
+  // ── Agrupar orçamento por origem ────────────────────────────────────────
+  const grupos = React.useMemo(() => {
+    const map = new Map()
+    orcItems.forEach((item, idx) => {
+      const key = item.origem || 'Outros'
+      if (!map.has(key)) map.set(key, [])
+      map.get(key).push({ ...item, _idx:idx })
+    })
+    return Array.from(map.entries()).map(([origem, items], gi) => ({
+      origem, items,
+      cor: corOrigem(origem, gi),
+      total: items.reduce((s, i) => s + (parseFloat(i.price)||0)*(parseFloat(i.qty)||1), 0)
+    }))
+  }, [orcItems])
 
-  const substituir = (artigo) => {
-    setKitItems(p => p.map((item,i) => i===subst.idx
-      ? {...item, artId:artigo.id, ref:artigo.ref, desc:artigo.desc, cat:artigo.cat||'', sub:artigo.sub||'', price:artigo.price||0, supplier:artigo.supplier||'', link:artigo.link||'', notes:artigo.notes||'', incluido:true}
-      : item))
-    setSubst(null)
-    showToast(`Substituído por ${artigo.ref}`)
-  }
+  // ── Filtrar artigos direito ─────────────────────────────────────────────
+  const artigosFiltrados = React.useMemo(() => {
+    const q = searchBib.toLowerCase()
+    if (!q) return artigos.slice(0, 40)
+    return artigos.filter(a =>
+      (a.ref && a.ref.toLowerCase().includes(q)) ||
+      (a.desc && a.desc.toLowerCase().includes(q))
+    ).slice(0, 40)
+  }, [artigos, searchBib])
 
-  const tentarSaltar = () => {
-    if (!temItensNoOrc(compActual)) { setConfirmSaltar(true) }
-    else { marcarFeitoEAvancar(compActual) }
-  }
+  const moFiltrados = React.useMemo(() => {
+    const q = moSearch.toLowerCase()
+    return artigos.filter(a => a.cat === 'Mão de Obra' || a.cat === 'Instalação').filter(a =>
+      !q || (a.ref && a.ref.toLowerCase().includes(q)) || (a.desc && a.desc.toLowerCase().includes(q))
+    ).slice(0, 40)
+  }, [artigos, moSearch])
 
-  const voltarPasso = () => {
-    if (passo==='componentes') fecharProjecto()
-    else if (passo==='execucao') {
-      if (kitSelId && !temItensNoOrc(compActual)) { setConfirmSaltar(true); return }
-      setPasso('componentes')
-    }
-    else if (passo==='resumo') setPasso('componentes')
-  }
+  const altFiltrados = React.useMemo(() => {
+    const q = altSearch.toLowerCase()
+    if (!q) return artigos.slice(0, 20)
+    return artigos.filter(a =>
+      (a.ref && a.ref.toLowerCase().includes(q)) ||
+      (a.desc && a.desc.toLowerCase().includes(q))
+    ).slice(0, 20)
+  }, [artigos, altSearch])
 
-  const progressoPct = compSel.length>0 ? Math.round((compFeitos.length/compSel.length)*100) : 0
+  const tipoActual = TIPOS.find(t => t.id === projData?.tipo)
 
-  // ── Guardar identidade (modal ✎) ──────────────────────────────────────
-  const abrirModalId = () => {
-    setModalNome(nome)
-    setModalCampos(Object.entries(campos).map(([chave,valor])=>({chave,valor})))
-    setModalId(true)
-  }
-
-  const guardarIdentidade = () => {
-    const novoNome    = modalNome.trim()
-    const novosCampos = Object.fromEntries(
-      modalCampos.filter(c=>c.chave.trim()).map(c=>[c.chave.trim(), c.valor])
-    )
-    setNome(novoNome); setCampos(novosCampos); setModalId(false)
-    // Gravar imediatamente
-    if (projId && user) {
-      setDoc(projListaRef(projId), { nome: novoNome, campos: novosCampos, ts: Date.now() }, { merge: true }).catch(() => {})
-    }
-    showToast(novoNome ? `Projecto: ${novoNome}` : 'Identidade guardada')
-  }
-
-  // ── Gravar tipos ──────────────────────────────────────────────────────
-  const saveTipos = (t) => {
-    setTipos(t)
-    if (user) setDoc(prefsRef(user.uid), { projTipos: t }, { merge: true }).catch(() => {})
-  }
-
-  // ─────────────────────────────────────────────────────────────────────
+  // ════════════════════════════════════════════════════════════════════════
   // RENDER
-  // ─────────────────────────────────────────────────────────────────────
-  return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%', overflow:'hidden', background:'var(--neo-bg)', color:'var(--neo-text)', fontFamily:"'Barlow',sans-serif" }}>
+  // ════════════════════════════════════════════════════════════════════════
 
-      {/* TOPBAR */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 16px', height:52, flexShrink:0, background:'var(--neo-bg)', boxShadow:'0 2px 8px rgba(0,0,0,0.4)' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          {passo !== 'tipo' && (
-            <button onClick={fecharProjecto}
-              title="Voltar à lista de projectos"
-              style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--neo-text2)', fontSize:11, padding:'4px 8px', lineHeight:1, fontFamily:"'Barlow Condensed'", letterSpacing:'0.1em', display:'flex', alignItems:'center', gap:4 }}>
-              <span style={{ fontSize:14 }}>←</span>
-              <span style={{ textTransform:'uppercase', fontSize:9, letterSpacing:'0.14em' }}>Projectos</span>
-            </button>
-          )}
-          {passo !== 'tipo' && (
-            <button onClick={voltarPasso} style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--neo-text2)', fontSize:18, padding:'4px 6px', lineHeight:1 }}></button>
-          )}
-          <div>
-            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text)' }}>
-              {passo === 'tipo' ? 'Projectos' : 'Novo Projecto'}
-            </div>
-            {passo !== 'tipo' && tipoActual && (
-              <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:tipoActual.cor, marginTop:1 }}>{tipoActual.icon} {tipoActual.label}</div>
-                {nome && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.08em', color:'var(--neo-text2)', marginTop:1 }}>· {nome}</div>}
-              </div>
-            )}
-          </div>
-        </div>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          {totalOrc > 0 && passo !== 'tipo' && (
-            <div style={{ background:'rgba(200,169,110,0.1)', border:'1px solid rgba(200,169,110,0.25)', borderRadius:'var(--neo-radius-pill)', padding:'4px 12px', fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, color:'var(--neo-gold)', letterSpacing:'0.08em' }}>
-              {f2(totalOrc)} €
-            </div>
-          )}
-          {passo !== 'tipo' && (
-            <button onClick={abrirModalId} title="Identificar projecto"
-              style={{ background: nome ? 'rgba(200,169,110,0.1)' : 'transparent', border:`1px solid ${nome ? 'rgba(200,169,110,0.3)' : 'rgba(255,255,255,0.08)'}`, borderRadius:'var(--neo-radius-pill)', padding:'5px 10px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', color: nome ? 'var(--neo-gold)' : 'var(--neo-text2)', transition:'all .15s' }}>
-              ✎
-            </button>
-          )}
-        </div>
+  // ── VISTA: LISTA ────────────────────────────────────────────────────────
+  if (vista === 'lista') return (
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', background:'#0c0c0b', overflow:'hidden' }}>
+
+      {/* Header lista */}
+      <div style={{ display:'flex', alignItems:'center', gap:12, padding:'0 20px', height:48, borderBottom:'1px solid rgba(255,255,255,0.05)', flexShrink:0 }}>
+        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'#e8e4dc' }}>Projectos</div>
+        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:'rgba(255,255,255,0.25)', letterSpacing:'0.06em' }}>{projectos.length} projectos</div>
+        <div style={{ flex:1 }} />
+        <button onClick={() => setNovoModal(true)} style={S.btnGold}>+ Novo projecto</button>
       </div>
 
-      {/* BARRA PROGRESSO */}
-      {['execucao','resumo'].includes(passo) && compSel.length>0 && (
-        <div style={{ height:3, background:'var(--neo-bg2)', flexShrink:0 }}>
-          <div style={{ height:'100%', width:`${progressoPct}%`, background:'linear-gradient(90deg,var(--neo-gold2),var(--neo-gold))', transition:'width .4s ease', boxShadow:'0 0 8px rgba(200,169,110,0.4)' }}/>
-        </div>
-      )}
-
-      <div className="neo-scroll" style={{ flex:1, overflowY:'auto', padding:'20px 16px 40px' }}>
-
-        {/* ECRA DE LISTA */}
-        {passo === 'tipo' && (
-          <div>
-            {/* Projectos em curso */}
-            {projectos.length > 0 && (
-              <div style={{ marginBottom:28 }}>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.22em', textTransform:'uppercase', color:'var(--neo-gold)', marginBottom:10 }}>
-                  Os teus projectos
-                </div>
-                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                  {projectos.map(proj => {
-                    const tObj = tipos.find(t => t.id === proj.tipo)
-                    const camposArr = Object.entries(proj.campos || {})
-                    const guiaEmCurso = proj.passo === 'componentes' || proj.passo === 'execucao'
-                    return (
-                      <div key={proj.projId}
-                        style={{ background:'var(--neo-bg2)', border:'1px solid rgba(200,169,110,0.18)', borderLeft:'3px solid var(--neo-gold)', borderRadius:'var(--neo-radius)', overflow:'hidden' }}>
-                        <div style={{ padding:'14px 16px 10px' }}>
-                          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                            <span style={{ fontSize:20, flexShrink:0 }}>{tObj?.icon || '✦'}</span>
-                            <div style={{ flex:1, minWidth:0 }}>
-                              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--neo-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                                {proj.nome || tObj?.label || 'Projecto'}
-                              </div>
-                              <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:2 }}>
-                                {proj.nome && tObj && (
-                                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.08em', color:'var(--neo-text2)' }}>{tObj.icon} {tObj.label}</span>
-                                )}
-                                {guiaEmCurso && (
-                                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'1px 7px', borderRadius:'var(--neo-radius-pill)', background:'rgba(200,169,110,0.1)', color:'var(--neo-gold)', border:'1px solid rgba(200,169,110,0.2)' }}>Em curso</span>
-                                )}
-                              </div>
-                            </div>
-                            {(proj.total||0) > 0 && (
-                              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:700, color:'var(--neo-gold)', flexShrink:0 }}>
-                                {f2(proj.total)} €
-                              </div>
-                            )}
-                          </div>
-                          {camposArr.length > 0 && (
-                            <div style={{ display:'flex', gap:12, flexWrap:'wrap', paddingLeft:30, marginTop:6 }}>
-                              {camposArr.map(([k,v]) => (
-                                <span key={k} style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'var(--neo-text2)' }}>
-                                  <span style={{ opacity:0.6 }}>{k}:</span> {v}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        {/* Acções */}
-                        <div style={{ display:'grid', gridTemplateColumns: guiaEmCurso ? '1fr 1fr auto auto' : '1fr auto auto', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
-                          <button onClick={() => _abrirProjecto(proj.projId)}
-                            style={{ background:'transparent', border:'none', borderRight:'1px solid rgba(255,255,255,0.06)', cursor:'pointer', padding:'11px 16px', fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-gold)', textAlign:'left' }}>
-                            Ver orcamento
-                          </button>
-                          {guiaEmCurso && (
-                            <button onClick={() => _retomarGuia(proj.projId)}
-                              style={{ background:'transparent', border:'none', borderRight:'1px solid rgba(255,255,255,0.06)', cursor:'pointer', padding:'11px 16px', fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', textAlign:'left' }}>
-                              Continuar guia
-                            </button>
-                          )}
-                          <button onClick={async () => { await _carregarEstado(proj.projId); abrirModalId() }}
-                            style={{ background:'transparent', border:'none', borderRight:'1px solid rgba(255,255,255,0.06)', cursor:'pointer', padding:'11px 16px', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)' }}>
-                            ✎ Editar
-                          </button>
-                          <button onClick={() => setConfirmApagar(proj.projId)}
-                            style={{ background:'transparent', border:'none', cursor:'pointer', padding:'11px 16px', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', opacity:0.6 }}>
-                            X
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Criar novo projecto */}
-            <PassoHeader
-              numero={null}
-              titulo="Novo projecto"
-              sub="Selecciona o tipo para começar"
-            />
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:10, marginTop:16 }}>
-              {tiposActivos.map(t => (
-                <button key={t.id} onClick={() => criarProjecto(t)} className="proj-tipo-card"
-                  style={{ background:'var(--neo-bg2)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'22px 16px', cursor:'pointer', textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
-                  <span style={{ fontSize:32, lineHeight:1 }}>{t.icon}</span>
-                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text)' }}>{t.label}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Editar tipos */}
-            <div style={{ marginTop:20 }}>
-              <button onClick={()=>setEditTipos(o=>!o)}
-                style={{ background:'transparent', border:'none', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text2)', padding:'4px 0', opacity:0.6 }}>
-                {editTipos ? '✓ Fechar' : '⚙ Gerir tipos'}
-              </button>
-              {editTipos && (
-                <div style={{ marginTop:12, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', border:'1px solid rgba(255,255,255,0.07)', padding:'14px' }}>
-                  {tipos.map((t,i) => (
-                    <div key={t.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'6px 0', borderBottom: i<tipos.length-1?'1px solid rgba(255,255,255,0.05)':'none' }}>
-                      <span style={{ fontSize:16 }}>{t.icon}</span>
-                      <span style={{ fontFamily:"'Barlow Condensed'", fontSize:12, letterSpacing:'0.08em', textTransform:'uppercase', color:t.activo?'var(--neo-text)':'var(--neo-text2)', flex:1 }}>{t.label}</span>
-                      <button onClick={()=>saveTipos(tipos.map((x,j)=>j===i?{...x,activo:!x.activo}:x))}
-                        style={{ background: t.activo?'rgba(200,169,110,0.1)':'transparent', border:`1px solid ${t.activo?'rgba(200,169,110,0.3)':'rgba(255,255,255,0.08)'}`, borderRadius:'var(--neo-radius-pill)', padding:'3px 10px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', color: t.activo?'var(--neo-gold)':'var(--neo-text2)' }}>
-                        {t.activo ? 'Activo' : 'Inactivo'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+      {/* Lista */}
+      <div style={{ flex:1, overflowY:'auto', padding:'16px 20px' }}>
+        {!carregado && (
+          <div style={{ textAlign:'center', padding:'60px 0', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.16em', textTransform:'uppercase', color:'rgba(255,255,255,0.2)' }}>A carregar…</div>
+        )}
+        {carregado && projectos.length === 0 && (
+          <div style={{ textAlign:'center', padding:'60px 0' }}>
+            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, letterSpacing:'0.16em', textTransform:'uppercase', color:'rgba(255,255,255,0.15)', marginBottom:16 }}>Sem projectos</div>
+            <button onClick={() => setNovoModal(true)} style={S.btnGold}>Criar primeiro projecto</button>
           </div>
         )}
-
-        {/* PASSO 2: COMPONENTES */}
-        {passo === 'componentes' && tipoActual && (
-          <div>
-            <PassoHeader numero={2} titulo="O que inclui este projecto?" sub="Selecciona tudo o que o cliente pretende - a app trata de encontrar os kits certos"/>
-            <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:20 }}>
-              {COMPONENTES.map(comp => {
-                const sel = compSel.includes(comp.id)
-                const corR = hexToRgb(comp.cor)
-                const nKits = kitsParaComp(comp, kits, tipoActual.label).length
-                const temKits = nKits > 0
-                return (
-                  <button key={comp.id} onClick={()=>toggleComp(comp.id)} className="proj-comp-card"
-                    style={{ display:'flex', alignItems:'center', gap:14, background:sel?`rgba(${corR},0.1)`:'var(--neo-bg2)', border:sel?`1px solid ${comp.cor}55`:'1px solid rgba(255,255,255,0.06)', borderLeft:sel?`3px solid ${comp.cor}`:'3px solid transparent', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'14px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
-                    <div style={{ width:20, height:20, borderRadius:5, flexShrink:0, border:sel?`2px solid ${comp.cor}`:'2px solid rgba(255,255,255,0.15)', background:sel?comp.cor:'transparent', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#0f0d08', fontWeight:700 }}>
-                      {sel&&'✓'}
-                    </div>
-                    <span style={{ fontSize:20, flexShrink:0 }}>{comp.icon}</span>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:sel?comp.cor:'var(--neo-text)' }}>
-                        {comp.label}
-                      </div>
-                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', color:'var(--neo-text2)', marginTop:2 }}>
-                        {comp.sempreCalculadora ? 'Calculadora ANIGRACO' : temKits ? `${nKits} kit${nKits!==1?'s':''} disponível${nKits!==1?'s':''}` : comp.desc}
-                      </div>
-                    </div>
-                    {temKits && !comp.sempreCalculadora && (
-                      <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'2px 8px', borderRadius:'var(--neo-radius-pill)', background:`rgba(${corR},0.15)`, color:comp.cor, border:`1px solid ${comp.cor}33`, flexShrink:0 }}>
-                        {nKits} kit{nKits!==1?'s':''}
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-            {compSel.length > 0 && (
-              <div style={{ marginTop:20 }}>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
-                  Vais tratar por esta ordem:
-                </div>
-                <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:16 }}>
-                  {compSel.map((id,i) => {
-                    const c = COMPONENTES.find(x=>x.id===id)
-                    return (
-                      <span key={id} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', background:`rgba(${hexToRgb(c?.cor||'#c8943a')},0.15)`, color:c?.cor||'var(--neo-gold)', border:`1px solid ${c?.cor||'#c8943a'}33` }}>
-                        {i+1}. {c?.label}
-                      </span>
-                    )
-                  })}
-                </div>
-                <button onClick={avancarDeComponentes} className="neo-btn neo-btn-gold"
-                  style={{ width:'100%', height:48, fontSize:11, letterSpacing:'0.12em', borderRadius:'var(--neo-radius)' }}>
-                  Começar 
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* PASSO 3: EXECUCAO */}
-        {passo === 'execucao' && compActual && compObjActual && (() => {
-          const comp = compObjActual
-          const corR = hexToRgb(comp.cor)
-          const proximo = compSel.find(c=>c!==compActual&&!compFeitos.includes(c))
-          const temKits = kitsEncontrados.length > 0
-
+        {projectos.map(p => {
+          const tipo = TIPOS.find(t => t.id === p.tipo) || TIPOS[TIPOS.length-1]
           return (
-            <div>
-              <PassoHeader numero={compFeitos.length+1} titulo={comp.label} sub={''} cor={comp.cor} icon={comp.icon}/>
-
-              {/* Pills progresso */}
-              <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:12, marginBottom:24 }}>
-                {compSel.map(id => {
-                  const c=COMPONENTES.find(x=>x.id===id)
-                  const feito=compFeitos.includes(id); const actual=id===compActual
-                  return (
-                    <span key={id} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:'var(--neo-radius-pill)', fontWeight:actual?700:400, background:feito?'rgba(200,169,110,0.12)':actual?`rgba(${hexToRgb(c?.cor||'#c8943a')},0.18)`:'var(--neo-bg2)', color:feito?'var(--neo-gold)':actual?(c?.cor||'var(--neo-gold)'):'var(--neo-text2)', border:actual?`1px solid ${c?.cor||'var(--neo-gold)'}44`:'1px solid rgba(255,255,255,0.06)' }}>
-                      {feito?'v ':actual?'> ':''}{c?.label||id}
-                    </span>
-                  )
-                })}
+            <div key={p.projId} style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 16px', marginBottom:6, background:'#111110', border:'1px solid rgba(255,255,255,0.06)', borderLeft:'3px solid ' + tipo.cor, borderRadius:8, cursor:'pointer', transition:'all .15s' }}
+              onMouseOver={e => e.currentTarget.style.background='#161614'}
+              onMouseOut={e => e.currentTarget.style.background='#111110'}>
+              <div style={{ fontSize:20, flexShrink:0 }}>{tipo.icon}</div>
+              <div style={{ flex:1, minWidth:0 }} onClick={() => abrirProjeto(p)}>
+                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:700, letterSpacing:'0.06em', color:'#e8e4dc', marginBottom:3 }}>{p.nome || 'Sem nome'}</div>
+                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:tipo.cor, opacity:0.8 }}>{tipo.label}</span>
+                  {p.ref && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'rgba(255,255,255,0.25)' }}>{p.ref}</span>}
+                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'rgba(255,255,255,0.2)' }}>{new Date(p.ts).toLocaleDateString('pt-PT')}</span>
+                </div>
               </div>
-
-              {/* Tampos */}
-              {comp.sempreCalculadora && (
-                <CompCard comp={comp} corR={corR}>
-                  <p>Abre a calculadora ANIGRACO, faz o cálculo e guarda - depois volta aqui para continuar.</p>
-                  <button onClick={()=>onNavegar?.('tampos',null)} className="neo-btn neo-btn-gold" style={{ height:48, padding:'0 32px', fontSize:11, letterSpacing:'0.12em' }}>
-                    Abrir calculadora 
-                  </button>
-                </CompCard>
-              )}
-
-              {/* Com kits */}
-              {!comp.sempreCalculadora && temKits && (
-                <div>
-                  {kitsEncontrados.length>1 && !kitSel && (
-                    <div style={{ marginBottom:16 }}>
-                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:700, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
-                        Vários kits disponíveis - escolhe qual usar:
-                      </div>
-                      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                        {kitsEncontrados.map(kit => {
-                          const nIt=(kit.items||[]).length
-                          const tot=(kit.items||[]).reduce((s,i)=>s+(i.price||0)*(i.qty||1),0)
-                          return (
-                            <button key={kit.id} onClick={()=>escolherKit(kit)} className="proj-kit-card"
-                              style={{ display:'flex', alignItems:'center', gap:14, background:'var(--neo-bg2)', border:'1px solid rgba(255,255,255,0.06)', borderLeft:'3px solid transparent', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', padding:'14px 16px', cursor:'pointer', textAlign:'left', width:'100%' }}>
-                              <div style={{ flex:1, minWidth:0 }}>
-                                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--neo-text)' }}>{kit.name}</div>
-                                {kit.notas&&<div style={{ fontSize:11, fontWeight:300, color:'var(--neo-text2)', marginTop:2 }}>{kit.notas}</div>}
-                                <div style={{ display:'flex', gap:10, marginTop:4 }}>
-                                  <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)' }}>{nIt} artigo{nIt!==1?'s':''}</span>
-                                  {tot>0&&<span style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:600, color:'var(--neo-gold)' }}>{f2(tot)} €</span>}
-                                </div>
-                              </div>
-                              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:comp.cor, letterSpacing:'0.1em' }}>Usar </span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {kitSel && (
-                    <div>
-                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
-                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:comp.cor }}>
-                          {kitSel.name}
-                        </div>
-                        {kitsEncontrados.length>1 && (
-                          <button onClick={()=>{setKitSelId(null);setKitItems([])}} style={{ background:'transparent', border:'none', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)' }}>
-                             trocar kit
-                          </button>
-                        )}
-                      </div>
-                      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
-                        ✕ remove ·  substitui por outro da mesma categoria
-                      </div>
-                      <div style={{ background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', overflow:'hidden' }}>
-                        {kitItems.map((item,idx) => (
-                          <KitItemRow key={item.artId||idx} item={item}
-                            onChange={inc=>setKitItems(p=>p.map((x,i)=>i===idx?{...x,incluido:inc}:x))}
-                            onSubstituir={()=>setSubst({idx,cat:item.cat,sub:item.sub||''})}/>
-                        ))}
-                      </div>
-                      <div style={{ display:'flex', gap:8, marginTop:14 }}>
-                        <button onClick={tentarSaltar} className="neo-btn neo-btn-ghost" style={{ flex:1, height:44, fontSize:10 }}>Saltar</button>
-                        <button onClick={confirmarKit} disabled={loading} className="neo-btn neo-btn-gold" style={{ flex:2, height:44, fontSize:10 }}>
-                          {loading?'A adicionar...':`Adicionar (${kitItems.filter(i=>i.incluido).length} artigos) `}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {!kitSel && kitsEncontrados.length===1 && (
-                    <div style={{ padding:'20px', textAlign:'center', color:'var(--neo-text2)', fontFamily:"'Barlow Condensed'", fontSize:10 }}>A carregar kit...</div>
-                  )}
+              {p.total > 0 && (
+                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:15, fontWeight:700, color:'rgba(200,148,58,0.8)', flexShrink:0 }} onClick={() => abrirProjeto(p)}>
+                  {fEur(p.total)}
                 </div>
               )}
-
-              {/* Sem kits */}
-              {!comp.sempreCalculadora && !temKits && (
-                <CompCard comp={comp} corR={corR}>
-                  <p>
-                    {comp.destCat
-                      ? `Selecciona os artigos de "${comp.destCat}" na Biblioteca e volta aqui.`
-                      : 'Selecciona os serviços na Mão de Obra e volta aqui.'}
-                  </p>
-                  <div style={{ background:'rgba(200,169,110,0.06)', border:'1px solid rgba(200,169,110,0.15)', borderRadius:'var(--neo-radius-sm)', padding:'10px 14px', marginBottom:20, fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.12em', color:'var(--neo-text2)' }}>
-                    💡 Podes criar um kit de <strong style={{color:'var(--neo-gold)'}}>{comp.label}</strong> na secção <strong style={{color:'var(--neo-gold)'}}>Kits</strong> para não teres de seleccionar manualmente da próxima vez.
-                  </div>
-                  <button onClick={()=>onNavegar?.(comp.destino||'biblioteca', comp.destCat||null)} className="neo-btn neo-btn-gold" style={{ height:48, padding:'0 32px', fontSize:11, letterSpacing:'0.12em' }}>
-                    Abrir {comp.label} 
-                  </button>
-                </CompCard>
-              )}
-
-              {!comp.sempreCalculadora && (
-                <button onClick={tentarSaltar} className="neo-btn neo-btn-ghost"
-                  style={{ width:'100%', height:44, fontSize:10, marginTop: temKits&&kitSel ? 0 : 12 }}>
-                  {compPorFazer.length===1
-                    ? '✓ Concluído - ver resumo'
-                    : `✓ Feito - próximo: ${COMPONENTES.find(c=>c.id===proximo)?.label||''}`}
-                </button>
-              )}
-              {comp.sempreCalculadora && (
-                <button onClick={tentarSaltar} className="neo-btn neo-btn-ghost"
-                  style={{ width:'100%', height:44, fontSize:10, marginTop:12 }}>
-                  {compPorFazer.length===1
-                    ? '✓ Tampos calculados - ver resumo'
-                    : `✓ Tampos calculados - próximo: ${COMPONENTES.find(c=>c.id===proximo)?.label||''}`}
-                </button>
-              )}
+              <button onClick={() => setConfirmDel(p.projId)} style={{ background:'transparent', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.15)', fontSize:16, padding:'4px 6px', flexShrink:0, transition:'color .15s' }}
+                onMouseOver={e => e.currentTarget.style.color='rgba(255,80,80,0.6)'}
+                onMouseOut={e => e.currentTarget.style.color='rgba(255,255,255,0.15)'}>✕</button>
             </div>
           )
-        })()}
-
-        {/* PASSO 4: RESUMO */}
-        {passo === 'resumo' && (
-          <div>
-            <PassoHeader numero="✓" titulo="Projecto concluído" sub={tipoActual?`${tipoActual.icon} ${tipoActual.label}`:''} cor="var(--neo-gold)"/>
-            {totalOrc > 0 && (
-              <div style={{ background:'rgba(200,169,110,0.08)', border:'1px solid rgba(200,169,110,0.25)', borderRadius:'var(--neo-radius)', padding:'20px 24px', textAlign:'center', marginTop:20, marginBottom:20 }}>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:8 }}>Total PVP indicativo</div>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:36, fontWeight:700, color:'var(--neo-gold)', textShadow:'0 0 20px rgba(200,169,110,0.3)' }}>{f2(totalOrc)} €</div>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, color:'var(--neo-text2)', letterSpacing:'0.1em', marginTop:6 }}>{orcItems.length} item{orcItems.length!==1?'s':''} no orçamento</div>
-              </div>
-            )}
-            <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:16 }}>
-              {compFeitos.map(id => {
-                const c = COMPONENTES.find(x=>x.id===id)
-                return (
-                  <div key={id} style={{ display:'flex', alignItems:'center', gap:12, background:'var(--neo-bg2)', borderRadius:'var(--neo-radius-sm)', border:'1px solid rgba(255,255,255,0.06)', borderLeft:`3px solid ${c?.cor||'var(--neo-gold)'}`, padding:'10px 14px' }}>
-                    <span style={{ fontSize:16 }}>{c?.icon}</span>
-                    <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:c?.cor||'var(--neo-gold)' }}>{c?.label}</span>
-                    <button onClick={() => iniciarComp(id)}
-                      style={{ marginLeft:'auto', background:'transparent', border:'1px solid rgba(255,255,255,0.1)', borderRadius:4, padding:'4px 10px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', transition:'all .15s' }}
-                      onMouseOver={e=>{e.currentTarget.style.borderColor='rgba(200,169,110,0.4)';e.currentTarget.style.color='var(--neo-gold)'}}
-                      onMouseOut={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.1)';e.currentTarget.style.color='var(--neo-text2)'}}>
-                      ✎ Editar
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              <button onClick={()=>onNavegar?.('orcamentos')} className="neo-btn neo-btn-gold"
-                style={{ width:'100%', height:48, fontSize:11 }}>
-                Ver orçamento completo 
-              </button>
-              <button onClick={() => setPasso('componentes')} className="neo-btn neo-btn-ghost"
-                style={{ width:'100%', height:44, fontSize:10 }}>
-                ← Alterar componentes do projecto
-              </button>
-              <button onClick={fecharProjecto} className="neo-btn neo-btn-ghost"
-                style={{ width:'100%', height:44, fontSize:10, opacity:0.6 }}>
-                Voltar à lista de projectos
-              </button>
-            </div>
-          </div>
-        )}
-
+        })}
       </div>
 
-      {/* MODAL CONFIRMAR APAGAR */}
-      {confirmApagar && (
-        <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setConfirmApagar(null)}}>
-          <div className="neo-modal" style={{ maxWidth:340 }}>
-            <div className="neo-modal-head">
-              Apagar projecto
-              <button className="neo-modal-close" onClick={()=>setConfirmApagar(null)}>✕</button>
+      {/* Modal novo projecto */}
+      {novoModal && (
+        <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+          <div style={{ background:'#111110', borderRadius:10, border:'1px solid rgba(255,255,255,0.08)', width:'100%', maxWidth:420, padding:'24px 24px 20px' }}>
+            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'#e8e4dc', marginBottom:20 }}>Novo projecto</div>
+            <div style={{ marginBottom:14 }}>
+              <label style={S.label}>Nome do cliente</label>
+              <input autoFocus value={novoNome} onChange={e=>setNovoNome(e.target.value)} onKeyDown={e=>e.key==='Enter'&&criarProjeto()} placeholder="ex: A. Borges" style={S.input} />
             </div>
-            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, color:'var(--neo-text2)', letterSpacing:'0.06em', lineHeight:1.9, marginBottom:24 }}>
-              Tens a certeza? Esta acção apaga o projecto e o seu orçamento.<br/>
-              <span style={{ fontSize:10 }}>Não é possível recuperar.</span>
-            </div>
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              <button className="neo-btn neo-btn-danger" onClick={()=>apagarProjecto(confirmApagar)} style={{ width:'100%', height:44, fontSize:10 }}>
-                Apagar definitivamente
-              </button>
-              <button className="neo-btn neo-btn-ghost" onClick={()=>setConfirmApagar(null)} style={{ width:'100%', height:40, fontSize:9, opacity:0.6 }}>
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL CONFIRMAR SALTAR */}
-      {confirmSaltar && (
-        <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setConfirmSaltar(false)}}>
-          <div className="neo-modal" style={{ maxWidth:340 }}>
-            <div className="neo-modal-head">
-              Sem artigos adicionados
-              <button className="neo-modal-close" onClick={()=>setConfirmSaltar(false)}>✕</button>
-            </div>
-            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, color:'var(--neo-text2)', letterSpacing:'0.06em', lineHeight:1.9, marginBottom:24 }}>
-              Não adicionaste nenhum artigo ao orçamento para este componente.<br/>
-              <span style={{ fontSize:10 }}>Tens a certeza que queres avançar sem adicionar nada?</span>
-            </div>
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              <button className="neo-btn neo-btn-ghost" onClick={()=>{ setConfirmSaltar(false); marcarFeitoEAvancar(compActual) }} style={{ width:'100%', height:44, fontSize:10 }}>
-                Sim, avançar sem adicionar
-              </button>
-              <button className="neo-btn neo-btn-gold" onClick={()=>setConfirmSaltar(false)} style={{ width:'100%', height:44, fontSize:10 }}>
-                 Voltar e adicionar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL IDENTIDADE */}
-      {modalId && (
-        <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setModalId(false)}}>
-          <div className="neo-modal" style={{ maxWidth:380 }}>
-            <div className="neo-modal-head">
-              Identificar projecto
-              <button className="neo-modal-close" onClick={()=>setModalId(false)}>✕</button>
-            </div>
-            <div style={{ marginBottom:18 }}>
-              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:6 }}>Nome do cliente</div>
-              <input
-                value={modalNome}
-                onChange={e=>setModalNome(e.target.value)}
-                placeholder="ex: João Silva"
-                autoFocus
-                style={{ width:'100%', background:'var(--neo-bg)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'var(--neo-radius-sm)', padding:'10px 12px', fontFamily:"'Barlow'", fontSize:14, color:'var(--neo-text)', outline:'none', boxSizing:'border-box' }}
-              />
-            </div>
-            <div style={{ marginBottom:18 }}>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text2)' }}>Campos adicionais</div>
-                <button onClick={()=>setModalCampos(p=>[...p,{chave:'',valor:''}])}
-                  style={{ background:'transparent', border:'1px solid rgba(200,169,110,0.25)', borderRadius:'var(--neo-radius-pill)', padding:'3px 10px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', color:'var(--neo-gold)' }}>
-                  + Adicionar
-                </button>
-              </div>
-              {modalCampos.length === 0 && (
-                <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)', letterSpacing:'0.08em', opacity:0.6 }}>
-                  ex: Processo, Nº de obra, Nota...
-                </div>
-              )}
-              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-                {modalCampos.map((c,i)=>(
-                  <div key={i} style={{ display:'flex', alignItems:'center', gap:6 }}>
-                    <input value={c.chave} onChange={e=>setModalCampos(p=>p.map((x,j)=>j===i?{...x,chave:e.target.value}:x))} placeholder="Campo"
-                      style={{ width:100, flexShrink:0, background:'var(--neo-bg)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'var(--neo-radius-sm)', padding:'7px 10px', fontFamily:"'Barlow Condensed'", fontSize:11, letterSpacing:'0.08em', textTransform:'uppercase', color:'var(--neo-text2)', outline:'none' }}/>
-                    <input value={c.valor} onChange={e=>setModalCampos(p=>p.map((x,j)=>j===i?{...x,valor:e.target.value}:x))} placeholder="Valor"
-                      style={{ flex:1, background:'var(--neo-bg)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'var(--neo-radius-sm)', padding:'7px 10px', fontFamily:"'Barlow'", fontSize:13, color:'var(--neo-text)', outline:'none' }}/>
-                    <button onClick={()=>setModalCampos(p=>p.filter((_,j)=>j!==i))}
-                      style={{ background:'transparent', border:'none', cursor:'pointer', color:'var(--neo-text2)', fontSize:14, padding:'4px 6px', lineHeight:1, flexShrink:0 }}>✕</button>
-                  </div>
+            <div style={{ marginBottom:20 }}>
+              <label style={S.label}>Tipo</label>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:6 }}>
+                {TIPOS.map(t => (
+                  <button key={t.id} onClick={() => setNovoTipo(t.id)} style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 10px', borderRadius:6, border:'1px solid ' + (novoTipo===t.id ? t.cor+'55' : 'rgba(255,255,255,0.07)'), background: novoTipo===t.id ? t.cor+'15' : 'transparent', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.06em', textTransform:'uppercase', color: novoTipo===t.id ? t.cor : 'rgba(255,255,255,0.35)', transition:'all .15s' }}>
+                    <span>{t.icon}</span>{t.label}
+                  </button>
                 ))}
               </div>
             </div>
-            <div style={{ display:'flex', gap:8 }}>
-              <button className="neo-btn neo-btn-ghost" onClick={()=>setModalId(false)} style={{ flex:1, height:42, fontSize:10 }}>Cancelar</button>
-              <button className="neo-btn neo-btn-gold" onClick={guardarIdentidade} style={{ flex:2, height:42, fontSize:10 }}>Guardar</button>
+            <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+              <button onClick={() => setNovoModal(false)} style={S.btnGhost}>Cancelar</button>
+              <button onClick={criarProjeto} style={S.btnGold}>Criar</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL SUBSTITUICAO */}
-      {subst && (
-        <div className="neo-overlay open" onClick={e=>{if(e.target===e.currentTarget)setSubst(null)}}>
-          <div className="neo-modal" style={{ maxWidth:480 }}>
-            <div className="neo-modal-head">
-              Substituir artigo
-              <button className="neo-modal-close" onClick={()=>setSubst(null)}>✕</button>
-            </div>
-            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--neo-text2)', marginBottom:10 }}>
-              {subst.sub || subst.cat} - escolhe o artigo substituto
-            </div>
-            {kitItems[subst.idx] && (
-              <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background:'rgba(200,169,110,0.06)', border:'1px solid rgba(200,169,110,0.2)', borderRadius:'var(--neo-radius-sm)', marginBottom:14 }}>
-                <span style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:'var(--neo-text2)', flexShrink:0 }}>ACTUAL</span>
-                <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'var(--neo-gold)', letterSpacing:'0.06em', flexShrink:0 }}>{kitItems[subst.idx].ref}</span>
-                <span style={{ fontSize:12, fontWeight:300, color:'var(--neo-text2)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{kitItems[subst.idx].desc}</span>
-                {kitItems[subst.idx].price>0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, color:'var(--neo-text2)', flexShrink:0 }}>{f2(kitItems[subst.idx].price)} €</span>}
-              </div>
-            )}
-            <div className="neo-scroll" style={{ maxHeight:'50vh', overflowY:'auto' }}>
-              {artsCat.length===0
-                ? <div style={{ padding:'30px 20px', textAlign:'center', fontFamily:"'Barlow Condensed'", fontSize:10, color:'var(--neo-text2)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Sem artigos em {subst.sub||subst.cat}</div>
-                : (() => {
-                    const precoActual = kitItems[subst.idx]?.price || 0
-                    const renderArt = (art) => {
-                      const diff = precoActual>0 ? art.price - precoActual : null
-                      return (
-                        <div key={art.id} className="tampo-ref-row" style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
-                          <div style={{ flex:1, minWidth:0 }}>
-                            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:2 }}>
-                              <span style={{ fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'var(--neo-gold)', letterSpacing:'0.06em', flexShrink:0 }}>{art.ref}</span>
-                              {art.price>0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, color:'var(--neo-text2)', flexShrink:0 }}>{f2(art.price)} €</span>}
-                              {diff!==null&&diff!==0&&(
-                                <span style={{ fontFamily:"'Barlow Condensed'", fontSize:10, fontWeight:700, color:diff>0?'#f87171':'#4ade80', flexShrink:0 }}>
-                                  {diff>0?'+':''}{f2(diff)} €
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ fontSize:12, fontWeight:300, color:'var(--neo-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{art.desc}</div>
-                            <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:1 }}>
-                              {art.supplier&&<span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)' }}>{art.supplier}</span>}
-                              {art.link&&<a href={art.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{ fontFamily:"'Barlow Condensed'", fontSize:8, color:'var(--neo-gold2)', textDecoration:'none', letterSpacing:'0.08em' }}> link</a>}
-                            </div>
-                          </div>
-                          <button onClick={()=>substituir(art)} className="neo-btn neo-btn-gold" style={{ height:30, padding:'0 14px', fontSize:9, flexShrink:0 }}>
-                            Usar este
-                          </button>
-                        </div>
-                      )
-                    }
-                    return (
-                      <>
-                        {artsSub.length>0 && artsSub.map(renderArt)}
-                        {artsSub.length>0 && artsResto.length>0 && (
-                          <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', margin:'4px 0' }}>
-                            <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.06)' }}/>
-                            <span style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.16em', textTransform:'uppercase', color:'var(--neo-text3,#4a4a42)', flexShrink:0 }}>Outros em {subst.cat}</span>
-                            <div style={{ flex:1, height:1, background:'rgba(255,255,255,0.06)' }}/>
-                          </div>
-                        )}
-                        {artsResto.map(renderArt)}
-                      </>
-                    )
-                  })()
-              }
+      {/* Confirm eliminar */}
+      {confirmDel && (
+        <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+          <div style={{ background:'#111110', borderRadius:10, border:'1px solid rgba(255,255,255,0.08)', padding:'24px', maxWidth:360, width:'100%' }}>
+            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, letterSpacing:'0.06em', color:'#e8e4dc', marginBottom:16 }}>Eliminar este projecto permanentemente?</div>
+            <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+              <button onClick={() => setConfirmDel(null)} style={S.btnGhost}>Cancelar</button>
+              <button onClick={() => eliminarProjeto(confirmDel)} style={{ ...S.btnGold, background:'rgba(200,60,60,0.8)' }}>Eliminar</button>
             </div>
           </div>
         </div>
       )}
     </div>
   )
-}
 
-// ── Sub-componentes ───────────────────────────────────────────────────────
-
-function CompCard({ comp, corR, children }) {
+  // ── VISTA: WORKSPACE ────────────────────────────────────────────────────
   return (
-    <div style={{ background:'var(--neo-bg2)', borderRadius:'var(--neo-radius)', boxShadow:'var(--neo-shadow-out-sm)', border:`1px solid rgba(${corR},0.2)`, padding:'28px 20px', textAlign:'center', marginBottom:14 }}>
-      <div style={{ fontSize:44, marginBottom:14 }}>{comp.icon}</div>
-      <div style={{ fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:comp.cor, marginBottom:10 }}>{comp.label}</div>
-      <div style={{ fontSize:13, fontWeight:300, color:'var(--neo-text2)', lineHeight:1.7, marginBottom:20, maxWidth:300, margin:'0 auto 20px' }}>
-        {children}
-      </div>
-    </div>
-  )
-}
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', overflow:'hidden', background:'#0c0c0b' }}>
 
-function PassoHeader({ numero, titulo, sub, cor, icon }) {
-  const mostrarCirculo = icon != null || numero != null
-  return (
-    <div style={{ marginBottom:4 }}>
-      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
-        {mostrarCirculo && (
-          <div style={{ width:28, height:28, borderRadius:'50%', flexShrink:0, background:cor?`${cor}22`:'rgba(200,169,110,0.15)', border:`1px solid ${cor||'var(--neo-gold)'}44`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:700, color:cor||'var(--neo-gold)' }}>
-            {icon||numero}
+      {/* Topbar workspace */}
+      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'0 16px', height:46, background:'#0f0f0e', borderBottom:'1px solid rgba(255,255,255,0.05)', flexShrink:0 }}>
+        <button onClick={() => setVista('lista')} style={{ background:'transparent', border:'none', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)', display:'flex', alignItems:'center', gap:5, padding:0, transition:'color .15s' }}
+          onMouseOver={e=>e.currentTarget.style.color='#c8a96e'}
+          onMouseOut={e=>e.currentTarget.style.color='rgba(255,255,255,0.3)'}>
+          ← Projectos
+        </button>
+        <div style={{ width:1, height:16, background:'rgba(255,255,255,0.08)' }} />
+        <div style={{ flex:1 }}>
+          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:14, fontWeight:700, letterSpacing:'0.06em', color:'#e8e4dc' }}>{projData?.nome || 'Projecto'}</div>
+          <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, color:tipoActual?.cor || '#c8943a', letterSpacing:'0.1em', textTransform:'uppercase' }}>{tipoActual?.icon} {tipoActual?.label}</div>
+        </div>
+        {total > 0 && (
+          <div style={{ background:'rgba(200,148,58,0.1)', border:'1px solid rgba(200,148,58,0.25)', borderRadius:99, padding:'4px 14px', fontFamily:"'Barlow Condensed'", fontSize:13, fontWeight:700, color:'#c8a96e', letterSpacing:'0.06em', flexShrink:0 }}>
+            {fEur(total)}
           </div>
         )}
-        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:18, fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase', color:'var(--neo-text)' }}>{titulo}</div>
+        <button onClick={() => { onNavegar?.('proposta') }} style={{ ...S.btnGhost, fontSize:9, padding:'5px 10px' }}>Proposta</button>
       </div>
-      {sub && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.1em', color:'var(--neo-text2)', paddingLeft: mostrarCirculo ? 38 : 0, lineHeight:1.6 }}>{sub}</div>}
+
+      {/* Workspace body */}
+      <div style={{ display:'grid', gridTemplateColumns:'186px 1fr 210px', flex:1, overflow:'hidden' }}>
+
+        {/* ── PAINEL ESQUERDO — Info ── */}
+        <div style={{ background:'#0f0f0e', borderRight:'1px solid rgba(255,255,255,0.05)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+          <div style={{ flex:1, overflowY:'auto', padding:'14px 12px', display:'flex', flexDirection:'column', gap:14 }}>
+
+            <div>
+              <label style={S.label}>Cliente</label>
+              <input value={projData?.nome||''} onChange={e=>setProjData(p=>({...p,nome:e.target.value}))} onBlur={guardarInfo} style={S.input} />
+            </div>
+
+            <div>
+              <label style={S.label}>Tipo</label>
+              <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                {TIPOS.map(t => (
+                  <button key={t.id} onClick={async ()=>{ setProjData(p=>({...p,tipo:t.id})); await setDoc(projRef(projId),{tipo:t.id},{merge:true}) }}
+                    style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 10px', borderRadius:5, border:'1px solid ' + (projData?.tipo===t.id ? t.cor+'55' : 'rgba(255,255,255,0.06)'), background: projData?.tipo===t.id ? t.cor+'12' : 'transparent', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.06em', textTransform:'uppercase', color: projData?.tipo===t.id ? t.cor : 'rgba(255,255,255,0.3)', transition:'all .15s', textAlign:'left' }}>
+                    <span style={{ fontSize:14 }}>{t.icon}</span>{t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ height:1, background:'rgba(255,255,255,0.05)' }} />
+
+            <div>
+              <label style={S.label}>Referência</label>
+              <input value={projData?.ref||''} onChange={e=>setProjData(p=>({...p,ref:e.target.value}))} onBlur={guardarInfo} placeholder="ex: OS 4521" style={S.input} />
+            </div>
+
+            <div>
+              <label style={S.label}>Notas</label>
+              <textarea value={projData?.notas||''} onChange={e=>setProjData(p=>({...p,notas:e.target.value}))} onBlur={guardarInfo} placeholder="Notas do projecto, pedidos do cliente…" style={S.textarea} />
+            </div>
+
+          </div>
+        </div>
+
+        {/* ── CENTRO — Orçamento ── */}
+        <div style={{ display:'flex', flexDirection:'column', overflow:'hidden', background:'#0c0c0b' }}>
+
+          <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 16px', borderBottom:'1px solid rgba(255,255,255,0.05)', flexShrink:0 }}>
+            <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:600, letterSpacing:'0.16em', textTransform:'uppercase', color:'rgba(255,255,255,0.25)' }}>
+              Orçamento · {orcItems.length} artigo{orcItems.length!==1?'s':''}
+            </div>
+          </div>
+
+          <div style={{ flex:1, overflowY:'auto' }}>
+            {orcItems.length === 0 && (
+              <div style={{ textAlign:'center', padding:'60px 20px', fontFamily:"'Barlow Condensed'", fontSize:10, letterSpacing:'0.14em', textTransform:'uppercase', color:'rgba(255,255,255,0.12)' }}>
+                Adiciona artigos da Biblioteca →
+              </div>
+            )}
+            {grupos.map(grupo => (
+              <div key={grupo.origem} style={{ marginBottom:2 }}>
+                {/* Cabeçalho do grupo */}
+                <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 16px', background:'rgba(255,255,255,0.02)', borderBottom:'1px solid rgba(255,255,255,0.04)', borderLeft:'2px solid ' + grupo.cor }}>
+                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, fontWeight:700, letterSpacing:'0.14em', textTransform:'uppercase', color:grupo.cor, opacity:0.8 }}>{grupo.origem}</div>
+                  <div style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed'", fontSize:9, color:'rgba(255,255,255,0.2)' }}>{fEur(grupo.total)}</div>
+                </div>
+                {/* Itens do grupo */}
+                {grupo.items.map(item => (
+                  <React.Fragment key={item._idx}>
+                    <OrcItem item={item} idx={item._idx} onRemove={removerItem} onQty={updateQty} onPrice={updatePrice} onAlt={() => { setAltModal(item._idx); setAltSearch('') }} />
+                    {/* Alternativas */}
+                    {(item.alternativas||[]).map(alt => (
+                      <div key={alt.ref} style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 16px 6px 30px', borderBottom:'1px solid rgba(255,255,255,0.02)', background:'rgba(0,0,0,0.15)' }}>
+                        <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:'rgba(200,148,58,0.45)', width:72, flexShrink:0 }}>{alt.ref}</div>
+                        <div style={{ fontSize:11, fontWeight:300, color:'rgba(255,255,255,0.3)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{alt.desc}</div>
+                        <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, color:'rgba(255,255,255,0.2)', width:58, textAlign:'right', flexShrink:0 }}>{fEur(alt.price)}</div>
+                        <button onClick={() => usarAlternativa(item._idx, alt)} style={{ background:'transparent', border:'1px solid rgba(200,148,58,0.2)', borderRadius:3, padding:'2px 8px', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(200,148,58,0.5)', flexShrink:0, transition:'all .15s' }}
+                          onMouseOver={e=>{e.currentTarget.style.borderColor='rgba(200,148,58,0.5)';e.currentTarget.style.color='#c8943a'}}
+                          onMouseOut={e=>{e.currentTarget.style.borderColor='rgba(200,148,58,0.2)';e.currentTarget.style.color='rgba(200,148,58,0.5)'}}>
+                          Usar
+                        </button>
+                        <button onClick={() => removerAlternativa(item._idx, alt.ref)} style={{ background:'transparent', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.1)', fontSize:11, padding:'2px 4px', transition:'color .15s' }}
+                          onMouseOver={e=>e.currentTarget.style.color='rgba(255,80,80,0.5)'}
+                          onMouseOut={e=>e.currentTarget.style.color='rgba(255,255,255,0.1)'}>✕</button>
+                      </div>
+                    ))}
+                  </React.Fragment>
+                ))}
+              </div>
+            ))}
+          </div>
+
+          {/* Footer total */}
+          <div style={{ padding:'12px 16px', borderTop:'1px solid rgba(255,255,255,0.05)', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+            <div>
+              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.14em', textTransform:'uppercase', color:'rgba(255,255,255,0.2)', marginBottom:2 }}>Total</div>
+              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:20, fontWeight:700, color:'#c8a96e' }}>{fEur(total)}</div>
+            </div>
+            <button onClick={() => onNavegar?.('orcamentos')} style={S.btnGhost}>Ver orçamento completo</button>
+          </div>
+        </div>
+
+        {/* ── DIREITA — Biblioteca rápida ── */}
+        <div style={{ background:'#0f0f0e', borderLeft:'1px solid rgba(255,255,255,0.05)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+
+          {/* Tabs */}
+          <div style={{ display:'flex', borderBottom:'1px solid rgba(255,255,255,0.05)', flexShrink:0 }}>
+            {[['biblioteca','Biblioteca'],['maodeobra','Mão Obra']].map(([id,label]) => (
+              <button key={id} onClick={() => setRightTab(id)} style={{ flex:1, padding:'8px 6px', background:'transparent', border:'none', cursor:'pointer', fontFamily:"'Barlow Condensed'", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color: rightTab===id ? '#c8943a' : 'rgba(255,255,255,0.25)', borderBottom: rightTab===id ? '2px solid #c8943a' : '2px solid transparent', transition:'all .15s' }}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Search */}
+          <div style={{ padding:'8px 10px', borderBottom:'1px solid rgba(255,255,255,0.05)', flexShrink:0 }}>
+            <input
+              value={rightTab==='biblioteca' ? searchBib : moSearch}
+              onChange={e => rightTab==='biblioteca' ? setSearchBib(e.target.value) : setMoSearch(e.target.value)}
+              placeholder="Pesquisar artigo..."
+              style={{ ...S.input, padding:'6px 10px', fontSize:11 }}
+            />
+          </div>
+
+          {/* Lista */}
+          <div style={{ flex:1, overflowY:'auto' }}>
+            {(rightTab==='biblioteca' ? artigosFiltrados : moFiltrados).map(art => (
+              <div key={art.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderBottom:'1px solid rgba(255,255,255,0.03)', cursor:'pointer', transition:'background .1s' }}
+                onMouseOver={e=>e.currentTarget.style.background='rgba(255,255,255,0.03)'}
+                onMouseOut={e=>e.currentTarget.style.background='transparent'}>
+                <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:'#c8943a', width:58, flexShrink:0 }}>{art.ref}</div>
+                <div style={{ fontSize:11, fontWeight:300, color:'rgba(255,255,255,0.6)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{art.desc}</div>
+                <button onClick={() => addArtigo(art)} style={{ background:'transparent', border:'none', cursor:'pointer', color:'rgba(200,148,58,0.4)', fontSize:16, padding:'2px', flexShrink:0, transition:'color .15s', lineHeight:1 }}
+                  onMouseOver={e=>e.currentTarget.style.color='#c8943a'}
+                  onMouseOut={e=>e.currentTarget.style.color='rgba(200,148,58,0.4)'}>+</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Modal alternativa */}
+      {altModal !== null && (
+        <div style={{ position:'fixed', inset:0, zIndex:300, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+          <div style={{ background:'#111110', borderRadius:10, border:'1px solid rgba(255,255,255,0.08)', width:'100%', maxWidth:460, display:'flex', flexDirection:'column', maxHeight:'70vh' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px', borderBottom:'1px solid rgba(255,255,255,0.06)', flexShrink:0 }}>
+              <div style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', color:'#e8e4dc' }}>Adicionar alternativa</div>
+              <button onClick={() => setAltModal(null)} style={{ background:'transparent', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.3)', fontSize:18 }}>✕</button>
+            </div>
+            <div style={{ padding:'10px 18px', borderBottom:'1px solid rgba(255,255,255,0.05)', flexShrink:0 }}>
+              <input value={altSearch} onChange={e=>setAltSearch(e.target.value)} placeholder="Pesquisar artigo alternativo..." style={{ ...S.input }} autoFocus />
+            </div>
+            <div style={{ flex:1, overflowY:'auto' }}>
+              {altFiltrados.map(art => (
+                <div key={art.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 18px', borderBottom:'1px solid rgba(255,255,255,0.04)', cursor:'pointer', transition:'background .1s' }}
+                  onMouseOver={e=>e.currentTarget.style.background='rgba(255,255,255,0.02)'}
+                  onMouseOut={e=>e.currentTarget.style.background='transparent'}>
+                  <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:11, color:'#c8943a', width:72, flexShrink:0 }}>{art.ref}</div>
+                  <div style={{ fontSize:12, fontWeight:300, color:'#e8e4dc', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{art.desc}</div>
+                  <div style={{ fontFamily:"'Barlow Condensed'", fontSize:11, color:'rgba(255,255,255,0.3)', width:52, textAlign:'right', flexShrink:0 }}>{fEur(art.price)}</div>
+                  <button onClick={() => adicionarAlternativa(altModal, art)} style={S.btnGold}>+ Alt</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function KitItemRow({ item, onChange, onSubstituir }) {
+// ── Componente OrcItem ────────────────────────────────────────────────────
+function OrcItem({ item, idx, onRemove, onQty, onPrice, onAlt }) {
+  const [editQty,   setEditQty]   = useState(false)
+  const [editPrice, setEditPrice] = useState(false)
+  const [qtyVal,    setQtyVal]    = useState(item.qty||1)
+  const [priceVal,  setPriceVal]  = useState(item.price||0)
+
+  const subtotal = (parseFloat(item.price)||0) * (parseFloat(item.qty)||1)
+
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderBottom:'1px solid rgba(255,255,255,0.05)', background:item.incluido?'transparent':'rgba(0,0,0,0.12)', opacity:item.incluido?1:0.45, transition:'all .15s' }}>
-      <button onClick={()=>onChange(!item.incluido)} style={{ width:20, height:20, borderRadius:4, border:item.incluido?'2px solid var(--neo-gold)':'2px solid rgba(255,255,255,0.15)', background:item.incluido?'var(--neo-gold)':'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, cursor:'pointer', fontSize:11, color:'#0f0d08', fontWeight:700 }}>
-        {item.incluido&&'✓'}
-      </button>
-      <span style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:700, letterSpacing:'0.06em', color:'var(--neo-gold)', flexShrink:0, minWidth:65 }}>{item.ref}</span>
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontSize:12, fontWeight:300, color:'var(--neo-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.desc}</div>
-        {item.cat && <div style={{ fontFamily:"'Barlow Condensed'", fontSize:8, letterSpacing:'0.1em', textTransform:'uppercase', color:'var(--neo-text2)', marginTop:1 }}>{item.cat}{item.sub?' · '+item.sub:''}</div>}
-      </div>
-      {item.price>0 && <span style={{ fontFamily:"'Barlow Condensed'", fontSize:11, fontWeight:600, color:'var(--neo-text2)', flexShrink:0 }}>{f2(item.price)} €</span>}
-      {item.link && (
-        <a href={item.link} target="_blank" rel="noreferrer" title="Abrir link do artigo"
-          style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:26, height:26, borderRadius:'var(--neo-radius-pill)', background:'var(--neo-bg)', boxShadow:'var(--neo-shadow-out-sm)', textDecoration:'none', color:'var(--neo-gold2)', fontSize:11, flexShrink:0 }}
-          onClick={e=>e.stopPropagation()}></a>
+    <div style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 16px', borderBottom:'1px solid rgba(255,255,255,0.03)', transition:'background .1s' }}
+      onMouseOver={e=>e.currentTarget.style.background='rgba(255,255,255,0.02)'}
+      onMouseOut={e=>e.currentTarget.style.background='transparent'}>
+
+      <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:11, color:'#c8943a', width:72, flexShrink:0 }}>{item.ref}</div>
+
+      <div style={{ fontSize:12, fontWeight:300, color:'#e8e4dc', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item.desc}</div>
+
+      {/* Qty */}
+      {editQty ? (
+        <input type="number" value={qtyVal} onChange={e=>setQtyVal(e.target.value)}
+          onBlur={()=>{ onQty(idx, qtyVal); setEditQty(false) }}
+          onKeyDown={e=>e.key==='Enter'&&(onQty(idx,qtyVal),setEditQty(false))}
+          autoFocus style={{ width:40, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(200,148,58,0.3)', borderRadius:4, padding:'2px 4px', color:'#e8e4dc', fontSize:11, textAlign:'center', outline:'none' }} />
+      ) : (
+        <div onClick={()=>{ setQtyVal(item.qty||1); setEditQty(true) }} style={{ fontSize:10, color:'rgba(255,255,255,0.25)', width:20, textAlign:'center', cursor:'pointer', flexShrink:0 }} title="Editar quantidade">×{item.qty||1}</div>
       )}
-      {item.cat && (
-        <button onClick={onSubstituir} title={`Substituir - ver outros em ${item.cat}`}
-          style={{ background:'var(--neo-bg)', border:'none', borderRadius:'var(--neo-radius-pill)', width:26, height:26, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'var(--neo-shadow-out-sm)', color:'var(--neo-text2)', fontSize:11, flexShrink:0 }}>
-          sub
-        </button>
+
+      {/* Price */}
+      {editPrice ? (
+        <input type="number" value={priceVal} onChange={e=>setPriceVal(e.target.value)}
+          onBlur={()=>{ onPrice(idx, priceVal); setEditPrice(false) }}
+          onKeyDown={e=>e.key==='Enter'&&(onPrice(idx,priceVal),setEditPrice(false))}
+          autoFocus style={{ width:60, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(200,148,58,0.3)', borderRadius:4, padding:'2px 4px', color:'#c8a96e', fontSize:11, textAlign:'right', outline:'none' }} />
+      ) : (
+        <div onClick={()=>{ setPriceVal(item.price||0); setEditPrice(true) }} style={{ fontFamily:"'Barlow Condensed'", fontSize:12, fontWeight:600, color:'rgba(255,255,255,0.45)', width:58, textAlign:'right', cursor:'pointer', flexShrink:0 }} title="Editar preço">
+          {parseFloat(item.price||0).toFixed(2)} €
+        </div>
       )}
+
+      <button onClick={() => onAlt(idx)} title="Adicionar alternativa" style={{ background:'transparent', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.12)', fontSize:13, padding:'2px 3px', flexShrink:0, transition:'color .15s', lineHeight:1 }}
+        onMouseOver={e=>e.currentTarget.style.color='rgba(200,148,58,0.6)'}
+        onMouseOut={e=>e.currentTarget.style.color='rgba(255,255,255,0.12)'}>⇄</button>
+
+      <button onClick={() => onRemove(idx)} style={{ background:'transparent', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.1)', fontSize:13, padding:'2px 4px', flexShrink:0, transition:'color .15s' }}
+        onMouseOver={e=>e.currentTarget.style.color='rgba(255,80,80,0.5)'}
+        onMouseOut={e=>e.currentTarget.style.color='rgba(255,255,255,0.1)'}>✕</button>
     </div>
   )
 }
